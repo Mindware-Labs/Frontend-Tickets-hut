@@ -24,11 +24,20 @@ import {
   CreditCard,
   LogOut,
   Sparkles,
-  MoreHorizontal
+  MoreHorizontal,
+  Calendar,
+  FileText,
+  ShieldCheck,
+  Headphones,
+  Activity
 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { UserButton } from "@clerk/nextjs"
+import { useRole } from "@/components/providers/role-provider"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
 
 import {
   Sidebar,
@@ -87,6 +96,10 @@ const data = {
           title: "Analytics",
           url: "/dashboard/analytics",
         },
+        {
+          title: "Real-time Monitor",
+          url: "/dashboard/monitor",
+        },
       ],
     },
     {
@@ -113,6 +126,25 @@ const data = {
       ],
     },
     {
+      title: "Communication",
+      url: "/communication",
+      icon: Headphones,
+      items: [
+        {
+          title: "Live Calls",
+          url: "/calls/live",
+        },
+        {
+          title: "Call History",
+          url: "/calls/history",
+        },
+        {
+          title: "Voicemails",
+          url: "/calls/voicemail",
+        },
+      ]
+    },
+    {
       title: "Campaigns",
       url: "/campaigns",
       icon: Megaphone,
@@ -125,7 +157,30 @@ const data = {
           title: "Archived",
           url: "/campaigns/archived",
         },
+        {
+          title: "Templates",
+          url: "/campaigns/templates",
+        },
       ],
+    },
+    {
+      title: "Knowledge Base",
+      url: "/knowledge",
+      icon: BookOpen,
+      items: [
+        {
+          title: "Articles",
+          url: "/knowledge/articles",
+        },
+        {
+          title: "Guides",
+          url: "/knowledge/guides",
+        },
+        {
+          title: "FAQ",
+          url: "/knowledge/faq",
+        }
+      ]
     },
     {
       title: "Reports",
@@ -139,6 +194,10 @@ const data = {
         {
           title: "Agent Stats",
           url: "/reports/agents",
+        },
+        {
+          title: "Campaign ROI",
+          url: "/reports/roi",
         },
       ],
     },
@@ -176,6 +235,25 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const { role, setRole, isAdmin } = useRole()
+
+  // Filter navigation based on role
+  const filteredNavMain = data.navMain.filter(item => {
+    if (role === "Agent") {
+      // Agents can see Platform, Tickets, Communication, Knowledge
+      return ["Platform", "Tickets", "Communication", "Knowledge Base"].includes(item.title)
+    }
+    return true
+  })
+
+  // Helper to check if a group is active
+  const isGroupActive = (item: any) => {
+    // Check if exact match on parent URL (rare) or specific child
+    if (pathname === item.url) return true;
+    // Check if any child matches
+    if (item.items?.some((sub: any) => pathname === sub.url || pathname.startsWith(sub.url))) return true;
+    return false;
+  }
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -201,62 +279,102 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarGroup>
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
           <SidebarMenu>
-            {data.navMain.map((item) => (
-              <Collapsible
-                key={item.title}
-                asChild
-                defaultOpen={item.isActive} // In a real app, verify path
-                className="group/collapsible"
-              >
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip={item.title}>
-                      {item.icon && <item.icon />}
-                      <span>{item.title}</span>
-                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {item.items?.map((subItem) => (
-                        <SidebarMenuSubItem key={subItem.title}>
-                          <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
-                            <a href={subItem.url}>
-                              <span>{subItem.title}</span>
-                            </a>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
-            ))}
+            {filteredNavMain.map((item) => {
+              const active = isGroupActive(item);
+              return (
+                <Collapsible
+                  key={item.title}
+                  asChild
+                  defaultOpen={active || item.isActive}
+                  className="group/collapsible"
+                >
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton
+                        tooltip={item.title}
+                        isActive={active}
+                        className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-medium relative overflow-hidden transition-all duration-200"
+                      >
+                        {active && (
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
+                        )}
+                        {item.icon && <item.icon />}
+                        <span>{item.title}</span>
+                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        {item.items?.map((subItem) => (
+                          <SidebarMenuSubItem key={subItem.title}>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={pathname === subItem.url}
+                              className="data-[active=true]:text-primary data-[active=true]:font-medium"
+                            >
+                              <a href={subItem.url}>
+                                <span>{subItem.title}</span>
+                              </a>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+              )
+            })}
           </SidebarMenu>
         </SidebarGroup>
 
-        {/* Core Sections (Non-Collapsible Example) */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Management</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Users">
-                <a href="/users">
-                  <Users />
-                  <span>User Management</span>
-                </a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Settings">
-                <a href="/settings">
-                  <Settings2 />
-                  <span>System Settings</span>
-                </a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
+        {/* Core Sections (Management) - Admin Only */}
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Management</SidebarGroupLabel>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Users"
+                  isActive={pathname.startsWith("/users")}
+                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
+                >
+                  <a href="/users">
+                    {pathname.startsWith("/users") && (
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
+                    )}
+                    <Users />
+                    <span>User Management</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Settings"
+                  isActive={pathname.startsWith("/settings")}
+                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
+                >
+                  <a href="/settings">
+                    {pathname.startsWith("/settings") && (
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
+                    )}
+                    <Settings2 />
+                    <span>System Settings</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Audit Logs">
+                  <a href="/audit">
+                    <ShieldCheck />
+                    <span>Audit Logs</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
 
         {/* Secondary (Support) */}
         <SidebarGroup className="mt-auto">
@@ -279,6 +397,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarFooter>
         <SidebarMenu>
+
+          {/* Role Simulator (Dev Only) */}
+          <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
+            <div className="flex items-center justify-between p-2 rounded-lg bg-sidebar-accent/50 mb-2">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Simulate Role</span>
+                <Badge variant="outline" className="w-fit text-[10px] h-4 px-1">{role}</Badge>
+              </div>
+              <Switch
+                checked={role === "Admin"}
+                onCheckedChange={(checked) => setRole(checked ? "Admin" : "Agent")}
+                className="scale-75"
+              />
+            </div>
+          </SidebarMenuItem>
+
           <SidebarMenuItem>
             <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors group-data-[collapsible=icon]:justify-center">
               <UserButton

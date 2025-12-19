@@ -1,200 +1,112 @@
 "use client"
 
-import { useState } from "react"
-import ChartCard from "@/components/dashboard/chart-card"
-import BarChart from "@/components/dashboard/bar-chart"
-import LineChart from "@/components/dashboard/line-chart"
-import { getTicketsByCampaign, getTicketsByType, getCallsPerDay, mockTickets } from "@/lib/mock-data"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { CalendarDateRangePicker } from "@/components/dashboard/date-range-picker"
+import { Download, BarChart, PieChart, LineChart, FileText, ShieldAlert } from "lucide-react"
+import KPICard from "@/components/dashboard/kpi-card"
+import { useRole } from "@/components/providers/role-provider"
 
 export default function ReportsPage() {
-  const [filters, setFilters] = useState({
-    startDate: "",
-    endDate: "",
-    campaign: "",
-    type: "",
-  })
+  const { isAdmin } = useRole()
 
-  const campaignData = getTicketsByCampaign()
-  const typeData = getTicketsByType()
-  const callsData = getCallsPerDay()
+  if (!isAdmin) {
+    return (
+      <div className="h-[50vh] flex flex-col items-center justify-center gap-4 text-center">
+        <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
+          <ShieldAlert className="h-8 w-8" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold">Restricted Area</h1>
+          <p className="text-muted-foreground">Analytics reports are available to Administrators only.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>Reports</h2>
-        <div className="d-flex gap-2">
-          <button className="btn btn-outline-primary">
-            <i className="bi bi-file-earmark-pdf me-2"></i>Export PDF
-          </button>
-          <button className="btn btn-primary">
-            <i className="bi bi-file-earmark-excel me-2"></i>Export Excel
-          </button>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Reports</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Analyze performance and export data for external review.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <CalendarDateRangePicker />
+          <Button variant="outline" className="h-9">
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="card mb-4">
-        <div className="card-body">
-          <div className="row g-3">
-            <div className="col-md-3">
-              <label className="form-label">Start Date</label>
-              <input
-                type="date"
-                className="form-control"
-                value={filters.startDate}
-                onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-              />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">End Date</label>
-              <input
-                type="date"
-                className="form-control"
-                value={filters.endDate}
-                onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-              />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Campaign</label>
-              <select
-                className="form-select"
-                value={filters.campaign}
-                onChange={(e) => setFilters({ ...filters, campaign: e.target.value })}
-              >
-                <option value="">All Campaigns</option>
-                <option value="Spring Campaign 2024">Spring Campaign 2024</option>
-                <option value="Q1 Collections">Q1 Collections</option>
-                <option value="New Customer Outreach">New Customer Outreach</option>
-              </select>
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Ticket Type</label>
-              <select
-                className="form-select"
-                value={filters.type}
-                onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-              >
-                <option value="">All Types</option>
-                <option value="Onboarding">Onboarding</option>
-                <option value="AR">AR</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="agent-performance">Agent Performance</TabsTrigger>
+          <TabsTrigger value="campaign-roi">Campaign ROI</TabsTrigger>
+        </TabsList>
 
-      {/* Summary Stats */}
-      <div className="row g-3 mb-4">
-        <div className="col-md-3">
-          <div className="card">
-            <div className="card-body text-center">
-              <h3 className="text-primary">{mockTickets.length}</h3>
-              <p className="text-muted mb-0">Total Tickets</p>
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="glass-card p-6 rounded-xl border border-border/50 space-y-2">
+              <h3 className="text-sm font-medium text-muted-foreground">Total Tickets</h3>
+              <div className="text-2xl font-bold">1,248</div>
+              <p className="text-xs text-muted-foreground">+12% from last month</p>
+            </div>
+            <div className="glass-card p-6 rounded-xl border border-border/50 space-y-2">
+              <h3 className="text-sm font-medium text-muted-foreground">Avg Resolution Time</h3>
+              <div className="text-2xl font-bold">4h 12m</div>
+              <p className="text-xs text-emerald-500 font-medium">-15m improvement</p>
+            </div>
+            <div className="glass-card p-6 rounded-xl border border-border/50 space-y-2">
+              <h3 className="text-sm font-medium text-muted-foreground">CSAT Score</h3>
+              <div className="text-2xl font-bold text-emerald-600">4.8/5</div>
+              <p className="text-xs text-muted-foreground">Based on 450 ratings</p>
+            </div>
+            <div className="glass-card p-6 rounded-xl border border-border/50 space-y-2">
+              <h3 className="text-sm font-medium text-muted-foreground">SLA Breach Rate</h3>
+              <div className="text-2xl font-bold text-rose-600">2.1%</div>
+              <p className="text-xs text-muted-foreground">Target: &lt; 5%</p>
             </div>
           </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card">
-            <div className="card-body text-center">
-              <h3 className="text-success">{mockTickets.filter((t) => t.status === "Closed").length}</h3>
-              <p className="text-muted mb-0">Resolved</p>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card">
-            <div className="card-body text-center">
-              <h3 className="text-info">4.5</h3>
-              <p className="text-muted mb-0">Avg Resolution Time (hrs)</p>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card">
-            <div className="card-body text-center">
-              <h3 className="text-warning">92%</h3>
-              <p className="text-muted mb-0">Resolution Rate</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Charts */}
-      <div className="row g-4 mb-4">
-        <div className="col-lg-6">
-          <ChartCard title="Tickets by Campaign">
-            <BarChart data={campaignData} color="#3b82f6" />
-          </ChartCard>
-        </div>
-        <div className="col-lg-6">
-          <ChartCard title="Tickets by Type">
-            <BarChart data={typeData} color="#10b981" />
-          </ChartCard>
-        </div>
-      </div>
-
-      <div className="row g-4 mb-4">
-        <div className="col-12">
-          <ChartCard title="Calls per Day (Last 7 Days)">
-            <LineChart data={callsData} />
-          </ChartCard>
-        </div>
-      </div>
-
-      {/* Detailed Report Table */}
-      <div className="card">
-        <div className="card-header bg-white">
-          <h5 className="mb-0">Detailed Report</h5>
-        </div>
-        <div className="card-body p-0">
-          <div className="table-responsive">
-            <table className="table table-hover mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th>Date</th>
-                  <th>Campaign</th>
-                  <th>Total Calls</th>
-                  <th>Tickets Created</th>
-                  <th>Resolved</th>
-                  <th>Resolution Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Jan 15, 2024</td>
-                  <td>Spring Campaign 2024</td>
-                  <td>52</td>
-                  <td>48</td>
-                  <td>42</td>
-                  <td>
-                    <span className="badge bg-success">87.5%</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Jan 14, 2024</td>
-                  <td>Q1 Collections</td>
-                  <td>48</td>
-                  <td>45</td>
-                  <td>40</td>
-                  <td>
-                    <span className="badge bg-success">88.9%</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Jan 13, 2024</td>
-                  <td>New Customer Outreach</td>
-                  <td>61</td>
-                  <td>58</td>
-                  <td>55</td>
-                  <td>
-                    <span className="badge bg-success">94.8%</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <Card className="col-span-4">
+              <CardHeader>
+                <CardTitle>Ticket Volume Trends</CardTitle>
+                <CardDescription>Daily ticket intake vs resolved over past 30 days.</CardDescription>
+              </CardHeader>
+              <CardContent className="pl-2">
+                <div className="h-[300px] flex items-center justify-center bg-secondary/10 rounded-lg border border-dashed border-border">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <LineChart className="h-10 w-10 opacity-20" />
+                    <span className="text-sm">Chart Placeholder (Recharts integration here)</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="col-span-3">
+              <CardHeader>
+                <CardTitle>Ticket Sources</CardTitle>
+                <CardDescription>Distribution of ticket origin channels.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px] flex items-center justify-center bg-secondary/10 rounded-lg border border-dashed border-border">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <PieChart className="h-10 w-10 opacity-20" />
+                    <span className="text-sm">Chart Placeholder</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
