@@ -9,7 +9,7 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -23,7 +23,10 @@ import {
   MoreHorizontal,
   ArrowUpRight,
   Filter,
-  Users
+  Users,
+  PhoneIncoming,
+  PhoneOutgoing,
+  PhoneMissed,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -33,7 +36,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
 import { useRole } from "@/components/providers/role-provider"
 import { ShieldAlert } from "lucide-react"
 
@@ -42,11 +44,11 @@ export default function CampaignsPage() {
 
   if (!isAdmin) {
     return (
-      <div className="h-[50vh] flex flex-col items-center justify-center gap-4 text-center">
-        <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
-          <ShieldAlert className="h-8 w-8" />
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 p-8 text-center">
+        <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
+          <ShieldAlert className="h-8 w-8 text-destructive" />
         </div>
-        <div>
+        <div className="space-y-2">
           <h1 className="text-2xl font-bold">Access Denied</h1>
           <p className="text-muted-foreground">You do not have permission to view marketing campaigns.</p>
         </div>
@@ -62,111 +64,174 @@ export default function CampaignsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Active": return "bg-emerald-500/15 text-emerald-600 border-emerald-500/20"
-      case "Paused": return "bg-amber-500/15 text-amber-600 border-amber-500/20"
-      default: return "bg-secondary text-secondary-foreground"
+      case "Active":
+        return "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
+      case "Paused":
+        return "bg-amber-500/10 text-amber-700 border-amber-500/20"
+      default:
+        return "bg-secondary text-secondary-foreground"
+    }
+  }
+
+  const getCampaignStats = (campaignName: string) => {
+    const tickets = mockTickets.filter(t => t.campaign === campaignName)
+    
+    return {
+      total: tickets.length,
+      onboarding: tickets.filter(t => t.type === "Onboarding").length,
+      ar: tickets.filter(t => t.type === "AR").length,
+      open: tickets.filter(t => t.status === "Open").length,
+      closed: tickets.filter(t => t.status === "Closed").length,
+      inbound: tickets.filter(t => t.direction === "inbound").length,
+      outbound: tickets.filter(t => t.direction === "outbound").length,
+      missed: tickets.filter(t => t.direction === "missed").length,
     }
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Campaigns</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage your marketing and outreach campaigns.
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">Campaigns</h1>
+          <p className="text-muted-foreground">
+            Manage your marketing and outreach campaigns
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button className="h-9 btn-primary-modern shadow-lg shadow-primary/20">
-            <Plus className="h-4 w-4 mr-2" />
-            New Campaign
-          </Button>
-        </div>
+        <Button className="bg-primary hover:bg-primary/90">
+          <Plus className="mr-2 h-4 w-4" />
+          New Campaign
+        </Button>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl glass-card border border-border/50">
-        <div className="relative w-full sm:w-[300px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {/* Search Bar */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search campaigns..."
-            className="pl-9 bg-secondary/20 border-border/50"
+            className="pl-9"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button variant="outline" size="sm" className="hidden sm:flex">
-          <Filter className="mr-2 h-4 w-4" />
-          Filter
+        <Button variant="outline" size="icon">
+          <Filter className="h-4 w-4" />
         </Button>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Campaigns Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredCampaigns.map((campaign) => {
-          const campaignTickets = mockTickets.filter((t) => t.campaign === campaign.name)
-          const openTickets = campaignTickets.filter((t) => t.status === "Open").length
-          const closedTickets = campaignTickets.filter((t) => t.status === "Closed").length
-          const progress = campaignTickets.length > 0 ? (closedTickets / campaignTickets.length) * 100 : 0
+          const stats = getCampaignStats(campaign.name)
+          const progress = stats.total > 0 ? (stats.closed / stats.total) * 100 : 0
 
           return (
-            <Card key={campaign.id} className="group hover:shadow-lg hover:border-primary/20 transition-all duration-300 overflow-hidden">
-              <CardHeader className="bg-secondary/10 pb-4">
+            <Card key={campaign.id} className="overflow-hidden hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <div className="flex gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
-                      <Megaphone className="h-5 w-5" />
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <Megaphone className="h-5 w-5 text-primary" />
                     </div>
-                    <div>
-                      <CardTitle className="text-base font-semibold group-hover:text-primary transition-colors">{campaign.name}</CardTitle>
-                      <CardDescription className="text-xs font-mono mt-0.5">{campaign.id}</CardDescription>
+                    <div className="space-y-1">
+                      <CardTitle className="text-base">{campaign.name}</CardTitle>
+                      <CardDescription className="text-xs font-mono">
+                        {campaign.id}
+                      </CardDescription>
                     </div>
                   </div>
-                  <Badge variant="outline" className={`text-[10px] font-medium border ${getStatusColor(campaign.status)}`}>
+                  <Badge
+                    variant="secondary"
+                    className={`${getStatusColor(campaign.status)} border`}
+                  >
                     {campaign.status}
                   </Badge>
                 </div>
               </CardHeader>
 
-              <CardContent className="pt-6 space-y-6">
-                {/* Progress Stats */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Completion</span>
-                    <span>{Math.round(progress)}%</span>
+              <CardContent className="pb-3">
+                {/* Progress Bar */}
+                <div className="mb-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Progress</span>
+                    <span className="font-medium">{Math.round(progress)}%</span>
                   </div>
-                  <Progress value={progress} className="h-1.5" />
+                  <Progress value={progress} className="h-2" />
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="p-2 rounded-lg bg-secondary/30 text-center space-y-1">
-                    <div className="text-lg font-bold text-foreground">{campaign.ticketCount}</div>
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Total</div>
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-lg border p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-2xl font-bold">{stats.total}</p>
+                        <p className="text-xs text-muted-foreground">Total Tickets</p>
+                      </div>
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                    </div>
                   </div>
-                  <div className="p-2 rounded-lg bg-blue-500/5 text-center space-y-1">
-                    <div className="text-lg font-bold text-blue-600">{openTickets}</div>
-                    <div className="text-[10px] text-blue-500/80 uppercase tracking-wider">Open</div>
+
+                  <div className="rounded-lg border p-3">
+                    <div className="space-y-1">
+                      <p className="text-lg font-bold">
+                        {stats.open} / {stats.closed}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Open / Closed</p>
+                    </div>
                   </div>
-                  <div className="p-2 rounded-lg bg-emerald-500/5 text-center space-y-1">
-                    <div className="text-lg font-bold text-emerald-600">{closedTickets}</div>
-                    <div className="text-[10px] text-emerald-500/80 uppercase tracking-wider">Done</div>
+                </div>
+
+                {/* Type Breakdown */}
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="rounded-lg bg-blue-50 p-2 dark:bg-blue-950/20">
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-blue-600 dark:text-blue-500">
+                        {stats.onboarding}
+                      </p>
+                      <p className="text-xs font-medium text-blue-600/80 dark:text-blue-500/80">
+                        Onboarding
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg bg-purple-50 p-2 dark:bg-purple-950/20">
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-purple-600 dark:text-purple-500">
+                        {stats.ar}
+                      </p>
+                      <p className="text-xs font-medium text-purple-600/80 dark:text-purple-500/80">
+                        AR
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
 
-              <CardFooter className="bg-secondary/5 pt-4 border-t border-border/50 flex items-center justify-between">
-                <div className="flex items-center text-xs text-muted-foreground">
-                  <Calendar className="mr-2 h-3.5 w-3.5" />
+              <CardFooter className="flex items-center justify-between border-t bg-muted/50 px-6 py-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-3 w-3" />
                   {new Date(campaign.startDate).toLocaleDateString()}
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem>Edit Campaign</DropdownMenuItem>
+                      <DropdownMenuItem>View Analytics</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive">
+                        Delete Campaign
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Link href={`/campaigns/${campaign.id}`}>
-                    <Button size="sm" variant="outline" className="h-8 text-xs group-hover:border-primary/50 group-hover:text-primary transition-colors">
+                    <Button size="sm" variant="outline">
                       Details
                       <ArrowUpRight className="ml-2 h-3 w-3" />
                     </Button>
@@ -177,6 +242,29 @@ export default function CampaignsPage() {
           )
         })}
       </div>
+
+      {/* Empty State */}
+      {filteredCampaigns.length === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted">
+            <Megaphone className="h-10 w-10 text-muted-foreground" />
+          </div>
+          <div className="mt-4 text-center">
+            <h3 className="text-lg font-semibold">No campaigns found</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {searchTerm
+                ? "Try adjusting your search"
+                : "Get started by creating a new campaign"}
+            </p>
+            {!searchTerm && (
+              <Button className="mt-4">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Campaign
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -106,9 +106,9 @@ export default function DashboardPage() {
           trendUp={true}
         />
         <KPICard
-          title="Revenue Hub"
-          value={`$${stats.arPayments.toLocaleString()}`}
-          secondaryValue="Pending: $3,500"
+          title="Pending Actions"
+          value="7"
+          secondaryValue="Waiting for supervisor"
           icon={CircleDollarSign}
           iconBg="bg-amber-500"
           trend="-15.3%"

@@ -125,7 +125,7 @@ const data = {
         },
       ],
     },
-    {
+    /*{
       title: "Communication",
       url: "/communication",
       icon: Headphones,
@@ -143,7 +143,7 @@ const data = {
           url: "/calls/voicemail",
         },
       ]
-    },
+    },*/
     {
       title: "Campaigns",
       url: "/campaigns",
@@ -164,22 +164,19 @@ const data = {
       ],
     },
     {
-      title: "Knowledge Base",
+      title: "Knowledge",
       url: "/knowledge",
       icon: BookOpen,
       items: [
         {
-          title: "Articles",
-          url: "/knowledge/articles",
+          title: "Rig Hut policies",
+          url: "/Knowledge/policies",
         },
         {
           title: "Guides",
-          url: "/knowledge/guides",
+          url: "/Knowledge/Guides",
         },
-        {
-          title: "FAQ",
-          url: "/knowledge/faq",
-        }
+
       ]
     },
     {
