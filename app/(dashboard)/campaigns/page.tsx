@@ -84,7 +84,6 @@ export default function CampaignsPage() {
       closed: tickets.filter(t => t.status === "Closed").length,
       inbound: tickets.filter(t => t.direction === "inbound").length,
       outbound: tickets.filter(t => t.direction === "outbound").length,
-      missed: tickets.filter(t => t.direction === "missed").length,
     }
   }
 

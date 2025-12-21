@@ -12,8 +12,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -22,38 +21,28 @@ import {
   SelectValue
 } from "@/components/ui/select"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu"
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from "@/components/ui/sheet"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  mockTickets,
-  type Ticket
-} from "@/lib/mock-data"
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Label } from "@/components/ui/label"
 import {
   Search,
-  Filter,
-  MoreHorizontal,
-  ArrowUpDown,
-  Plus,
   RefreshCw,
-  Eye,
-  CheckCircle,
   AlertCircle,
-  Clock,
-  MessageSquare,
-  Ticket as TicketIcon,
   Inbox,
   User,
   Hash,
@@ -62,8 +51,38 @@ import {
   SlidersHorizontal,
   PhoneOutgoing,
   PhoneIncoming,
-  PhoneMissed,
+  MapPin,
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  X,
+  FileText,
+  Edit2,
+  Save,
+  Calendar,
+  Clock,
+  CheckCircle,
+  Tag,
+  MessageCircle,
+  Users,
+  Sparkles,
+  Building
 } from "lucide-react"
+import {
+  mockTickets,
+  type Ticket
+} from "@/lib/mock-data"
+import { YARDS, YARD_CATEGORIES, type Yard, type YardType } from "@/lib/yard-data"
+
+// Extender el tipo Ticket
+declare module "@/lib/mock-data" {
+  interface Ticket {
+    issueDetail?: string
+    yard?: string
+    yardId?: string
+    yardType?: YardType
+  }
+}
 
 export default function TicketsPage() {
   const [search, setSearch] = useState("")
@@ -71,16 +90,49 @@ export default function TicketsPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [priorityFilter, setPriorityFilter] = useState("all")
   const [directionFilter, setDirectionFilter] = useState("all")
-  const [sortBy, setSortBy] = useState<keyof Ticket>("createdAt")
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
   const [showDetails, setShowDetails] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
+  const [selectedYardId, setSelectedYardId] = useState<string>("")
+  const [isAssigningYard, setIsAssigningYard] = useState(false)
+  const [issueDetail, setIssueDetail] = useState("")
+  const [isEditingIssue, setIsEditingIssue] = useState(false)
+  const [yardSearch, setYardSearch] = useState("")
+  const [yardCategory, setYardCategory] = useState<string>("all")
 
-  // Filter and Sort Logic
+  // Obtener yarda seleccionada
+  const selectedYard = useMemo(() => {
+    return YARDS.find(y => y.id === selectedYardId)
+  }, [selectedYardId])
+
+  // Obtener yarda actual del ticket
+  const currentYard = useMemo(() => {
+    if (!selectedTicket?.yardId) return null
+    return YARDS.find(y => y.id === selectedTicket.yardId)
+  }, [selectedTicket?.yardId])
+
+  // Filtrar yardas
+  const filteredYards = useMemo(() => {
+    return YARDS.filter(yard => {
+      const matchesSearch = yardSearch === "" || 
+        yard.name.toLowerCase().includes(yardSearch.toLowerCase()) ||
+        yard.commonName.toLowerCase().includes(yardSearch.toLowerCase()) ||
+        yard.city.toLowerCase().includes(yardSearch.toLowerCase()) ||
+        yard.state.toLowerCase().includes(yardSearch.toLowerCase())
+      
+      const matchesCategory = yardCategory === "all" || 
+        yard.type === yardCategory ||
+        yard.category === yardCategory
+      
+      return matchesSearch && matchesCategory
+    })
+  }, [yardSearch, yardCategory])
+
+  // Filter tickets logic
   const filteredTickets = useMemo(() => {
     return mockTickets.filter(ticket => {
       const matchesSearch =
         (ticket.clientName?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
+        (ticket.yard?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
         ticket.id.toLowerCase().includes(search.toLowerCase()) ||
         ticket.phone.toLowerCase().includes(search.toLowerCase())
 
@@ -102,37 +154,46 @@ export default function TicketsPage() {
       }
 
       return matchesSearch && matchesStatus && matchesPriority && matchesView && matchesDirection
-    }).sort((a, b) => {
-      const aValue = a[sortBy] ?? ""
-      const bValue = b[sortBy] ?? ""
-
-      if (aValue < bValue) return sortOrder === "asc" ? -1 : 1
-      if (aValue > bValue) return sortOrder === "asc" ? 1 : -1
-      return 0
     })
-  }, [search, statusFilter, priorityFilter, directionFilter, sortBy, sortOrder, activeView])
-
-  const toggleSort = (field: keyof Ticket) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-    } else {
-      setSortBy(field)
-      setSortOrder("desc")
-    }
-  }
+  }, [search, statusFilter, priorityFilter, directionFilter, activeView])
 
   const handleViewDetails = (ticket: Ticket) => {
     setSelectedTicket(ticket)
+    setSelectedYardId(ticket.yardId || "")
+    setIssueDetail(ticket.issueDetail || "")
+    setIsEditingIssue(false)
     setShowDetails(true)
+    setYardSearch("")
+    setYardCategory("all")
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Open": return "bg-emerald-500 text-white shadow-emerald-500/20"
-      case "In Progress": return "bg-amber-500 text-white shadow-amber-500/20"
-      case "Closed": return "bg-rose-500 text-white shadow-rose-500/20"
-      default: return "bg-secondary text-secondary-foreground"
+  const handleAssignYard = async () => {
+    if (!selectedTicket || !selectedYardId) return
+    
+    setIsAssigningYard(true)
+    
+    // Simular llamada a API
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // Actualizar el ticket localmente
+    if (selectedTicket && selectedYard) {
+      selectedTicket.yardId = selectedYardId
+      selectedTicket.yard = `${selectedYard.name} - ${selectedYard.city}, ${selectedYard.state}`
+      selectedTicket.yardType = selectedYard.type
     }
+    
+    setIsAssigningYard(false)
+  }
+
+  const handleSaveIssueDetail = () => {
+    if (!selectedTicket) return
+    
+    // Actualizar el ticket localmente
+    if (selectedTicket) {
+      selectedTicket.issueDetail = issueDetail
+    }
+    
+    setIsEditingIssue(false)
   }
 
   const getStatusBadgeColor = (status: string) => {
@@ -157,173 +218,182 @@ export default function TicketsPage() {
     if (direction === "outbound") {
       return <PhoneOutgoing className="h-3 w-3 text-blue-500" />
     } 
-     else {
+    else {
       return <PhoneIncoming className="h-3 w-3 text-emerald-500" />
     }
   }
   
   const getDirectionText = (direction: string) => {
-    return direction === "outbound" ? "Outbound" : 
-           "Inbound"
+    return direction === "outbound" ? "Outbound" : "Inbound"
   }
 
-  // Función para determinar si es Onboarding basado en el número (simulado)
-  // En producción, esto vendría de tu lógica de negocio
   const getCampaignFromType = (type: string) => {
     return type === "Onboarding" ? "Onboarding" : "AR"
   }
 
-  // Función para obtener el color de la campaña
- /* const getCampaignColor = (campaign: string) => {
-    return campaign === "Onboarding" 
-      ? "text-blue-600 bg-blue-50 border-blue-200" 
-      : "text-purple-600 bg-purple-50 border-purple-200"
-  }*/
+  const getYardTypeColor = (type?: YardType) => {
+    switch (type) {
+      case 'full_service':
+        return 'border-blue-500/20 bg-blue-500/5 text-blue-600 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400'
+      case 'saas':
+        return 'border-purple-500/20 bg-purple-500/5 text-purple-600 dark:border-purple-500/30 dark:bg-purple-500/10 dark:text-purple-400'
+      default:
+        return 'border-gray-500/20 bg-gray-500/5 text-gray-600'
+    }
+  }
+
+  const getYardTypeIcon = (type?: YardType) => {
+    switch (type) {
+      case 'full_service':
+        return <Users className="h-3 w-3" />
+      case 'saas':
+        return <Sparkles className="h-3 w-3" />
+      default:
+        return <Building className="h-3 w-3" />
+    }
+  }
+
+  // Obtener yard display name para la tabla
+  const getYardDisplayName = (ticket: Ticket) => {
+    if (!ticket.yardId) return null
+    const yard = YARDS.find(y => y.id === ticket.yardId)
+    return yard ? `${yard.name} - ${yard.city}, ${yard.state}` : ticket.yard
+  }
 
   return (
-    <div className="h-[calc(100vh-theme(spacing.24))] flex flex-col lg:flex-row gap-6 animate-in fade-in duration-500">
-
-      {/* --- LEFT SIDEBAR (FILTERS & VIEWS) --- */}
-      <div className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-6">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-lg font-semibold tracking-tight">Ticketing</h2>
-          <Button size="icon" variant="ghost" className="h-8 w-8">
+    <div className="h-screen flex flex-col lg:flex-row gap-6 p-4">
+      {/* Sidebar izquierdo */}
+      <div className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Ticketing</h2>
+          <Button size="icon" variant="ghost">
             <SlidersHorizontal className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="glass-card rounded-xl p-3 space-y-1">
+        <div className="space-y-1">
           <Button
             variant={activeView === 'all' ? 'secondary' : 'ghost'}
-            className="w-full justify-start text-sm font-medium"
+            className="w-full justify-start"
             onClick={() => setActiveView('all')}
           >
             <Inbox className="mr-2 h-4 w-4" />
             All Tickets
-            <span className="ml-auto text-xs text-muted-foreground">{mockTickets.length}</span>
+            <span className="ml-auto text-xs">{mockTickets.length}</span>
           </Button>
           <Button
             variant={activeView === 'active' ? 'secondary' : 'ghost'}
-            className="w-full justify-start text-sm font-medium"
+            className="w-full justify-start"
             onClick={() => setActiveView('active')}
           >
-            <AlertCircle className="mr-2 h-4 w-4 text-emerald-500" />
+            <AlertCircle className="mr-2 h-4 w-4" />
             Open
-            <span className="ml-auto text-xs text-muted-foreground">
+            <span className="ml-auto text-xs">
               {mockTickets.filter(t => t.status === 'Open' || t.status === 'In Progress').length}
             </span>
           </Button>
           <Button
             variant={activeView === 'assigned' ? 'secondary' : 'ghost'}
-            className="w-full justify-start text-sm font-medium"
+            className="w-full justify-start"
             onClick={() => setActiveView('assigned')}
           >
-            <User className="mr-2 h-4 w-4 text-emerald-500" />
+            <User className="mr-2 h-4 w-4" />
             Assigned
-            <span className="ml-auto text-xs text-muted-foreground">
+            <span className="ml-auto text-xs">
               {mockTickets.filter(t => !!t.assignedTo).length}
             </span>
           </Button>
           <Button
             variant={activeView === 'assigned_me' ? 'secondary' : 'ghost'}
-            className="w-full justify-start text-sm font-medium"
+            className="w-full justify-start"
             onClick={() => setActiveView('assigned_me')}
           >
             <User className="mr-2 h-4 w-4" />
             My Tickets
-            <span className="ml-auto text-xs text-muted-foreground">
+            <span className="ml-auto text-xs">
               {mockTickets.filter(t => t.assignedTo === 'Agent Smith').length}
             </span>
           </Button>
           <Button
             variant={activeView === 'unassigned' ? 'secondary' : 'ghost'}
-            className="w-full justify-start text-sm font-medium"
+            className="w-full justify-start"
             onClick={() => setActiveView('unassigned')}
           >
             <Hash className="mr-2 h-4 w-4" />
             Unassigned
-            <span className="ml-auto text-xs text-muted-foreground">
+            <span className="ml-auto text-xs">
               {mockTickets.filter(t => !t.assignedTo).length}
             </span>
           </Button>
           <Button
             variant={activeView === 'high_priority' ? 'secondary' : 'ghost'}
-            className="w-full justify-start text-sm font-medium"
+            className="w-full justify-start"
             onClick={() => setActiveView('high_priority')}
           >
-            <Star className="mr-2 h-4 w-4 text-rose-500" />
+            <Star className="mr-2 h-4 w-4" />
             High Priority
-            <span className="ml-auto text-xs text-muted-foreground">
+            <span className="ml-auto text-xs">
               {mockTickets.filter(t => t.priority === 'High').length}
             </span>
           </Button>
-          <Button variant="ghost" className="w-full justify-start text-sm font-medium text-muted-foreground">
-            <Archive className="mr-2 h-4 w-4" />
-            Archived
-          </Button>
         </div>
 
-        <div className="glass-card rounded-xl p-4 space-y-4 flex-1">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Quick Filters</h3>
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold">Filters</h3>
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Open">Open</SelectItem>
+                <SelectItem value="In Progress">In Progress</SelectItem>
+                <SelectItem value="Closed">Closed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full h-8 text-xs bg-background/50">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Open">Open</SelectItem>
-                  <SelectItem value="In Progress">In Progress</SelectItem>
-                  <SelectItem value="Closed">Closed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>Priority</Label>
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priority</SelectItem>
+                <SelectItem value="High">High</SelectItem>
+                <SelectItem value="Medium">Medium</SelectItem>
+                <SelectItem value="Low">Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium">Priority</label>
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-full h-8 text-xs bg-background/50">
-                  <SelectValue placeholder="All Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priority</SelectItem>
-                  <SelectItem value="High">High</SelectItem>
-                  <SelectItem value="Medium">Medium</SelectItem>
-                  <SelectItem value="Low">Low</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium">Direction</label>
-              <Select value={directionFilter} onValueChange={setDirectionFilter}>
-                <SelectTrigger className="w-full h-8 text-xs bg-background/50">
-                  <SelectValue placeholder="All Directions" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Directions</SelectItem>
-                  <SelectItem value="inbound">Inbound</SelectItem>
-                  <SelectItem value="outbound">Outbound</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>Direction</Label>
+            <Select value={directionFilter} onValueChange={setDirectionFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Directions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Directions</SelectItem>
+                <SelectItem value="inbound">Inbound</SelectItem>
+                <SelectItem value="outbound">Outbound</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
 
-      {/* --- MAIN CONTENT AREA --- */}
-      <div className="flex-1 flex flex-col gap-4 overflow-hidden pt-1">
-
-        {/* Toolbar */}
+      {/* Área principal */}
+      <div className="flex-1 flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search tickets by ID, name, or phone number..."
-              className="pl-9 bg-background border-border/50 focus-visible:ring-primary/20"
+              placeholder="Search tickets..."
+              className="pl-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -331,283 +401,505 @@ export default function TicketsPage() {
           <Button variant="outline" size="icon">
             <RefreshCw className="h-4 w-4" />
           </Button>
-       
         </div>
 
-        {/* Table Content */}
-        <div className="flex-1 rounded-2xl border border-border/50 bg-card overflow-hidden shadow-sm flex flex-col">
-          <div className="overflow-auto flex-1">
+        <div className="flex-1 rounded-lg border overflow-hidden">
+          <ScrollArea className="h-[calc(100vh-12rem)]">
             <Table>
-              <TableHeader className="bg-muted/30 sticky top-0 z-10 backdrop-blur-md">
-                <TableRow className="hover:bg-transparent border-b border-border/50">
-                  <TableHead className="w-[80px] font-bold text-xs uppercase tracking-wider pl-4">ID</TableHead>
-                  <TableHead className="w-[150px] font-bold text-xs uppercase tracking-wider">Name</TableHead>
-                  <TableHead className="w-[120px] font-bold text-xs uppercase tracking-wider">Number</TableHead>
-                  <TableHead className="w-[120px] font-bold text-xs uppercase tracking-wider">Campaign</TableHead>
-                  <TableHead className="w-[140px] font-bold text-xs uppercase tracking-wider">Assignee</TableHead>
-                  <TableHead className="w-[100px] font-bold text-xs uppercase tracking-wider">Status</TableHead>
-                  <TableHead className="w-[100px] font-bold text-xs uppercase tracking-wider">Priority</TableHead>
-                  <TableHead className="w-[120px] font-bold text-xs uppercase tracking-wider">Created</TableHead>
-                  <TableHead className="w-[100px] font-bold text-xs uppercase tracking-wider text-right pr-4">Direction</TableHead>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[80px]">ID</TableHead>
+                  <TableHead className="w-[150px]">Name</TableHead>
+                  <TableHead className="w-[140px]">Yard</TableHead>
+                  <TableHead className="w-[120px]">Number</TableHead>
+                  <TableHead className="w-[120px]">Campaign</TableHead>
+                  <TableHead className="w-[140px]">Assignee</TableHead>
+                  <TableHead className="w-[100px]">Status</TableHead>
+                  <TableHead className="w-[100px]">Priority</TableHead>
+                  <TableHead className="w-[120px]">Created</TableHead>
+                  <TableHead className="w-[100px]">Direction</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTickets.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="h-[400px] text-center text-muted-foreground">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <Inbox className="h-12 w-12 opacity-10" />
-                        <p>No tickets found in this view.</p>
-                        <Button variant="link" onClick={() => { 
-                          setSearch(''); 
-                          setStatusFilter('all'); 
-                          setPriorityFilter('all');
-                          setDirectionFilter('all');
-                        }}>Clear filters</Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredTickets.map((ticket) => (
+                {filteredTickets.map((ticket) => {
+                  const yardDisplayName = getYardDisplayName(ticket)
+                  const yard = YARDS.find(y => y.id === ticket.yardId)
+                  
+                  return (
                     <TableRow
                       key={ticket.id}
-                      className="border-b border-border/40 hover:bg-muted/30 cursor-pointer transition-colors group"
+                      className="cursor-pointer hover:bg-muted/50"
                       onClick={() => handleViewDetails(ticket)}
                     >
-                      <TableCell className="font-mono text-xs font-medium text-muted-foreground group-hover:text-primary pl-4">
+                      <TableCell className="font-mono text-xs">
                         #{ticket.id.split('-')[1]}
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm text-foreground/90">
-                          {ticket.clientName || <span className="text-muted-foreground italic">-</span>}
-                        </span>
+                        {ticket.clientName || '-'}
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm text-foreground/90">{ticket.phone}</span>
+                        {yard ? (
+                          <div className="flex flex-col gap-1">
+                            <Badge variant="outline" className={`${getYardTypeColor(yard.type)}`}>
+                              <div className="flex items-center gap-1">
+                                {getYardTypeIcon(yard.type)}
+                                <span className="truncate max-w-[100px]">
+                                  {yard.name}
+                                </span>
+                              </div>
+                            </Badge>
+                            <span className="text-xs text-muted-foreground truncate">
+                              {yard.city}, {yard.state}
+                            </span>
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="border-amber-500/20 bg-amber-500/5 text-amber-600">
+                            <AlertTriangle className="mr-1 h-3 w-3" />
+                            Pending
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
-                        <Badge 
-                          variant="outline" 
-                        //  className={`text-xs ${getCampaignColor(getCampaignFromType(ticket.type))}`}
-                        >
+                        {ticket.phone}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
                           {getCampaignFromType(ticket.type)}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         {ticket.assignedTo ? (
                           <div className="flex items-center gap-2">
-                            <Avatar className="h-5 w-5 border border-border/50">
-                              <AvatarImage src={`/avatars/${ticket.assignedTo.toLowerCase().replace(' ', '-')}.jpg`} />
-                              <AvatarFallback className="text-[8px]">{ticket.assignedTo.substring(0, 2).toUpperCase()}</AvatarFallback>
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="text-xs">
+                                {ticket.assignedTo.substring(0, 2).toUpperCase()}
+                              </AvatarFallback>
                             </Avatar>
-                            <span className="text-xs font-medium text-foreground/70">{ticket.assignedTo}</span>
+                            <span className="text-sm">{ticket.assignedTo}</span>
                           </div>
                         ) : (
-                          <span className="text-xs text-muted-foreground italic">Unassigned</span>
+                          <span className="text-sm text-muted-foreground">Unassigned</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${getStatusBadgeColor(ticket.status)}`}>
+                        <Badge variant="outline" className={getStatusBadgeColor(ticket.status)}>
                           {ticket.status}
-                        </div>
+                        </Badge>
                       </TableCell>
                       <TableCell>
-                        {ticket.priority === 'High' && (
-                          <Badge variant="destructive" className="text-[10px] h-5 px-1.5">High</Badge>
-                        )}
-                        {ticket.priority === 'Medium' && (
-                          <Badge variant="secondary" className="text-[10px] h-5 px-1.5 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20">Medium</Badge>
-                        )}
-                        {ticket.priority === 'Low' && (
-                          <span className="text-xs text-muted-foreground">Low</span>
-                        )}
-                        {!ticket.priority && (
-                          <span className="text-xs text-muted-foreground italic">-</span>
+                        {ticket.priority ? (
+                          <Badge variant="outline" className={getPriorityColor(ticket.priority)}>
+                            {ticket.priority}
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {new Date(ticket.createdAt).toLocaleDateString("en-US", { month: 'short', day: 'numeric' })}
-                        </span>
+                        {new Date(ticket.createdAt).toLocaleDateString("en-US", { 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
                       </TableCell>
-                      <TableCell className="text-right pr-4">
-                        <div className="flex items-center justify-end gap-1">
+                      <TableCell>
+                        <div className="flex items-center gap-1">
                           {getDirectionIcon(ticket.direction || 'inbound')}
-                          <span className={`text-xs font-medium ${
-
-                               (ticket.direction || 'inbound') === 'outbound'
-                              ? 'text-blue-600'
-                              : 'text-emerald-600'
-                          }`}>
+                          <span className="text-xs">
                             {getDirectionText(ticket.direction || 'inbound')}
                           </span>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
+                  )
+                })}
               </TableBody>
             </Table>
-          </div>
-
-          {/* Simple Footer Pagination for Table */}
-          <div className="p-3 border-t border-border/50 bg-muted/10 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Showing {filteredTickets.length} tickets</p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="h-7 text-xs" disabled>Previous</Button>
-              <Button variant="outline" size="sm" className="h-7 text-xs" disabled>Next</Button>
-            </div>
-          </div>
+          </ScrollArea>
         </div>
       </div>
 
-      {/* --- DETAILS SHEET --- */}
-      <Sheet open={showDetails} onOpenChange={setShowDetails}>
-        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto border-l border-border/50">
-          {selectedTicket ? (
+      {/* Dialog central para detalles del ticket */}
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          {selectedTicket && (
             <>
-              <SheetHeader className="space-y-4">
+              <DialogHeader>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="font-mono text-xs">{selectedTicket.id}</Badge>
-                    <div className="flex items-center gap-1">
-                      {getDirectionIcon(selectedTicket.direction || 'inbound')}
-                      <span className={`text-xs font-medium ${
-                           (selectedTicket.direction || 'inbound') === 'outbound'
-                          ? 'text-blue-600'
-                          : 'text-emerald-600'
-                      }`}>
-                        {getDirectionText(selectedTicket.direction || 'inbound')}
-                      </span>
+                  <DialogTitle className="text-xl">
+                    Ticket Details
+                  </DialogTitle>
+  
+                </div>
+                <DialogDescription>
+                  <div className="flex items-center gap-3 mt-2">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {selectedTicket.clientName ? 
+                          selectedTicket.clientName.substring(0, 2).toUpperCase() : 
+                          'UC'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium">{selectedTicket.clientName || 'Unknown Caller'}</div>
+                      <div className="text-sm text-muted-foreground">{selectedTicket.phone}</div>
                     </div>
                   </div>
-                  <Badge variant="secondary" className={`${getStatusColor(selectedTicket.status)}`}>
-                    {selectedTicket.status}
-                  </Badge>
-                </div>
-                <SheetTitle className="text-xl font-bold">
-                  {selectedTicket.clientName || 'Unknown Caller'}
-                </SheetTitle>
-                <SheetDescription className="flex items-center gap-2">
-                  <span className="font-medium">{selectedTicket.phone}</span>
-                  <span>•</span>
-                  <Badge 
-                    variant="outline" 
-                  //  className={`${getCampaignColor(getCampaignFromType(selectedTicket.type))}`}
-                  >
-                    {getCampaignFromType(selectedTicket.type)}
-                  </Badge>
-                </SheetDescription>
-              </SheetHeader>
+                </DialogDescription>
+              </DialogHeader>
 
-              <div className="py-8 space-y-8">
-                {/* Primary Actions */}
-  
-                {/* Metadata Card */}
-                <div className="glass-card rounded-xl p-4 border border-border/50">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Ticket Metadata</h4>
-                  <div className="grid grid-cols-2 gap-y-4 gap-x-6">
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase text-muted-foreground font-medium">Assignee</span>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-5 w-5">
-                          <AvatarFallback className="text-[9px]">
-                            {selectedTicket.assignedTo ? selectedTicket.assignedTo.substring(0, 2).toUpperCase() : 'NA'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm font-medium">{selectedTicket.assignedTo || 'Unassigned'}</span>
+              <div className="grid gap-6">
+                {/* Issue Detail */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        Issue Detail
+                      </CardTitle>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => isEditingIssue ? handleSaveIssueDetail() : setIsEditingIssue(true)}
+                      >
+                        {isEditingIssue ? (
+                          <>
+                            <Save className="mr-2 h-4 w-4" />
+                            Save
+                          </>
+                        ) : (
+                          <>
+                            <Edit2 className="mr-2 h-4 w-4" />
+                            Edit
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {isEditingIssue ? (
+                      <div className="space-y-3">
+                        <Textarea
+                          value={issueDetail}
+                          onChange={(e) => setIssueDetail(e.target.value)}
+                          placeholder="Describe the issue in detail..."
+                          className="min-h-[100px]"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsEditingIssue(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={handleSaveIssueDetail}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="p-3 bg-muted/30 rounded-lg">
+                          {issueDetail ? (
+                            <p className="whitespace-pre-wrap">{issueDetail}</p>
+                          ) : (
+                            <div className="text-center py-4 text-muted-foreground">
+                              <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                              <p>No issue details added yet</p>
+                              <Button
+                                variant="link"
+                                className="mt-1"
+                                onClick={() => setIsEditingIssue(true)}
+                              >
+                                Add issue details
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        {issueDetail && (
+                          <p className="text-xs text-muted-foreground">
+                            Last updated today at 10:30 AM
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Yard Assignment - ACTUALIZADO CON YARDAS REALES */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5" />
+                      Yard Assignment
+                    </CardTitle>
+                    {!selectedTicket.yardId && (
+                      <CardDescription className="text-amber-600">
+                        <AlertTriangle className="inline h-4 w-4 mr-1" />
+                        Action Required: No yard assigned
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Yard actual asignado */}
+                      {currentYard && (
+                        <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg border border-emerald-200 dark:border-emerald-500/20">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-lg ${getYardTypeColor(currentYard.type)}`}>
+                                {getYardTypeIcon(currentYard.type)}
+                              </div>
+                              <div>
+                                <p className="font-medium">{currentYard.name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {currentYard.city}, {currentYard.state}
+                                </p>
+                                <Badge variant="outline" className={`mt-1 ${getYardTypeColor(currentYard.type)}`}>
+                                  {currentYard.type === 'full_service' ? 'Full Service' : 'SAAS'}
+                                </Badge>
+                              </div>
+                            </div>
+                            <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Filtros para yardas */}
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label>Filter by Category</Label>
+                            <Select value={yardCategory} onValueChange={setYardCategory}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="All Categories" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {YARD_CATEGORIES.map((category) => (
+                                  <SelectItem key={category.id} value={category.id}>
+                                    {category.label} ({category.count})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Search Yards</Label>
+                            <Input
+                              placeholder="Search by name, city, state..."
+                              value={yardSearch}
+                              onChange={(e) => setYardSearch(e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Select Yard</Label>
+                          <div className="relative">
+                            <Select value={selectedYardId} onValueChange={setSelectedYardId}>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Choose a yard...">
+                                  {selectedYard ? (
+                                    <div className="flex items-center gap-2">
+                                      {getYardTypeIcon(selectedYard.type)}
+                                      <span className="truncate">
+                                        {selectedYard.name} - {selectedYard.city}, {selectedYard.state}
+                                      </span>
+                                    </div>
+                                  ) : "Choose a yard..."}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent className="max-h-64">
+                                <ScrollArea className="h-60">
+                                  <div className="p-1">
+                                    <div className="text-xs text-muted-foreground px-2 py-1">
+                                      {filteredYards.length} yards found
+                                    </div>
+                                    {filteredYards.map((yard) => (
+                                      <SelectItem key={yard.id} value={yard.id} className="py-3">
+                                        <div className="flex flex-col gap-1">
+                                          <div className="flex items-center gap-2">
+                                            {getYardTypeIcon(yard.type)}
+                                            <span className="font-medium truncate">{yard.name}</span>
+                                            <Badge 
+                                              variant="outline" 
+                                              className={`ml-auto text-[10px] ${getYardTypeColor(yard.type)}`}
+                                            >
+                                              {yard.type === 'full_service' ? 'FS' : 'SAAS'}
+                                            </Badge>
+                                          </div>
+                                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                            <span>{yard.city}, {yard.state}</span>
+                                            {yard.contactPhone && (
+                                              <span className="font-mono">{yard.contactPhone}</span>
+                                            )}
+                                          </div>
+                                          {yard.features && yard.features.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {yard.features.slice(0, 2).map((feature, index) => (
+                                                <span 
+                                                  key={index} 
+                                                  className="text-[10px] px-1.5 py-0.5 bg-muted rounded"
+                                                >
+                                                  {feature}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </div>
+                                </ScrollArea>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Botones de acción */}
+                        <div className="flex gap-3 pt-2">
+                          <Button
+                            onClick={handleAssignYard}
+                            disabled={!selectedYardId || isAssigningYard || selectedYardId === selectedTicket.yardId}
+                            className="flex-1"
+                          >
+                            {isAssigningYard ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Assigning...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                {selectedTicket.yardId ? 'Update Yard' : 'Assign Yard'}
+                              </>
+                            )}
+                          </Button>
+                          
+                          {selectedTicket.yardId && selectedYardId !== selectedTicket.yardId && (
+                            <Button
+                              variant="outline"
+                              onClick={() => setSelectedYardId(selectedTicket.yardId || "")}
+                              disabled={isAssigningYard}
+                            >
+                              Reset
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Información de la yarda seleccionada */}
+                        {selectedYard && (
+                          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg border border-blue-200 dark:border-blue-500/20">
+                            <div className="flex items-start gap-3">
+                              <div className={`p-2 rounded-lg ${getYardTypeColor(selectedYard.type)}`}>
+                                {getYardTypeIcon(selectedYard.type)}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="font-medium">
+                                      {selectedYard.type === 'full_service' ? 'Full Service Yard' : 'SAAS Yard'}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {selectedYard.address ? `${selectedYard.address}, ` : ''}
+                                      {selectedYard.city}, {selectedYard.state} {selectedYard.zip}
+                                    </p>
+                                  </div>
+                                  <Badge variant="outline" className={getYardTypeColor(selectedYard.type)}>
+                                    {selectedYard.type === 'full_service' ? 'Full Service' : 'SAAS'}
+                                  </Badge>
+                                </div>
+                                
+                                {selectedYard.contactPhone && (
+                                  <div className="flex items-center gap-2 mt-2 text-sm">
+                                    <span className="font-medium">Contact:</span>
+                                    <span>{selectedYard.contactPhone}</span>
+                                  </div>
+                                )}
+                                
+                                {selectedYard.notes && (
+                                  <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
+                                    <span className="font-medium">Note: </span>
+                                    {selectedYard.notes}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase text-muted-foreground font-medium">Priority</span>
-                      <div className="flex items-center">
+                  </CardContent>
+                </Card>
+
+                {/* Ticket Metadata */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Ticket Information</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Status</p>
+                        <Badge variant="outline" className={getStatusBadgeColor(selectedTicket.status)}>
+                          {selectedTicket.status}
+                        </Badge>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Priority</p>
                         <Badge variant="outline" className={getPriorityColor(selectedTicket.priority)}>
                           {selectedTicket.priority || 'Not set'}
                         </Badge>
                       </div>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase text-muted-foreground font-medium">Direction</span>
-                      <div className="flex items-center gap-1">
-                        {getDirectionIcon(selectedTicket.direction || 'inbound')}
-                        <span className={`text-sm font-medium ${
-                             (selectedTicket.direction || 'inbound') === 'outbound'
-                            ? 'text-blue-600'
-                            : 'text-emerald-600'
-                        }`}>
-                          {getDirectionText(selectedTicket.direction || 'inbound')}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase text-muted-foreground font-medium">Campaign</span>
-                      <Badge 
-                        variant="outline" 
-                      // className={`${getCampaignColor(getCampaignFromType(selectedTicket.type))}`}
-                      >
-                        {getCampaignFromType(selectedTicket.type)}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase text-muted-foreground font-medium">Opened</span>
-                      <p className="text-sm">
-                        {new Date(selectedTicket.createdAt).toLocaleString("en-US", { 
-                          dateStyle: 'medium', 
-                          timeStyle: 'short' 
-                        })}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase text-muted-foreground font-medium">Duration</span>
-                      <p className="text-sm font-mono tracking-tight">{selectedTicket.callDuration || '0:00'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase text-muted-foreground font-medium">Aircall ID</span>
-                      <p className="text-sm font-mono">{selectedTicket.aircallId || 'N/A'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Placeholder Activity Stream */}
-                <div className="space-y-4">
-                  <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Activity Stream
-                  </h4>
-                  <div className="relative pl-4 border-l-2 border-border/40 space-y-6">
-                    <div className="relative">
-                      <div className="absolute -left-[21px] top-1 h-3 w-3 rounded-full border-2 border-background bg-blue-500"></div>
                       <div className="space-y-1">
-                        <p className="text-sm">
-                          <span className="font-semibold">System</span> created this ticket via {getDirectionText(selectedTicket.direction || 'inbound')} call
-                        </p>
-                        <p className="text-xs text-muted-foreground text-[10px]">
-                          {new Date(selectedTicket.createdAt).toLocaleString("en-US")}
-                        </p>
+                        <p className="text-sm font-medium text-muted-foreground">Assignee</p>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs">
+                              {selectedTicket.assignedTo ? 
+                                selectedTicket.assignedTo.substring(0, 2).toUpperCase() : 
+                                'NA'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{selectedTicket.assignedTo || 'Unassigned'}</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="relative">
-                      <div className="absolute -left-[21px] top-1 h-3 w-3 rounded-full border-2 border-background bg-zinc-400"></div>
                       <div className="space-y-1">
-                        <p className="text-sm">
-                          <span className="font-semibold">{selectedTicket.assignedTo || 'Agent'}</span> viewed details
-                        </p>
-                        <p className="text-xs text-muted-foreground text-[10px]">Just now</p>
+                        <p className="text-sm font-medium text-muted-foreground">Direction</p>
+                        <div className="flex items-center gap-2">
+                          {getDirectionIcon(selectedTicket.direction || 'inbound')}
+                          <span>{getDirectionText(selectedTicket.direction || 'inbound')}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Created</p>
+                        <p>{new Date(selectedTicket.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Campaign</p>
+                        <Badge variant="outline">{getCampaignFromType(selectedTicket.type)}</Badge>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               </div>
 
-              <SheetFooter className="mt-auto">
-                <Button variant="ghost" className="w-full text-rose-500 hover:text-rose-600 hover:bg-rose-500/10">
-                  Archive Ticket
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowDetails(false)}>
+                  Close
                 </Button>
-              </SheetFooter>
+                <Button onClick={handleAssignYard} disabled={isAssigningYard}>
+                  Save Changes
+                </Button>
+              </DialogFooter>
             </>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

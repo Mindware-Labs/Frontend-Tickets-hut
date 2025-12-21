@@ -1,6 +1,7 @@
 export interface Ticket {
   id: string
   clientName: string
+  yard?: string
   phone: string
   type: "Onboarding" | "AR"
   campaign: string
@@ -11,7 +12,7 @@ export interface Ticket {
   description?: string
   callDuration?: string
   aircallId?: string
-  direction?: "inbound" | "outbound" | "missed"
+  direction?: "inbound" | "outbound"
 }
 
 export interface Campaign {

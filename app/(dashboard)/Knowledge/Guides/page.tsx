@@ -57,15 +57,15 @@ export default function GuidesPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-slate-950 min-h-screen text-slate-200">
+    <div className="p-6 space-y-6 bg-background min-h-screen text-foreground">
       
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <BookOpen className="h-6 w-6 text-indigo-500" />
+        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <BookOpen className="h-6 w-6 text-primary" />
           Operational Guides
         </h1>
-        <p className="text-slate-400 text-sm mt-1">
+        <p className="text-muted-foreground text-sm mt-1">
           Handbooks, tutoriales e instrucciones operativas para agentes.
         </p>
       </div>
@@ -73,23 +73,23 @@ export default function GuidesPage() {
       {/* Grid de Guías */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {GUIDES.map((guide) => (
-          <Card key={guide.id} className="bg-slate-900 border-slate-800 hover:border-indigo-500/50 transition-all group">
+          <Card key={guide.id} className="bg-card border-border hover:border-primary/50 transition-all group">
             <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-2">
-              <div className="p-2 rounded-lg bg-slate-800 text-indigo-400 group-hover:bg-indigo-500/20 group-hover:text-indigo-400 transition-colors">
+              <div className="p-2 rounded-lg bg-muted text-primary group-hover:bg-primary/20 group-hover:text-primary transition-colors">
                 <guide.icon className="h-6 w-6" />
               </div>
               <div className="flex-1">
-                <CardTitle className="text-base text-slate-100 leading-tight">
+                <CardTitle className="text-base text-foreground leading-tight">
                   {guide.title}
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-500 mt-1">
+                <CardDescription className="text-xs text-muted-foreground mt-1">
                   {guide.type} • {guide.size}
                 </CardDescription>
               </div>
             </CardHeader>
             
             <CardContent>
-              <p className="text-sm text-slate-400 line-clamp-2">
+              <p className="text-sm text-muted-foreground line-clamp-2">
                 {guide.description}
               </p>
             </CardContent>
@@ -98,14 +98,14 @@ export default function GuidesPage() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="flex-1 border-slate-700 bg-slate-800/50 text-slate-300 hover:text-white hover:bg-slate-800"
+                className="flex-1 border-border bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
                 onClick={() => handleView(guide.title)}
               >
                 <Eye className="h-4 w-4 mr-2" /> View
               </Button>
               <Button 
                 size="sm" 
-                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white"
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                 onClick={() => handleDownload(guide.title)}
               >
                 <Download className="h-4 w-4 mr-2" /> Download
