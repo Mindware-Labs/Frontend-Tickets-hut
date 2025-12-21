@@ -113,16 +113,16 @@ export default function TicketsPage() {
   // Filtrar yardas
   const filteredYards = useMemo(() => {
     return YARDS.filter(yard => {
-      const matchesSearch = yardSearch === "" || 
+      const matchesSearch = yardSearch === "" ||
         yard.name.toLowerCase().includes(yardSearch.toLowerCase()) ||
         yard.commonName.toLowerCase().includes(yardSearch.toLowerCase()) ||
         yard.city.toLowerCase().includes(yardSearch.toLowerCase()) ||
         yard.state.toLowerCase().includes(yardSearch.toLowerCase())
-      
-      const matchesCategory = yardCategory === "all" || 
+
+      const matchesCategory = yardCategory === "all" ||
         yard.type === yardCategory ||
         yard.category === yardCategory
-      
+
       return matchesSearch && matchesCategory
     })
   }, [yardSearch, yardCategory])
@@ -169,30 +169,64 @@ export default function TicketsPage() {
 
   const handleAssignYard = async () => {
     if (!selectedTicket || !selectedYardId) return
-    
+
+    // Función para resaltar coincidencias en el texto
+const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
+  if (!searchTerm || !text) return text;
+  
+  const lowerText = text.toString().toLowerCase();
+  const lowerSearch = searchTerm.toLowerCase();
+  
+  // Si no hay coincidencia, devolver el texto normal
+  if (!lowerText.includes(lowerSearch)) {
+    return text;
+  }
+  
+  // Dividir el texto en partes que coinciden y no coinciden
+  const regex = new RegExp(`(${searchTerm})`, 'gi');
+  const parts = text.toString().split(regex);
+  
+  return (
+    <span>
+      {parts.map((part, index) =>
+        part.toLowerCase() === lowerSearch ? (
+          <mark 
+            key={index} 
+            className="bg-yellow-200 dark:bg-yellow-800/70 text-yellow-900 dark:text-yellow-100 px-0.5 rounded font-medium"
+          >
+            {part}
+          </mark>
+        ) : (
+          <span key={index}>{part}</span>
+        )
+      )}
+    </span>
+  );
+};
+
     setIsAssigningYard(true)
-    
+
     // Simular llamada a API
     await new Promise(resolve => setTimeout(resolve, 1000))
-    
+
     // Actualizar el ticket localmente
     if (selectedTicket && selectedYard) {
       selectedTicket.yardId = selectedYardId
       selectedTicket.yard = `${selectedYard.name} - ${selectedYard.city}, ${selectedYard.state}`
       selectedTicket.yardType = selectedYard.type
     }
-    
+
     setIsAssigningYard(false)
   }
 
   const handleSaveIssueDetail = () => {
     if (!selectedTicket) return
-    
+
     // Actualizar el ticket localmente
     if (selectedTicket) {
       selectedTicket.issueDetail = issueDetail
     }
-    
+
     setIsEditingIssue(false)
   }
 
@@ -217,12 +251,12 @@ export default function TicketsPage() {
   const getDirectionIcon = (direction: string) => {
     if (direction === "outbound") {
       return <PhoneOutgoing className="h-3 w-3 text-blue-500" />
-    } 
+    }
     else {
       return <PhoneIncoming className="h-3 w-3 text-emerald-500" />
     }
   }
-  
+
   const getDirectionText = (direction: string) => {
     return direction === "outbound" ? "Outbound" : "Inbound"
   }
@@ -424,7 +458,7 @@ export default function TicketsPage() {
                 {filteredTickets.map((ticket) => {
                   const yardDisplayName = getYardDisplayName(ticket)
                   const yard = YARDS.find(y => y.id === ticket.yardId)
-                  
+
                   return (
                     <TableRow
                       key={ticket.id}
@@ -496,9 +530,9 @@ export default function TicketsPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {new Date(ticket.createdAt).toLocaleDateString("en-US", { 
-                          month: 'short', 
-                          day: 'numeric' 
+                        {new Date(ticket.createdAt).toLocaleDateString("en-US", {
+                          month: 'short',
+                          day: 'numeric'
                         })}
                       </TableCell>
                       <TableCell>
@@ -518,388 +552,403 @@ export default function TicketsPage() {
         </div>
       </div>
 
-      {/* Dialog central para detalles del ticket */}
-      <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-          {selectedTicket && (
-            <>
-              <DialogHeader>
-                <div className="flex items-center justify-between">
-                  <DialogTitle className="text-xl">
-                    Ticket Details
-                  </DialogTitle>
-  
+{/* Dialog central para detalles del ticket */}
+<Dialog open={showDetails} onOpenChange={setShowDetails}>
+  <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+    {selectedTicket && (
+      <>
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-xl">
+              Ticket Details
+            </DialogTitle>
+          </div>
+          <DialogDescription>
+            <div className="flex items-center gap-3 mt-2">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  {selectedTicket.clientName ?
+                    selectedTicket.clientName.substring(0, 2).toUpperCase() :
+                    'UC'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="font-medium">{selectedTicket.clientName || 'Unknown Caller'}</div>
+                <div className="text-sm text-muted-foreground">{selectedTicket.phone}</div>
+              </div>
+            </div>
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-6">
+                 {/* Ticket Metadata - MANTIENE EL MISMO FORMATO */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Ticket Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Status</p>
+                  <Badge variant="outline" className={getStatusBadgeColor(selectedTicket.status)}>
+                    {selectedTicket.status}
+                  </Badge>
                 </div>
-                <DialogDescription>
-                  <div className="flex items-center gap-3 mt-2">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {selectedTicket.clientName ? 
-                          selectedTicket.clientName.substring(0, 2).toUpperCase() : 
-                          'UC'}
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Priority</p>
+                  <Badge variant="outline" className={getPriorityColor(selectedTicket.priority)}>
+                    {selectedTicket.priority || 'Not set'}
+                  </Badge>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Assignee</p>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className="text-xs">
+                        {selectedTicket.assignedTo ?
+                          selectedTicket.assignedTo.substring(0, 2).toUpperCase() :
+                          'NA'}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <div className="font-medium">{selectedTicket.clientName || 'Unknown Caller'}</div>
-                      <div className="text-sm text-muted-foreground">{selectedTicket.phone}</div>
+                    <span>{selectedTicket.assignedTo || 'Unassigned'}</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Direction</p>
+                  <div className="flex items-center gap-2">
+                    {getDirectionIcon(selectedTicket.direction || 'inbound')}
+                    <span>{getDirectionText(selectedTicket.direction || 'inbound')}</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Created</p>
+                  <p>{new Date(selectedTicket.createdAt).toLocaleDateString()}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Campaign</p>
+                  <Badge variant="outline">{getCampaignFromType(selectedTicket.type)}</Badge>
+                </div>
+              </div>
+            </CardContent>
+          
+
+          {/* Yard Assignment  */}
+          
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Yard Assignment
+              </CardTitle>
+              {!selectedTicket.yardId && (
+                <CardDescription className="text-amber-600">
+                  <AlertTriangle className="inline h-4 w-4 mr-1" />
+                  Action Required: No yard assigned
+                </CardDescription>
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Yard actual asignado */}
+                {currentYard && (
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg border border-emerald-200 dark:border-emerald-500/20">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${getYardTypeColor(currentYard.type)}`}>
+                          {getYardTypeIcon(currentYard.type)}
+                        </div>
+                        <div>
+                          <p className="font-medium">{currentYard.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {currentYard.city}, {currentYard.state}
+                          </p>
+                          <Badge variant="outline" className={`mt-1 ${getYardTypeColor(currentYard.type)}`}>
+                            {currentYard.type === 'full_service' ? 'Full Service' : 'SAAS'}
+                          </Badge>
+                        </div>
+                      </div>
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                     </div>
                   </div>
-                </DialogDescription>
-              </DialogHeader>
+                )}
 
-              <div className="grid gap-6">
-                {/* Issue Detail */}
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
-                        Issue Detail
-                      </CardTitle>
+                {/* Buscador de yardas */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Search Yard</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by name, address, city, state, phone, or zip..."
+                        className="pl-9"
+                        value={yardSearch}
+                        onChange={(e) => {
+                          const newSearch = e.target.value;
+                          setYardSearch(newSearch);
+                          
+                          // Si el usuario empieza a escribir de nuevo, limpiamos la selección
+                          if (newSearch && selectedYardId && !newSearch.toLowerCase().includes(selectedYard?.name?.toLowerCase() || '')) {
+                            setSelectedYardId("");
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          // Si presiona Escape, limpia la búsqueda
+                          if (e.key === 'Escape') {
+                            setYardSearch("");
+                            setSelectedYardId("");
+                          }
+                        }}
+                      />
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <Badge variant="outline" className="text-xs">
+                          {selectedYardId ? "1 selected" : `${filteredYards.length} found`}
+                        </Badge>
+                      </div>
+                      
+                    
+                    </div>
+                  </div>
+
+                  {/* MOSTRAR SOLO LA YARDA SELECCIONADA */}
+                  {selectedYard && !yardSearch && (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-500/10 rounded-lg border border-blue-200 dark:border-blue-500/20">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2 rounded-lg ${getYardTypeColor(selectedYard.type)}`}>
+                            {getYardTypeIcon(selectedYard.type)}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium">{selectedYard.name}</p>
+                              <Badge variant="outline" className={getYardTypeColor(selectedYard.type)}>
+                                {selectedYard.type === 'full_service' ? 'Full Service' : 'SAAS'}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {selectedYard.address ? `${selectedYard.address}, ` : ''}
+                              {selectedYard.city}, {selectedYard.state} {selectedYard.zip}
+                            </p>
+                            
+                            {selectedYard.contactPhone && (
+                              <div className="flex items-center gap-2 mt-2 text-sm">
+                                <span className="font-medium">Contact:</span>
+                                <span>{selectedYard.contactPhone}</span>
+                              </div>
+                            )}
+
+                            {selectedYard.notes && (
+                              <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
+                                <span className="font-medium">Note: </span>
+                                {selectedYard.notes}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedYardId("");
+                            setYardSearch("");
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* MOSTRAR OPCIONES SOLO CUANDO HAY BÚSQUEDA Y NO HAY YARDA SELECCIONADA */}
+                  {yardSearch && !selectedYardId && filteredYards.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm">Select a Yard</Label>
+                      <ScrollArea className="h-64 rounded-md border">
+                        <div className="p-2">
+                          {filteredYards.map((yard) => (
+                            <div
+                              key={yard.id}
+                              className="p-3 rounded-lg mb-2 cursor-pointer transition-colors hover:bg-muted/50 bg-card border"
+                              onClick={() => {
+                                // Al hacer clic, selecciona la yarda y limpia la búsqueda
+                                setSelectedYardId(yard.id);
+                                setYardSearch("");
+                              }}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className={`p-2 rounded-lg ${getYardTypeColor(yard.type)}`}>
+                                  {getYardTypeIcon(yard.type)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between">
+                                    <p className="font-medium truncate">{yard.name}</p>
+                                    <Badge
+                                      variant="outline"
+                                      className={`text-[10px] ${getYardTypeColor(yard.type)}`}
+                                    >
+                                      {yard.type === 'full_service' ? 'FS' : 'SAAS'}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground truncate">
+                                    {yard.address ? `${yard.address}, ` : ''}
+                                    {yard.city}, {yard.state} {yard.zip}
+                                  </p>
+                                  {yard.contactPhone && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      📞 {yard.contactPhone}
+                                    </p>
+                                  )}
+                                  {yard.features && yard.features.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                      {yard.features.slice(0, 2).map((feature, index) => (
+                                        <span
+                                          key={index}
+                                          className="text-[10px] px-1.5 py-0.5 bg-muted rounded"
+                                        >
+                                          {feature}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  )}
+
+                  {/* MENSAJE CUANDO NO HAY RESULTADOS */}
+                  {yardSearch && !selectedYardId && filteredYards.length === 0 && (
+                    <div className="p-6 text-center border rounded-lg">
+                      <Search className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-muted-foreground">No yards found</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Try a different search term
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Botón para resetear (solo para visualización, no guarda) */}
+                  {selectedTicket.yardId && selectedYardId !== selectedTicket.yardId && (
+                    <div className="pt-2">
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => isEditingIssue ? handleSaveIssueDetail() : setIsEditingIssue(true)}
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedYardId(selectedTicket.yardId || "");
+                          setYardSearch("");
+                        }}
+                        className="w-full"
                       >
-                        {isEditingIssue ? (
-                          <>
-                            <Save className="mr-2 h-4 w-4" />
-                            Save
-                          </>
-                        ) : (
-                          <>
-                            <Edit2 className="mr-2 h-4 w-4" />
-                            Edit
-                          </>
-                        )}
+                        Reset to Current Yard
                       </Button>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    {isEditingIssue ? (
-                      <div className="space-y-3">
-                        <Textarea
-                          value={issueDetail}
-                          onChange={(e) => setIssueDetail(e.target.value)}
-                          placeholder="Describe the issue in detail..."
-                          className="min-h-[100px]"
-                        />
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setIsEditingIssue(false)}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={handleSaveIssueDetail}
-                          >
-                            Save
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="p-3 bg-muted/30 rounded-lg">
-                          {issueDetail ? (
-                            <p className="whitespace-pre-wrap">{issueDetail}</p>
-                          ) : (
-                            <div className="text-center py-4 text-muted-foreground">
-                              <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                              <p>No issue details added yet</p>
-                              <Button
-                                variant="link"
-                                className="mt-1"
-                                onClick={() => setIsEditingIssue(true)}
-                              >
-                                Add issue details
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                        {issueDetail && (
-                          <p className="text-xs text-muted-foreground">
-                            Last updated today at 10:30 AM
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Yard Assignment - ACTUALIZADO CON YARDAS REALES */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5" />
-                      Yard Assignment
-                    </CardTitle>
-                    {!selectedTicket.yardId && (
-                      <CardDescription className="text-amber-600">
-                        <AlertTriangle className="inline h-4 w-4 mr-1" />
-                        Action Required: No yard assigned
-                      </CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {/* Yard actual asignado */}
-                      {currentYard && (
-                        <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg border border-emerald-200 dark:border-emerald-500/20">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-lg ${getYardTypeColor(currentYard.type)}`}>
-                                {getYardTypeIcon(currentYard.type)}
-                              </div>
-                              <div>
-                                <p className="font-medium">{currentYard.name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {currentYard.city}, {currentYard.state}
-                                </p>
-                                <Badge variant="outline" className={`mt-1 ${getYardTypeColor(currentYard.type)}`}>
-                                  {currentYard.type === 'full_service' ? 'Full Service' : 'SAAS'}
-                                </Badge>
-                              </div>
-                            </div>
-                            <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Filtros para yardas */}
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div className="space-y-2">
-                            <Label>Filter by Category</Label>
-                            <Select value={yardCategory} onValueChange={setYardCategory}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="All Categories" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {YARD_CATEGORIES.map((category) => (
-                                  <SelectItem key={category.id} value={category.id}>
-                                    {category.label} ({category.count})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label>Search Yards</Label>
-                            <Input
-                              placeholder="Search by name, city, state..."
-                              value={yardSearch}
-                              onChange={(e) => setYardSearch(e.target.value)}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Select Yard</Label>
-                          <div className="relative">
-                            <Select value={selectedYardId} onValueChange={setSelectedYardId}>
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Choose a yard...">
-                                  {selectedYard ? (
-                                    <div className="flex items-center gap-2">
-                                      {getYardTypeIcon(selectedYard.type)}
-                                      <span className="truncate">
-                                        {selectedYard.name} - {selectedYard.city}, {selectedYard.state}
-                                      </span>
-                                    </div>
-                                  ) : "Choose a yard..."}
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent className="max-h-64">
-                                <ScrollArea className="h-60">
-                                  <div className="p-1">
-                                    <div className="text-xs text-muted-foreground px-2 py-1">
-                                      {filteredYards.length} yards found
-                                    </div>
-                                    {filteredYards.map((yard) => (
-                                      <SelectItem key={yard.id} value={yard.id} className="py-3">
-                                        <div className="flex flex-col gap-1">
-                                          <div className="flex items-center gap-2">
-                                            {getYardTypeIcon(yard.type)}
-                                            <span className="font-medium truncate">{yard.name}</span>
-                                            <Badge 
-                                              variant="outline" 
-                                              className={`ml-auto text-[10px] ${getYardTypeColor(yard.type)}`}
-                                            >
-                                              {yard.type === 'full_service' ? 'FS' : 'SAAS'}
-                                            </Badge>
-                                          </div>
-                                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                            <span>{yard.city}, {yard.state}</span>
-                                            {yard.contactPhone && (
-                                              <span className="font-mono">{yard.contactPhone}</span>
-                                            )}
-                                          </div>
-                                          {yard.features && yard.features.length > 0 && (
-                                            <div className="flex flex-wrap gap-1 mt-1">
-                                              {yard.features.slice(0, 2).map((feature, index) => (
-                                                <span 
-                                                  key={index} 
-                                                  className="text-[10px] px-1.5 py-0.5 bg-muted rounded"
-                                                >
-                                                  {feature}
-                                                </span>
-                                              ))}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </div>
-                                </ScrollArea>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        {/* Botones de acción */}
-                        <div className="flex gap-3 pt-2">
-                          <Button
-                            onClick={handleAssignYard}
-                            disabled={!selectedYardId || isAssigningYard || selectedYardId === selectedTicket.yardId}
-                            className="flex-1"
-                          >
-                            {isAssigningYard ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Assigning...
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                {selectedTicket.yardId ? 'Update Yard' : 'Assign Yard'}
-                              </>
-                            )}
-                          </Button>
-                          
-                          {selectedTicket.yardId && selectedYardId !== selectedTicket.yardId && (
-                            <Button
-                              variant="outline"
-                              onClick={() => setSelectedYardId(selectedTicket.yardId || "")}
-                              disabled={isAssigningYard}
-                            >
-                              Reset
-                            </Button>
-                          )}
-                        </div>
-
-                        {/* Información de la yarda seleccionada */}
-                        {selectedYard && (
-                          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg border border-blue-200 dark:border-blue-500/20">
-                            <div className="flex items-start gap-3">
-                              <div className={`p-2 rounded-lg ${getYardTypeColor(selectedYard.type)}`}>
-                                {getYardTypeIcon(selectedYard.type)}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <p className="font-medium">
-                                      {selectedYard.type === 'full_service' ? 'Full Service Yard' : 'SAAS Yard'}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {selectedYard.address ? `${selectedYard.address}, ` : ''}
-                                      {selectedYard.city}, {selectedYard.state} {selectedYard.zip}
-                                    </p>
-                                  </div>
-                                  <Badge variant="outline" className={getYardTypeColor(selectedYard.type)}>
-                                    {selectedYard.type === 'full_service' ? 'Full Service' : 'SAAS'}
-                                  </Badge>
-                                </div>
-                                
-                                {selectedYard.contactPhone && (
-                                  <div className="flex items-center gap-2 mt-2 text-sm">
-                                    <span className="font-medium">Contact:</span>
-                                    <span>{selectedYard.contactPhone}</span>
-                                  </div>
-                                )}
-                                
-                                {selectedYard.notes && (
-                                  <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
-                                    <span className="font-medium">Note: </span>
-                                    {selectedYard.notes}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Ticket Metadata */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Ticket Information</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">Status</p>
-                        <Badge variant="outline" className={getStatusBadgeColor(selectedTicket.status)}>
-                          {selectedTicket.status}
-                        </Badge>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">Priority</p>
-                        <Badge variant="outline" className={getPriorityColor(selectedTicket.priority)}>
-                          {selectedTicket.priority || 'Not set'}
-                        </Badge>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">Assignee</p>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarFallback className="text-xs">
-                              {selectedTicket.assignedTo ? 
-                                selectedTicket.assignedTo.substring(0, 2).toUpperCase() : 
-                                'NA'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>{selectedTicket.assignedTo || 'Unassigned'}</span>
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">Direction</p>
-                        <div className="flex items-center gap-2">
-                          {getDirectionIcon(selectedTicket.direction || 'inbound')}
-                          <span>{getDirectionText(selectedTicket.direction || 'inbound')}</span>
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">Created</p>
-                        <p>{new Date(selectedTicket.createdAt).toLocaleDateString()}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">Campaign</p>
-                        <Badge variant="outline">{getCampaignFromType(selectedTicket.type)}</Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
               </div>
+            </CardContent>
+               {/* Issue Detail  */}
+        
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Issue Detail
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isEditingIssue ? (
+                <div className="space-y-3">
+                  <Textarea
+                    value={issueDetail}
+                    onChange={(e) => setIssueDetail(e.target.value)}
+                    placeholder="Describe the issue in detail..."
+                    className="min-h-[100px]"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditingIssue(false)}
+                    >
+                      Cancel Edit
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="p-3 bg-muted/30 rounded-lg">
+                    {issueDetail ? (
+                      <p className="whitespace-pre-wrap">{issueDetail}</p>
+                    ) : (
+                      <div className="text-center py-4 text-muted-foreground">
+                        <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                        <p>No issue details added yet</p>
+                        <Button
+                          variant="link"
+                          className="mt-1"
+                          onClick={() => setIsEditingIssue(true)}
+                        >
+                          Add issue details
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowDetails(false)}>
-                  Close
-                </Button>
-                <Button onClick={handleAssignYard} disabled={isAssigningYard}>
-                  Save Changes
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+
+         
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setShowDetails(false)}>
+            Close
+          </Button>
+          <Button 
+            onClick={async () => {
+              // 1. Guardar issue detail si está en modo edición
+              if (isEditingIssue && selectedTicket) {
+                selectedTicket.issueDetail = issueDetail;
+                setIsEditingIssue(false);
+              }
+              
+              // 2. Guardar yard assignment si hay una yarda seleccionada
+              if (selectedYardId && selectedTicket && selectedYardId !== selectedTicket.yardId) {
+                setIsAssigningYard(true);
+                
+                // Simular llamada a API
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Actualizar el ticket
+                if (selectedYard) {
+                  selectedTicket.yardId = selectedYardId;
+                  selectedTicket.yard = `${selectedYard.name} - ${selectedYard.city}, ${selectedYard.state}`;
+                  selectedTicket.yardType = selectedYard.type;
+                }
+                
+                setIsAssigningYard(false);
+              }
+              
+              // 3. Cerrar el diálogo
+              setShowDetails(false);
+            }}
+            disabled={isAssigningYard}
+          >
+            {isAssigningYard ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Changes'
+            )}
+          </Button>
+        </DialogFooter>
+      </>
+    )}
+  </DialogContent>
+</Dialog>
     </div>
   )
 }
