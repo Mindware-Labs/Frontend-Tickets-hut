@@ -156,16 +156,14 @@ export default function TicketsPage() {
   const getDirectionIcon = (direction: string) => {
     if (direction === "outbound") {
       return <PhoneOutgoing className="h-3 w-3 text-blue-500" />
-    } else if (direction === "missed") {
-      return <PhoneMissed className="h-3 w-3 text-rose-500" />
-    } else {
+    } 
+     else {
       return <PhoneIncoming className="h-3 w-3 text-emerald-500" />
     }
   }
   
   const getDirectionText = (direction: string) => {
     return direction === "outbound" ? "Outbound" : 
-           direction === "missed" ? "Missed" : 
            "Inbound"
   }
 
@@ -309,7 +307,6 @@ export default function TicketsPage() {
                   <SelectItem value="all">All Directions</SelectItem>
                   <SelectItem value="inbound">Inbound</SelectItem>
                   <SelectItem value="outbound">Outbound</SelectItem>
-                  <SelectItem value="missed">Missed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -437,9 +434,8 @@ export default function TicketsPage() {
                         <div className="flex items-center justify-end gap-1">
                           {getDirectionIcon(ticket.direction || 'inbound')}
                           <span className={`text-xs font-medium ${
-                            (ticket.direction || 'inbound') === 'missed' 
-                              ? 'text-rose-600' 
-                              : (ticket.direction || 'inbound') === 'outbound'
+
+                               (ticket.direction || 'inbound') === 'outbound'
                               ? 'text-blue-600'
                               : 'text-emerald-600'
                           }`}>
@@ -477,9 +473,7 @@ export default function TicketsPage() {
                     <div className="flex items-center gap-1">
                       {getDirectionIcon(selectedTicket.direction || 'inbound')}
                       <span className={`text-xs font-medium ${
-                        (selectedTicket.direction || 'inbound') === 'missed' 
-                          ? 'text-rose-600' 
-                          : (selectedTicket.direction || 'inbound') === 'outbound'
+                           (selectedTicket.direction || 'inbound') === 'outbound'
                           ? 'text-blue-600'
                           : 'text-emerald-600'
                       }`}>
@@ -537,9 +531,7 @@ export default function TicketsPage() {
                       <div className="flex items-center gap-1">
                         {getDirectionIcon(selectedTicket.direction || 'inbound')}
                         <span className={`text-sm font-medium ${
-                          (selectedTicket.direction || 'inbound') === 'missed' 
-                            ? 'text-rose-600' 
-                            : (selectedTicket.direction || 'inbound') === 'outbound'
+                             (selectedTicket.direction || 'inbound') === 'outbound'
                             ? 'text-blue-600'
                             : 'text-emerald-600'
                         }`}>
