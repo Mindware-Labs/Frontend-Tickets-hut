@@ -334,4 +334,11 @@
  [ 2 0 2 5 - 1 2 - 2 2 T 1 6 : 3 0 : 3 8 . 9 4 0 Z ]   B a c k e n d   r e s p o n d e d :   { " d a t a " : [ { " i d " : 7 , " c u s t o m e r " : { " i d " : 1 , " n a m e " : " D A Q U A R I U S   D A W K I N S   N F L " , " p h o n e " : " + 1   4 6 9 - 3 3 8 - 1 0 3 1 " , " i s O n B o . . .  
  [ 2 0 2 5 - 1 2 - 2 2 T 1 6 : 3 0 : 3 8 . 9 7 1 Z ]   G E T   / a p i / t i c k e t s   p a g e = 1   l i m i t = 5 0  
  [ 2 0 2 5 - 1 2 - 2 2 T 1 6 : 3 0 : 3 9 . 1 4 7 Z ]   B a c k e n d   r e s p o n d e d :   { " d a t a " : [ { " i d " : 7 , " c u s t o m e r " : { " i d " : 1 , " n a m e " : " D A Q U A R I U S   D A W K I N S   N F L " , " p h o n e " : " + 1   4 6 9 - 3 3 8 - 1 0 3 1 " , " i s O n B o . . .  
- 
+ [2025-12-22T16:59:52.279Z] GET /api/tickets page=1 limit=50
+[2025-12-22T16:59:53.146Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T16:59:53.168Z] GET /api/tickets page=1 limit=50
+[2025-12-22T16:59:53.358Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T17:02:33.033Z] GET /api/tickets page=1 limit=50
+[2025-12-22T17:02:34.163Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T17:02:34.179Z] GET /api/tickets page=1 limit=50
+[2025-12-22T17:02:34.415Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...

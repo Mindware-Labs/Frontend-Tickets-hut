@@ -97,7 +97,7 @@ export default function RegisterPage() {
               <Input 
                 id="email" 
                 type="email" 
-                placeholder="name@company.com"
+                placeholder="Email address"
                 className="pl-10 bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-600 focus:border-blue-500 h-11"
                 required
                 value={formData.email}
