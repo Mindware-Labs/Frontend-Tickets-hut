@@ -8,13 +8,16 @@ export interface Yard {
   name: string;
   commonName: string;
   address: string;
+  propertyAddress?: string; // Unified property
   city: string;
   state: string;
   zip?: string;
   type: YardType;
+  yardType?: string; // Unified property
   category: YardCategory;
   contactPhone?: string;
   contactEmail?: string;
+  contactInfo?: string; // Unified property
   yardLink?: string;
   aircallNumber?: string;
   features: string[];
@@ -1932,13 +1935,13 @@ export const YARD_CATEGORIES = [
 // Función para buscar yardas
 export const searchYards = (query: string, category?: string): Yard[] => {
   const lowerQuery = query.toLowerCase();
-  
+
   return YARDS.filter(yard => {
     // Filtrar por categoría si se especifica
     if (category && category !== 'all' && yard.category !== category && yard.type !== category) {
       return false;
     }
-    
+
     // Buscar en múltiples campos
     return (
       yard.name.toLowerCase().includes(lowerQuery) ||

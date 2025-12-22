@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   BookOpen,
   Bot,
@@ -29,15 +29,16 @@ import {
   FileText,
   ShieldCheck,
   Headphones,
-  Activity
-} from "lucide-react"
-import { usePathname } from "next/navigation"
-import Link from "next/link"
-import { UserButton } from "@clerk/nextjs"
-import { useRole } from "@/components/providers/role-provider"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+  Activity,
+  Building,
+} from "lucide-react";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { UserButton } from "@clerk/nextjs";
+import { useRole } from "@/components/providers/role-provider";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 import {
   Sidebar,
@@ -55,12 +56,12 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+} from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,15 +70,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // User Mock Data
 const user = {
   name: "Gerald Luciano",
   email: "gerald@example.com",
   avatar: "/avatars/shadcn.jpg",
-}
+};
 
 // Navigation Data
 const data = {
@@ -122,6 +123,25 @@ const data = {
         {
           title: "Resolved",
           url: "/tickets?status=closed",
+        },
+      ],
+    },
+    {
+      title: "Yards",
+      url: "/yards",
+      icon: Building,
+      items: [
+        {
+          title: "All Yards",
+          url: "/yards",
+        },
+        {
+          title: "SaaS Yards",
+          url: "/yards?type=SAAS",
+        },
+        {
+          title: "Full Service",
+          url: "/yards?type=FULL_SERVICE",
         },
       ],
     },
@@ -176,8 +196,7 @@ const data = {
           title: "Guides",
           url: "/Knowledge/Guides",
         },
-
-      ]
+      ],
     },
     {
       title: "Reports",
@@ -228,29 +247,40 @@ const data = {
       icon: Map,
     },
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const pathname = usePathname()
-  const { role, setRole, isAdmin } = useRole()
+  const pathname = usePathname();
+  const { role, setRole, isAdmin } = useRole();
 
   // Filter navigation based on role
-  const filteredNavMain = data.navMain.filter(item => {
+  const filteredNavMain = data.navMain.filter((item) => {
     if (role === "Agent") {
-      // Agents can see Platform, Tickets, Communication, Knowledge
-      return ["Platform", "Tickets", "Communication", "Knowledge Base"].includes(item.title)
+      // Agents can see Platform, Tickets, Yards, Communication, Knowledge
+      return [
+        "Platform",
+        "Tickets",
+        "Yards",
+        "Communication",
+        "Knowledge Base",
+      ].includes(item.title);
     }
-    return true
-  })
+    return true;
+  });
 
   // Helper to check if a group is active
   const isGroupActive = (item: any) => {
     // Check if exact match on parent URL (rare) or specific child
     if (pathname === item.url) return true;
     // Check if any child matches
-    if (item.items?.some((sub: any) => pathname === sub.url || pathname.startsWith(sub.url))) return true;
+    if (
+      item.items?.some(
+        (sub: any) => pathname === sub.url || pathname.startsWith(sub.url)
+      )
+    )
+      return true;
     return false;
-  }
+  };
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -264,7 +294,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Pulse Ops</span>
-                  <span className="truncate text-xs text-muted-foreground">Enterprise v2.0</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    Enterprise v2.0
+                  </span>
                 </div>
               </a>
             </SidebarMenuButton>
@@ -319,7 +351,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </CollapsibleContent>
                   </SidebarMenuItem>
                 </Collapsible>
-              )
+              );
             })}
           </SidebarMenu>
         </SidebarGroup>
@@ -394,17 +426,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarFooter>
         <SidebarMenu>
-
           {/* Role Simulator (Dev Only) */}
           <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
             <div className="flex items-center justify-between p-2 rounded-lg bg-sidebar-accent/50 mb-2">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Simulate Role</span>
-                <Badge variant="outline" className="w-fit text-[10px] h-4 px-1">{role}</Badge>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Simulate Role
+                </span>
+                <Badge variant="outline" className="w-fit text-[10px] h-4 px-1">
+                  {role}
+                </Badge>
               </div>
               <Switch
                 checked={role === "Admin"}
-                onCheckedChange={(checked) => setRole(checked ? "Admin" : "Agent")}
+                onCheckedChange={(checked) =>
+                  setRole(checked ? "Admin" : "Agent")
+                }
                 className="scale-75"
               />
             </div>
@@ -418,13 +455,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   elements: {
                     avatarBox: "h-9 w-9 rounded-lg ring-2 ring-border/20",
                     userButtonPopoverCard: "shadow-xl border border-border/50",
-                    userButtonTrigger: "focus:shadow-none"
-                  }
+                    userButtonTrigger: "focus:shadow-none",
+                  },
                 }}
               />
               <div className="flex flex-col text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                 <span className="font-semibold text-foreground">Account</span>
-                <span className="text-xs text-muted-foreground">Manage profile</span>
+                <span className="text-xs text-muted-foreground">
+                  Manage profile
+                </span>
               </div>
             </div>
           </SidebarMenuItem>
@@ -432,5 +471,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }
