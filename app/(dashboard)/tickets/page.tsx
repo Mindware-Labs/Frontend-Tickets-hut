@@ -145,8 +145,11 @@ export default function TicketsPage() {
       name: string;
       commonName: string;
       propertyAddress: string;
+      address?: string;
       contactInfo: string;
+      contactPhone?: string;
       yardType: string;
+      type?: string;
       isActive: boolean;
       notes?: string;
     }>
@@ -162,6 +165,141 @@ export default function TicketsPage() {
     priority?: string;
     attachments?: string[];
   }>({});
+
+  // Helper functions moved to top to avoid ReferenceErrors during initialization
+  // Safe access to assignee
+  const getAssigneeName = (assignedTo: any) => {
+    if (!assignedTo) return "Unassigned";
+    if (typeof assignedTo === "string") return assignedTo;
+    return assignedTo.name || "Unknown Agent";
+  };
+
+  const getAssigneeInitials = (assignedTo: any) => {
+    const name = getAssigneeName(assignedTo);
+    if (name === "Unassigned") return "NA";
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  // Safe access to client/customer
+  const getClientName = (ticket: any) => {
+    if (ticket.clientName) return ticket.clientName;
+    if (ticket.customer?.name) return ticket.customer.name;
+    return "Unknown Caller";
+  };
+
+  const getClientPhone = (ticket: any) => {
+    if (ticket.phone) return ticket.phone;
+    if (ticket.customerPhone) return ticket.customerPhone;
+    if (ticket.customer?.phone) return ticket.customer.phone;
+    return "-";
+  };
+
+  const getClientInitials = (ticket: any) => {
+    const name = getClientName(ticket);
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case "Open":
+      case "OPEN":
+        return "border-emerald-500/20 bg-emerald-500/5 text-emerald-600";
+      case "In Progress":
+      case "IN_PROGRESS":
+        return "border-amber-500/20 bg-amber-500/5 text-amber-600";
+      case "Closed":
+      case "CLOSED":
+      case "RESOLVED":
+        return "border-rose-500/20 bg-rose-500/5 text-rose-600";
+      default:
+        return "";
+    }
+  };
+
+  const getPriorityColor = (priority?: string) => {
+    const p = priority?.toUpperCase();
+    switch (p) {
+      case "HIGH":
+      case "EMERGENCY":
+        return "text-rose-500 bg-rose-500/10 border-rose-500/20";
+      case "MEDIUM":
+        return "text-amber-500 bg-amber-500/10 border-amber-500/20";
+      case "LOW":
+        return "text-blue-500 bg-blue-500/10 border-blue-500/20";
+      default:
+        return "text-muted-foreground bg-secondary/50";
+    }
+  };
+
+  const getDirectionIcon = (direction: string) => {
+    const d = direction?.toString().toLowerCase();
+    if (d === "outbound") {
+      return <PhoneOutgoing className="h-3 w-3 text-blue-500" />;
+    } else {
+      return <PhoneIncoming className="h-3 w-3 text-emerald-500" />;
+    }
+  };
+
+  const getDirectionText = (direction: string) => {
+    const d = direction?.toString().toLowerCase();
+    return d === "outbound" ? "Outbound" : "Inbound";
+  };
+
+  const getCampaignFromType = (type: string) => {
+    return type === "Onboarding" || type === "ONBOARDING" ? "Onboarding" : "AR";
+  };
+
+  const getYardTypeColor = (type?: string) => {
+    const t = type?.toLowerCase();
+    switch (t) {
+      case "full_service":
+        return "border-blue-500/20 bg-blue-500/5 text-blue-600 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400";
+      case "saas":
+        return "border-purple-500/20 bg-purple-500/5 text-purple-600 dark:border-purple-500/30 dark:bg-purple-500/10 dark:text-purple-400";
+      default:
+        return "border-gray-500/20 bg-gray-500/5 text-gray-600";
+    }
+  };
+
+  const getYardTypeIcon = (type?: string) => {
+    const t = type?.toLowerCase();
+    switch (t) {
+      case "full_service":
+        return <Users className="h-3 w-3" />;
+      case "saas":
+        return <Sparkles className="h-3 w-3" />;
+      default:
+        return <Building className="h-3 w-3" />;
+    }
+  };
+
+  // Obtener yard display name para la tabla
+  const getYardDisplayName = (ticket: Ticket) => {
+    if (ticket.yard && typeof ticket.yard === 'object') {
+      const y = ticket.yard as any
+      // Handle different backend/mock structures
+      const name = y.name || "";
+      const secondary = y.commonName || y.city || "";
+      const location = y.propertyAddress || y.state || "";
+
+      let display = name;
+      if (secondary) display += ` - ${secondary}`;
+      if (location && location !== secondary) display += ` (${location})`;
+
+      return display || "Unknown Yard";
+    }
+
+    if (typeof ticket.yard === 'string' && ticket.yard.trim() !== '') {
+      return ticket.yard
+    }
+
+    if (ticket.yardId) {
+      const yard = YARDS.find(y => y.id.toString() === ticket.yardId?.toString())
+      if (yard) return `${yard.name} - ${yard.city}, ${yard.state}`
+    }
+
+    return null
+  };
 
   // Fetch tickets
   const fetchTickets = async () => {
@@ -186,7 +324,14 @@ export default function TicketsPage() {
     try {
       const response = await fetch("/api/yards");
       const data = await response.json();
-      setYards(data.filter((yard: any) => yard.isActive));
+      if (Array.isArray(data)) {
+        setYards(data.filter((yard: any) => yard.isActive));
+      } else if (data && typeof data === 'object' && Array.isArray(data.data)) {
+        setYards(data.data.filter((yard: any) => yard.isActive));
+      } else {
+        console.error("Yards data is not an array:", data);
+        setYards([]);
+      }
     } catch (err) {
       console.error("Failed to load yards", err);
     }
@@ -197,78 +342,77 @@ export default function TicketsPage() {
     fetchYards();
   }, []);
 
-  // Obtener yarda seleccionada
+  // Obtener yarda seleccionada para el selector de búsqueda
   const selectedYard = useMemo(() => {
     return yards.find((y) => y.id.toString() === selectedYardId);
   }, [selectedYardId, yards]);
 
-  // Obtener yarda actual del ticket
+  // Yarda actualmente asignada al ticket seleccionado
   const currentYard = useMemo(() => {
-    if (!selectedTicket?.yardId) return null;
-    return yards.find((y) => y.id.toString() === selectedTicket.yardId);
-  }, [selectedTicket?.yardId, yards]);
+    if (!selectedTicket?.yardId) return null
+    return YARDS.find(y => y.id === selectedTicket.yardId)
+  }, [selectedTicket?.yardId])
 
-  // Filtrar yardas
+  // Yardas filtradas por la búsqueda en el modal
   const filteredYards = useMemo(() => {
-    return yards.filter((yard) => {
-      const matchesSearch =
-        yardSearch === "" ||
+    return YARDS.filter(yard => {
+      const matchesSearch = yardSearch === "" ||
         yard.name.toLowerCase().includes(yardSearch.toLowerCase()) ||
         yard.commonName.toLowerCase().includes(yardSearch.toLowerCase()) ||
-        yard.propertyAddress.toLowerCase().includes(yardSearch.toLowerCase());
+        yard.city.toLowerCase().includes(yardSearch.toLowerCase()) ||
+        yard.state.toLowerCase().includes(yardSearch.toLowerCase())
 
-      const matchesCategory =
-        yardCategory === "all" || yard.yardType === yardCategory;
+      const matchesCategory = yardCategory === "all" ||
+        yard.type === yardCategory ||
+        yard.category === yardCategory
 
-      return matchesSearch && matchesCategory;
-    });
-  }, [yardSearch, yardCategory, yards]);
+      return matchesSearch && matchesCategory
+    })
+  }, [yardSearch, yardCategory])
 
   // Filter tickets logic
   const filteredTickets = useMemo(() => {
-    return tickets.filter((ticket) => {
-      const yardString =
-        typeof ticket.yard === "string"
-          ? ticket.yard
-          : typeof ticket.yardId === "string"
-          ? ticket.yardId
-          : "";
+    return tickets.filter(ticket => {
+      // Safe data mapping
+      const yardName = typeof ticket.yard === 'string'
+        ? ticket.yard
+        : (ticket.yard as any)?.name || "";
+      const clientName = ticket.clientName || (ticket.customer as any)?.name || "";
+      const phone = ticket.phone || (ticket.customer as any)?.phone || ticket.customerPhone || "";
+      const status = (ticket.status as any)?.toString().toUpperCase();
+      const priority = (ticket.priority as any)?.toString().toUpperCase();
+      const assigneeName = getAssigneeName(ticket.assignedTo);
+
+      // Search matching
       const matchesSearch =
-        (ticket.clientName?.toLowerCase().includes(search.toLowerCase()) ??
-          false) ||
-        yardString.toLowerCase().includes(search.toLowerCase()) ||
-        ticket.id.toString().toLowerCase().includes(search.toLowerCase()) ||
-        (ticket.phone &&
-          ticket.phone.toLowerCase().includes(search.toLowerCase()));
+        clientName.toLowerCase().includes(search.toLowerCase()) ||
+        yardName.toLowerCase().includes(search.toLowerCase()) ||
+        ticket.id.toString().includes(search) ||
+        phone.toLowerCase().includes(search.toLowerCase());
 
+      // Filter matching
       const matchesStatus =
-        statusFilter === "all" || ticket.status === statusFilter;
+        statusFilter === "all" || ticket.status === statusFilter || status === statusFilter.toUpperCase();
       const matchesPriority =
-        priorityFilter === "all" || ticket.priority === priorityFilter;
+        priorityFilter === "all" || ticket.priority === priorityFilter || priority === priorityFilter.toUpperCase();
       const matchesDirection =
-        directionFilter === "all" || ticket.direction === directionFilter;
+        directionFilter === "all" || ticket.direction === directionFilter || ticket.direction?.toString().toLowerCase() === directionFilter.toLowerCase();
 
+      // View matching
       let matchesView = true;
       if (activeView === "assigned_me") {
-        matchesView = ticket.assignedTo === "Agent Smith";
+        matchesView = assigneeName === "Agent Smith";
       } else if (activeView === "unassigned") {
         matchesView = !ticket.assignedTo;
       } else if (activeView === "active") {
-        matchesView =
-          ticket.status === "Open" || ticket.status === "In Progress";
+        matchesView = status === "OPEN" || status === "IN_PROGRESS" || ticket.status === "Open" || ticket.status === "In Progress";
       } else if (activeView === "assigned") {
         matchesView = !!ticket.assignedTo;
       } else if (activeView === "high_priority") {
-        matchesView = ticket.priority === "High";
+        matchesView = priority === "HIGH" || ticket.priority === "High";
       }
 
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesPriority &&
-        matchesView &&
-        matchesDirection
-      );
+      return matchesSearch && matchesStatus && matchesPriority && matchesDirection && matchesView;
     });
   }, [
     tickets,
@@ -289,8 +433,8 @@ export default function TicketsPage() {
       disposition: ticket.disposition || "",
       issueDetail: ticket.issueDetail || "",
       onboardingOption: ticket.onboardingOption || "",
-      status: ticket.status?.toUpperCase().replace(" ", "_"),
-      priority: ticket.priority?.toUpperCase(),
+      status: ticket.status?.toString().toUpperCase().replace(" ", "_") || "",
+      priority: ticket.priority?.toString().toUpperCase() || "",
       attachments: ticket.attachments || [],
     });
 
@@ -309,7 +453,7 @@ export default function TicketsPage() {
       const updatePayload: any = {
         ...editData,
         yardId: selectedYardId ? parseInt(selectedYardId) : null,
-        status: editData.status?.toUpperCase().replace(" ", "_"),
+        status: editData.status?.toUpperCase().replace(' ', '_'),
         priority: editData.priority?.toUpperCase(),
         disposition: editData.disposition || null,
         onboardingOption: editData.onboardingOption || null,
@@ -403,11 +547,11 @@ export default function TicketsPage() {
           prev.map((t) =>
             t.id === selectedTicket.id
               ? {
-                  ...t,
-                  yardId: selectedYardId,
-                  yard: updatedYard,
-                  yardType: selectedYard.yardType,
-                }
+                ...t,
+                yardId: selectedYardId,
+                yard: updatedYard,
+                yardType: selectedYard.yardType,
+              }
               : t
           )
         );
@@ -416,11 +560,11 @@ export default function TicketsPage() {
         setSelectedTicket((prev) =>
           prev
             ? {
-                ...prev,
-                yardId: selectedYardId,
-                yard: updatedYard,
-                yardType: selectedYard.yardType,
-              }
+              ...prev,
+              yardId: selectedYardId,
+              yard: updatedYard,
+              yardType: selectedYard.yardType,
+            }
             : null
         );
       }
@@ -443,123 +587,6 @@ export default function TicketsPage() {
     setSelectedTicket((prev) => (prev ? { ...prev, issueDetail } : null));
 
     setIsEditingIssue(false);
-  };
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case "Open":
-        return "border-emerald-500/20 bg-emerald-500/5 text-emerald-600";
-      case "In Progress":
-        return "border-amber-500/20 bg-amber-500/5 text-amber-600";
-      case "Closed":
-        return "border-rose-500/20 bg-rose-500/5 text-rose-600";
-      default:
-        return "";
-    }
-  };
-
-  const getPriorityColor = (priority?: string) => {
-    switch (priority) {
-      case "High":
-        return "text-rose-500 bg-rose-500/10 border-rose-500/20";
-      case "Medium":
-        return "text-amber-500 bg-amber-500/10 border-amber-500/20";
-      case "Low":
-        return "text-blue-500 bg-blue-500/10 border-blue-500/20";
-      default:
-        return "text-muted-foreground bg-secondary/50";
-    }
-  };
-
-  const getDirectionIcon = (direction: string) => {
-    if (direction === "outbound") {
-      return <PhoneOutgoing className="h-3 w-3 text-blue-500" />;
-    } else {
-      return <PhoneIncoming className="h-3 w-3 text-emerald-500" />;
-    }
-  };
-
-  const getDirectionText = (direction: string) => {
-    return direction === "outbound" ? "Outbound" : "Inbound";
-  };
-
-  const getCampaignFromType = (type: string) => {
-    return type === "Onboarding" ? "Onboarding" : "AR";
-  };
-
-  const getYardTypeColor = (type?: string) => {
-    const t = type?.toLowerCase();
-    switch (t) {
-      case "full_service":
-        return "border-blue-500/20 bg-blue-500/5 text-blue-600 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400";
-      case "saas":
-        return "border-purple-500/20 bg-purple-500/5 text-purple-600 dark:border-purple-500/30 dark:bg-purple-500/10 dark:text-purple-400";
-      default:
-        return "border-gray-500/20 bg-gray-500/5 text-gray-600";
-    }
-  };
-
-  const getYardTypeIcon = (type?: string) => {
-    const t = type?.toLowerCase();
-    switch (t) {
-      case "full_service":
-        return <Users className="h-3 w-3" />;
-      case "saas":
-        return <Sparkles className="h-3 w-3" />;
-      default:
-        return <Building className="h-3 w-3" />;
-    }
-  };
-
-  // Obtener yard display name para la tabla
-  const getYardDisplayName = (ticket: Ticket) => {
-    if (ticket.yard && typeof ticket.yard === "object") {
-      const y = ticket.yard as any;
-      return `${y.name} - ${y.city || ""}, ${y.state || ""}`.replace(/, $/, "");
-    }
-
-    if (typeof ticket.yard === "string" && ticket.yard.trim() !== "") {
-      return ticket.yard;
-    }
-
-    if (ticket.yardId) {
-      const yard = yards.find((y) => y.id.toString() === ticket.yardId);
-      if (yard) return `${yard.name} - ${yard.commonName}`;
-    }
-
-    return null;
-  };
-
-  // Safe access to assignee
-  const getAssigneeName = (assignedTo: any) => {
-    if (!assignedTo) return "Unassigned";
-    if (typeof assignedTo === "string") return assignedTo;
-    return assignedTo.name || "Unknown Agent";
-  };
-
-  const getAssigneeInitials = (assignedTo: any) => {
-    const name = getAssigneeName(assignedTo);
-    if (name === "Unassigned") return "NA";
-    return name.substring(0, 2).toUpperCase();
-  };
-
-  // Safe access to client/customer
-  const getClientName = (ticket: any) => {
-    if (ticket.clientName) return ticket.clientName;
-    if (ticket.customer?.name) return ticket.customer.name;
-    return "Unknown Caller";
-  };
-
-  const getClientPhone = (ticket: any) => {
-    if (ticket.phone) return ticket.phone;
-    if (ticket.customerPhone) return ticket.customerPhone;
-    if (ticket.customer?.phone) return ticket.customer.phone;
-    return "-";
-  };
-
-  const getClientInitials = (ticket: any) => {
-    const name = getClientName(ticket);
-    return name.substring(0, 2).toUpperCase();
   };
 
   return (
@@ -1005,7 +1032,7 @@ export default function TicketsPage() {
                           Onboarding Option
                         </p>
                         {(selectedTicket.type as string)?.toUpperCase() ===
-                        "ONBOARDING" ? (
+                          "ONBOARDING" ? (
                           <Select
                             value={editData.onboardingOption}
                             onValueChange={(v) =>
@@ -1130,10 +1157,10 @@ export default function TicketsPage() {
                         ))}
                         {(!editData.attachments ||
                           editData.attachments.length === 0) && (
-                          <p className="text-xs text-muted-foreground italic">
-                            No attachments added
-                          </p>
-                        )}
+                            <p className="text-xs text-muted-foreground italic">
+                              No attachments added
+                            </p>
+                          )}
                       </div>
                     </div>
                   </CardContent>
@@ -1167,10 +1194,10 @@ export default function TicketsPage() {
                                   {currentYard.name}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                  {currentYard.propertyAddress}
+                                  {currentYard.propertyAddress || currentYard.address}
                                 </p>
                                 <Badge variant="outline" className="mt-1">
-                                  {currentYard.yardType === "SAAS"
+                                  {(currentYard.yardType || currentYard.type) === "SAAS" || (currentYard.yardType || currentYard.type) === "saas"
                                     ? "SaaS"
                                     : "Full Service"}
                                 </Badge>
@@ -1200,7 +1227,7 @@ export default function TicketsPage() {
                                       variant="outline"
                                       className="text-[10px]"
                                     >
-                                      {selectedYard.yardType === "SAAS"
+                                      {(selectedYard.yardType || selectedYard.type) === "SAAS" || (selectedYard.yardType || selectedYard.type) === "saas"
                                         ? "SaaS"
                                         : "Full Service"}
                                     </Badge>
@@ -1237,7 +1264,7 @@ export default function TicketsPage() {
                                       value={yard.id.toString()}
                                     >
                                       {yard.name} -{" "}
-                                      {yard.yardType === "SAAS"
+                                      {(yard.yardType || yard.type) === "SAAS" || (yard.yardType || yard.type) === "saas"
                                         ? "SaaS"
                                         : "Full Service"}
                                     </SelectItem>
@@ -1262,21 +1289,21 @@ export default function TicketsPage() {
                                       {selectedYard.name}
                                     </p>
                                     <Badge variant="outline">
-                                      {selectedYard.yardType === "SAAS"
+                                      {(selectedYard.yardType || selectedYard.type) === "SAAS" || (selectedYard.yardType || selectedYard.type) === "saas"
                                         ? "SaaS"
                                         : "Full Service"}
                                     </Badge>
                                   </div>
                                   <p className="text-sm text-muted-foreground">
-                                    {selectedYard.propertyAddress}
+                                    {selectedYard.propertyAddress || selectedYard.address}
                                   </p>
 
-                                  {selectedYard.contactInfo && (
+                                  {(selectedYard.contactInfo || selectedYard.contactPhone) && (
                                     <div className="flex items-center gap-2 mt-2 text-sm">
                                       <span className="font-medium">
                                         Contact:
                                       </span>
-                                      <span>{selectedYard.contactInfo}</span>
+                                      <span>{selectedYard.contactInfo || selectedYard.contactPhone}</span>
                                     </div>
                                   )}
 
