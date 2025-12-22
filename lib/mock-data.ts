@@ -1,7 +1,7 @@
 export interface Ticket {
   id: string
   clientName: string
-  yard?: string
+  yard?: any
   phone: string
   type: "Onboarding" | "AR"
   campaign: string
@@ -12,7 +12,7 @@ export interface Ticket {
   description?: string
   callDuration?: string
   aircallId?: string
-  direction?: "inbound" | "outbound"
+  direction?: "inbound" | "outbound" | "missed"
 }
 
 export interface Campaign {
@@ -45,7 +45,7 @@ export const mockTickets: Ticket[] = [
     priority: "High",
     callDuration: "5:34",
     aircallId: "CALL-12345",
-     direction: "inbound",
+    direction: "inbound",
   },
   {
     id: "TKT-002",
@@ -59,7 +59,7 @@ export const mockTickets: Ticket[] = [
     priority: "Medium",
     callDuration: "3:22",
     aircallId: "CALL-12346",
-     direction: "outbound",
+    direction: "outbound",
   },
   {
     id: "TKT-003",
@@ -73,7 +73,7 @@ export const mockTickets: Ticket[] = [
     priority: "Low",
     callDuration: "8:15",
     aircallId: "CALL-12347",
-     direction: "missed",
+    direction: "missed",
   },
   {
     id: "TKT-004",
@@ -86,7 +86,7 @@ export const mockTickets: Ticket[] = [
     priority: "High",
     callDuration: "2:45",
     aircallId: "CALL-12348",
-     direction: "outbound",
+    direction: "outbound",
   },
   {
     id: "TKT-005",

@@ -1,0 +1,44 @@
+[2025-12-22T01:11:02.622Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:11:02.628Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T01:11:02.663Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:11:02.676Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T01:11:45.661Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:11:45.674Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T01:11:45.733Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:11:45.744Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T01:11:51.927Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:11:51.944Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T01:11:51.992Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:11:52.000Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T01:12:45.024Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:12:45.041Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T01:12:45.128Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:12:45.142Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T01:12:51.310Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:12:51.328Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T01:12:51.377Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:12:51.388Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T01:13:06.378Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:13:06.858Z] Backend responded: {"data":[{"id":5,"customer":{"id":2,"name":"+1 540-629-0683","phone":"+1 540-629-0683","isOnBoarding...
+[2025-12-22T01:13:06.940Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:13:07.065Z] Backend responded: {"data":[{"id":5,"customer":{"id":2,"name":"+1 540-629-0683","phone":"+1 540-629-0683","isOnBoarding...
+[2025-12-22T01:13:16.239Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:13:16.374Z] Backend responded: {"data":[{"id":5,"customer":{"id":2,"name":"+1 540-629-0683","phone":"+1 540-629-0683","isOnBoarding...
+[2025-12-22T01:13:16.489Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:13:16.615Z] Backend responded: {"data":[{"id":5,"customer":{"id":2,"name":"+1 540-629-0683","phone":"+1 540-629-0683","isOnBoarding...
+[2025-12-22T01:13:41.566Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:13:42.016Z] Backend responded: {"data":[{"id":5,"customer":{"id":2,"name":"+1 540-629-0683","phone":"+1 540-629-0683","isOnBoarding...
+[2025-12-22T01:13:42.053Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:13:42.183Z] Backend responded: {"data":[{"id":5,"customer":{"id":2,"name":"+1 540-629-0683","phone":"+1 540-629-0683","isOnBoarding...
+[2025-12-22T01:17:16.090Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:17:16.694Z] Backend responded: {"data":[{"id":5,"customer":{"id":2,"name":"+1 540-629-0683","phone":"+1 540-629-0683","isOnBoarding...
+[2025-12-22T01:17:17.079Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:17:17.229Z] Backend responded: {"data":[{"id":5,"customer":{"id":2,"name":"+1 540-629-0683","phone":"+1 540-629-0683","isOnBoarding...
+[2025-12-22T01:17:23.525Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:17:23.652Z] Backend responded: {"data":[{"id":5,"customer":{"id":2,"name":"+1 540-629-0683","phone":"+1 540-629-0683","isOnBoarding...
+[2025-12-22T01:17:23.718Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:17:23.847Z] Backend responded: {"data":[{"id":5,"customer":{"id":2,"name":"+1 540-629-0683","phone":"+1 540-629-0683","isOnBoarding...
+[2025-12-22T01:26:29.747Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:26:29.876Z] Backend responded: {"data":[{"id":5,"customer":{"id":2,"name":"+1 540-629-0683","phone":"+1 540-629-0683","isOnBoarding...
+[2025-12-22T01:26:29.963Z] GET /api/tickets page=1 limit=50
+[2025-12-22T01:26:30.082Z] Backend responded: {"data":[{"id":5,"customer":{"id":2,"name":"+1 540-629-0683","phone":"+1 540-629-0683","isOnBoarding...

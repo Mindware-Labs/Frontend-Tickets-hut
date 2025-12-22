@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import * as React from "react"
 import { AppSidebar } from "./sidebar"
 import Topbar from "./topbar"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
@@ -10,6 +10,16 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return null
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar />

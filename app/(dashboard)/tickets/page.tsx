@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import {
   Table,
   TableBody,
@@ -69,8 +69,7 @@ import {
   Building
 } from "lucide-react"
 import {
-  mockTickets,
-  type Ticket
+  Ticket,
 } from "@/lib/mock-data"
 import { YARDS, YARD_CATEGORIES, type Yard, type YardType } from "@/lib/yard-data"
 
@@ -78,13 +77,52 @@ import { YARDS, YARD_CATEGORIES, type Yard, type YardType } from "@/lib/yard-dat
 declare module "@/lib/mock-data" {
   interface Ticket {
     issueDetail?: string
-    yard?: string
     yardId?: string
-    yardType?: YardType
+    yardType?: string
+    customer?: { name: string; phone?: string }
+    customerPhone?: string
+    disposition?: string
+    onboardingOption?: string
+    attachments?: string[]
   }
 }
 
+// Enums para los selectores
+export enum TicketDisposition {
+  BOOKING = 'BOOKING',
+  GENERAL_INFO = 'GENERAL_INFO',
+  COMPLAINT = 'COMPLAINT',
+  SUPPORT = 'SUPPORT',
+  BILLING = 'BILLING',
+  TECHNICAL_ISSUE = 'TECHNICAL_ISSUE',
+  OTHER = 'OTHER',
+}
+
+export enum OnboardingOption {
+  NOT_REGISTER = 'NOT_REGISTER',
+  REGISTER = 'REGISTER',
+  PAID_WITH_LL = 'PAID_WITH_LL',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum TicketStatus {
+  OPEN = 'OPEN',
+  IN_PROGRESS = 'IN_PROGRESS',
+  RESOLVED = 'RESOLVED',
+  CLOSED = 'CLOSED',
+}
+
+export enum TicketPriority {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  EMERGENCY = 'EMERGENCY',
+}
+
 export default function TicketsPage() {
+  const [tickets, setTickets] = useState<Ticket[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [activeView, setActiveView] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -98,6 +136,39 @@ export default function TicketsPage() {
   const [isEditingIssue, setIsEditingIssue] = useState(false)
   const [yardSearch, setYardSearch] = useState("")
   const [yardCategory, setYardCategory] = useState<string>("all")
+
+  // State for updating ticket
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [editData, setEditData] = useState<{
+    disposition?: string;
+    issueDetail?: string;
+    onboardingOption?: string;
+    status?: string;
+    priority?: string;
+    attachments?: string[];
+  }>({})
+
+  // Fetch tickets
+  const fetchTickets = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/tickets')
+      const result = await response.json()
+      if (result.success) {
+        setTickets(result.data)
+      } else {
+        setError(result.message)
+      }
+    } catch (err) {
+      setError("Failed to load tickets")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchTickets()
+  }, [])
 
   // Obtener yarda seleccionada
   const selectedYard = useMemo(() => {
@@ -129,12 +200,12 @@ export default function TicketsPage() {
 
   // Filter tickets logic
   const filteredTickets = useMemo(() => {
-    return mockTickets.filter(ticket => {
+    return tickets.filter(ticket => {
       const matchesSearch =
         (ticket.clientName?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
         (ticket.yard?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
-        ticket.id.toLowerCase().includes(search.toLowerCase()) ||
-        ticket.phone.toLowerCase().includes(search.toLowerCase())
+        ticket.id.toString().toLowerCase().includes(search.toLowerCase()) ||
+        (ticket.phone && ticket.phone.toLowerCase().includes(search.toLowerCase()))
 
       const matchesStatus = statusFilter === "all" || ticket.status === statusFilter
       const matchesPriority = priorityFilter === "all" || ticket.priority === priorityFilter
@@ -155,77 +226,154 @@ export default function TicketsPage() {
 
       return matchesSearch && matchesStatus && matchesPriority && matchesView && matchesDirection
     })
-  }, [search, statusFilter, priorityFilter, directionFilter, activeView])
+  }, [tickets, search, statusFilter, priorityFilter, directionFilter, activeView])
 
   const handleViewDetails = (ticket: Ticket) => {
     setSelectedTicket(ticket)
     setSelectedYardId(ticket.yardId || "")
     setIssueDetail(ticket.issueDetail || "")
+
+    // Initialize edit data
+    setEditData({
+      disposition: ticket.disposition || "",
+      issueDetail: ticket.issueDetail || "",
+      onboardingOption: ticket.onboardingOption || "",
+      status: ticket.status?.toUpperCase().replace(' ', '_'),
+      priority: ticket.priority?.toUpperCase(),
+      attachments: ticket.attachments || [],
+    })
+
     setIsEditingIssue(false)
     setShowDetails(true)
     setYardSearch("")
     setYardCategory("all")
   }
 
+  const handleUpdateTicket = async () => {
+    if (!selectedTicket) return
+
+    try {
+      setIsUpdating(true)
+
+      const updatePayload: any = {
+        ...editData,
+        yardId: selectedYardId ? parseInt(selectedYardId) : null,
+        status: editData.status?.toUpperCase().replace(' ', '_'),
+        priority: editData.priority?.toUpperCase(),
+        disposition: editData.disposition || null,
+        onboardingOption: editData.onboardingOption || null,
+        issueDetail: editData.issueDetail || null,
+      }
+
+      const response = await fetch(`/api/tickets/${selectedTicket.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatePayload),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Update local tickets state
+        setTickets(prev => prev.map(t =>
+          t.id === selectedTicket.id ? { ...t, ...result.data } : t
+        ))
+
+        // Update selected ticket in modal
+        setSelectedTicket({ ...selectedTicket, ...result.data })
+
+        setShowDetails(false)
+      } else {
+        alert(result.message || "Failed to update ticket")
+      }
+    } catch (err) {
+      console.error("Update error:", err)
+      alert("Error updating ticket")
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   const handleAssignYard = async () => {
     if (!selectedTicket || !selectedYardId) return
 
     // Función para resaltar coincidencias en el texto
-const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
-  if (!searchTerm || !text) return text;
-  
-  const lowerText = text.toString().toLowerCase();
-  const lowerSearch = searchTerm.toLowerCase();
-  
-  // Si no hay coincidencia, devolver el texto normal
-  if (!lowerText.includes(lowerSearch)) {
-    return text;
-  }
-  
-  // Dividir el texto en partes que coinciden y no coinciden
-  const regex = new RegExp(`(${searchTerm})`, 'gi');
-  const parts = text.toString().split(regex);
-  
-  return (
-    <span>
-      {parts.map((part, index) =>
-        part.toLowerCase() === lowerSearch ? (
-          <mark 
-            key={index} 
-            className="bg-yellow-200 dark:bg-yellow-800/70 text-yellow-900 dark:text-yellow-100 px-0.5 rounded font-medium"
-          >
-            {part}
-          </mark>
-        ) : (
-          <span key={index}>{part}</span>
-        )
-      )}
-    </span>
-  );
-};
+    const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
+      if (!searchTerm || !text) return text;
+
+      const lowerText = text.toString().toLowerCase();
+      const lowerSearch = searchTerm.toLowerCase();
+
+      // Si no hay coincidencia, devolver el texto normal
+      if (!lowerText.includes(lowerSearch)) {
+        return text;
+      }
+
+      // Dividir el texto en partes que coinciden y no coinciden
+      const regex = new RegExp(`(${searchTerm})`, 'gi');
+      const parts = text.toString().split(regex);
+
+      return (
+        <span>
+          {parts.map((part, index) =>
+            part.toLowerCase() === lowerSearch ? (
+              <mark
+                key={index}
+                className="bg-yellow-200 dark:bg-yellow-800/70 text-yellow-900 dark:text-yellow-100 px-0.5 rounded font-medium"
+              >
+                {part}
+              </mark>
+            ) : (
+              <span key={index}>{part}</span>
+            )
+          )}
+        </span>
+      );
+    };
 
     setIsAssigningYard(true)
 
-    // Simular llamada a API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      // Simular llamada a API
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
-    // Actualizar el ticket localmente
-    if (selectedTicket && selectedYard) {
-      selectedTicket.yardId = selectedYardId
-      selectedTicket.yard = `${selectedYard.name} - ${selectedYard.city}, ${selectedYard.state}`
-      selectedTicket.yardType = selectedYard.type
+      if (selectedTicket && selectedYard) {
+        const updatedYard = `${selectedYard.name} - ${selectedYard.city}, ${selectedYard.state}`
+
+        // Update local tickets state
+        setTickets(prev => prev.map(t =>
+          t.id === selectedTicket.id
+            ? { ...t, yardId: selectedYardId, yard: updatedYard, yardType: selectedYard.type }
+            : t
+        ))
+
+        // Update selected ticket in modal
+        setSelectedTicket(prev => prev ? {
+          ...prev,
+          yardId: selectedYardId,
+          yard: updatedYard,
+          yardType: selectedYard.type
+        } : null)
+      }
+    } catch (err) {
+      console.error("Assign yard error:", err)
+    } finally {
+      setIsAssigningYard(false)
     }
-
-    setIsAssigningYard(false)
   }
 
   const handleSaveIssueDetail = () => {
     if (!selectedTicket) return
 
-    // Actualizar el ticket localmente
-    if (selectedTicket) {
-      selectedTicket.issueDetail = issueDetail
-    }
+    // Update local tickets state
+    setTickets(prev => prev.map(t =>
+      t.id === selectedTicket.id ? { ...t, issueDetail } : t
+    ))
+
+    // Update selected ticket in modal
+    setSelectedTicket(prev => prev ? { ...prev, issueDetail } : null)
 
     setIsEditingIssue(false)
   }
@@ -265,8 +413,9 @@ const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
     return type === "Onboarding" ? "Onboarding" : "AR"
   }
 
-  const getYardTypeColor = (type?: YardType) => {
-    switch (type) {
+  const getYardTypeColor = (type?: string) => {
+    const t = type?.toLowerCase()
+    switch (t) {
       case 'full_service':
         return 'border-blue-500/20 bg-blue-500/5 text-blue-600 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400'
       case 'saas':
@@ -276,8 +425,9 @@ const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
     }
   }
 
-  const getYardTypeIcon = (type?: YardType) => {
-    switch (type) {
+  const getYardTypeIcon = (type?: string) => {
+    const t = type?.toLowerCase()
+    switch (t) {
       case 'full_service':
         return <Users className="h-3 w-3" />
       case 'saas':
@@ -289,9 +439,53 @@ const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
 
   // Obtener yard display name para la tabla
   const getYardDisplayName = (ticket: Ticket) => {
-    if (!ticket.yardId) return null
-    const yard = YARDS.find(y => y.id === ticket.yardId)
-    return yard ? `${yard.name} - ${yard.city}, ${yard.state}` : ticket.yard
+    if (ticket.yard && typeof ticket.yard === 'object') {
+      const y = ticket.yard as any
+      return `${y.name} - ${y.city || ''}, ${y.state || ''}`.replace(/, $/, '')
+    }
+
+    if (typeof ticket.yard === 'string' && ticket.yard.trim() !== '') {
+      return ticket.yard
+    }
+
+    if (ticket.yardId) {
+      const yard = YARDS.find(y => y.id === ticket.yardId)
+      if (yard) return `${yard.name} - ${yard.city}, ${yard.state}`
+    }
+
+    return null
+  }
+
+  // Safe access to assignee
+  const getAssigneeName = (assignedTo: any) => {
+    if (!assignedTo) return "Unassigned"
+    if (typeof assignedTo === 'string') return assignedTo
+    return assignedTo.name || "Unknown Agent"
+  }
+
+  const getAssigneeInitials = (assignedTo: any) => {
+    const name = getAssigneeName(assignedTo)
+    if (name === "Unassigned") return "NA"
+    return name.substring(0, 2).toUpperCase()
+  }
+
+  // Safe access to client/customer
+  const getClientName = (ticket: any) => {
+    if (ticket.clientName) return ticket.clientName
+    if (ticket.customer?.name) return ticket.customer.name
+    return "Unknown Caller"
+  }
+
+  const getClientPhone = (ticket: any) => {
+    if (ticket.phone) return ticket.phone
+    if (ticket.customerPhone) return ticket.customerPhone
+    if (ticket.customer?.phone) return ticket.customer.phone
+    return "-"
+  }
+
+  const getClientInitials = (ticket: any) => {
+    const name = getClientName(ticket)
+    return name.substring(0, 2).toUpperCase()
   }
 
   return (
@@ -311,9 +505,9 @@ const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
             className="w-full justify-start"
             onClick={() => setActiveView('all')}
           >
-            <Inbox className="mr-2 h-4 w-4" />
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             All Tickets
-            <span className="ml-auto text-xs">{mockTickets.length}</span>
+            <span className="ml-auto text-xs">{tickets.length}</span>
           </Button>
           <Button
             variant={activeView === 'active' ? 'secondary' : 'ghost'}
@@ -323,7 +517,7 @@ const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
             <AlertCircle className="mr-2 h-4 w-4" />
             Open
             <span className="ml-auto text-xs">
-              {mockTickets.filter(t => t.status === 'Open' || t.status === 'In Progress').length}
+              {tickets.filter(t => t.status === 'Open' || t.status === 'In Progress').length}
             </span>
           </Button>
           <Button
@@ -334,7 +528,7 @@ const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
             <User className="mr-2 h-4 w-4" />
             Assigned
             <span className="ml-auto text-xs">
-              {mockTickets.filter(t => !!t.assignedTo).length}
+              {tickets.filter(t => !!t.assignedTo).length}
             </span>
           </Button>
           <Button
@@ -345,7 +539,7 @@ const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
             <User className="mr-2 h-4 w-4" />
             My Tickets
             <span className="ml-auto text-xs">
-              {mockTickets.filter(t => t.assignedTo === 'Agent Smith').length}
+              {tickets.filter(t => t.assignedTo === 'Agent Smith').length}
             </span>
           </Button>
           <Button
@@ -356,7 +550,7 @@ const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
             <Hash className="mr-2 h-4 w-4" />
             Unassigned
             <span className="ml-auto text-xs">
-              {mockTickets.filter(t => !t.assignedTo).length}
+              {tickets.filter(t => !t.assignedTo).length}
             </span>
           </Button>
           <Button
@@ -367,7 +561,7 @@ const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
             <Star className="mr-2 h-4 w-4" />
             High Priority
             <span className="ml-auto text-xs">
-              {mockTickets.filter(t => t.priority === 'High').length}
+              {tickets.filter(t => t.priority === 'High').length}
             </span>
           </Button>
         </div>
@@ -433,7 +627,7 @@ const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
             />
           </div>
           <Button variant="outline" size="icon">
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
 
@@ -455,9 +649,30 @@ const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTickets.map((ticket) => {
-                  const yardDisplayName = getYardDisplayName(ticket)
-                  const yard = YARDS.find(y => y.id === ticket.yardId)
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="h-24 text-center">
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                        Loading tickets...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredTickets.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                      No tickets found.
+                    </TableCell>
+                  </TableRow>
+                ) : filteredTickets.map((ticket) => {
+                  const yardDisplayName = getYardDisplayName(ticket);
+                  let yardType = ticket.yardType;
+
+                  // Si no tenemos yardType pero sí yardId, buscamos en los datos locales
+                  if (!yardType && ticket.yardId) {
+                    const yardObj = YARDS.find(y => y.id === ticket.yardId);
+                    if (yardObj) yardType = yardObj.type;
+                  }
 
                   return (
                     <TableRow
@@ -466,25 +681,22 @@ const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
                       onClick={() => handleViewDetails(ticket)}
                     >
                       <TableCell className="font-mono text-xs">
-                        #{ticket.id.split('-')[1]}
+                        #{ticket.id}
                       </TableCell>
                       <TableCell>
-                        {ticket.clientName || '-'}
+                        {getClientName(ticket)}
                       </TableCell>
                       <TableCell>
-                        {yard ? (
+                        {yardDisplayName ? (
                           <div className="flex flex-col gap-1">
-                            <Badge variant="outline" className={`${getYardTypeColor(yard.type)}`}>
+                            <Badge variant="outline" className={`${getYardTypeColor(yardType)}`}>
                               <div className="flex items-center gap-1">
-                                {getYardTypeIcon(yard.type)}
-                                <span className="truncate max-w-[100px]">
-                                  {yard.name}
+                                {getYardTypeIcon(yardType)}
+                                <span className="truncate max-w-[150px]">
+                                  {yardDisplayName}
                                 </span>
                               </div>
                             </Badge>
-                            <span className="text-xs text-muted-foreground truncate">
-                              {yard.city}, {yard.state}
-                            </span>
                           </div>
                         ) : (
                           <Badge variant="outline" className="border-amber-500/20 bg-amber-500/5 text-amber-600">
@@ -494,7 +706,7 @@ const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
                         )}
                       </TableCell>
                       <TableCell>
-                        {ticket.phone}
+                        {getClientPhone(ticket)}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
@@ -506,10 +718,10 @@ const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
                           <div className="flex items-center gap-2">
                             <Avatar className="h-6 w-6">
                               <AvatarFallback className="text-xs">
-                                {ticket.assignedTo.substring(0, 2).toUpperCase()}
+                                {getAssigneeInitials(ticket.assignedTo)}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="text-sm">{ticket.assignedTo}</span>
+                            <span className="text-sm">{getAssigneeName(ticket.assignedTo)}</span>
                           </div>
                         ) : (
                           <span className="text-sm text-muted-foreground">Unassigned</span>
@@ -552,403 +764,504 @@ const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
         </div>
       </div>
 
-{/* Dialog central para detalles del ticket */}
-<Dialog open={showDetails} onOpenChange={setShowDetails}>
-  <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-    {selectedTicket && (
-      <>
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl">
-              Ticket Details
-            </DialogTitle>
-          </div>
-          <DialogDescription>
-            <div className="flex items-center gap-3 mt-2">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  {selectedTicket.clientName ?
-                    selectedTicket.clientName.substring(0, 2).toUpperCase() :
-                    'UC'}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="font-medium">{selectedTicket.clientName || 'Unknown Caller'}</div>
-                <div className="text-sm text-muted-foreground">{selectedTicket.phone}</div>
-              </div>
-            </div>
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid gap-6">
-                 {/* Ticket Metadata - MANTIENE EL MISMO FORMATO */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Ticket Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Status</p>
-                  <Badge variant="outline" className={getStatusBadgeColor(selectedTicket.status)}>
-                    {selectedTicket.status}
-                  </Badge>
+      {/* Dialog central para detalles del ticket */}
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          {selectedTicket && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center justify-between">
+                  <DialogTitle className="text-xl">
+                    Ticket Details
+                  </DialogTitle>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Priority</p>
-                  <Badge variant="outline" className={getPriorityColor(selectedTicket.priority)}>
-                    {selectedTicket.priority || 'Not set'}
-                  </Badge>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Assignee</p>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-xs">
-                        {selectedTicket.assignedTo ?
-                          selectedTicket.assignedTo.substring(0, 2).toUpperCase() :
-                          'NA'}
+                <DialogDescription>
+                  <div className="flex items-center gap-3 mt-2">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {getClientInitials(selectedTicket)}
                       </AvatarFallback>
                     </Avatar>
-                    <span>{selectedTicket.assignedTo || 'Unassigned'}</span>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Direction</p>
-                  <div className="flex items-center gap-2">
-                    {getDirectionIcon(selectedTicket.direction || 'inbound')}
-                    <span>{getDirectionText(selectedTicket.direction || 'inbound')}</span>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Created</p>
-                  <p>{new Date(selectedTicket.createdAt).toLocaleDateString()}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Campaign</p>
-                  <Badge variant="outline">{getCampaignFromType(selectedTicket.type)}</Badge>
-                </div>
-              </div>
-            </CardContent>
-          
-
-          {/* Yard Assignment  */}
-          
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Yard Assignment
-              </CardTitle>
-              {!selectedTicket.yardId && (
-                <CardDescription className="text-amber-600">
-                  <AlertTriangle className="inline h-4 w-4 mr-1" />
-                  Action Required: No yard assigned
-                </CardDescription>
-              )}
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Yard actual asignado */}
-                {currentYard && (
-                  <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg border border-emerald-200 dark:border-emerald-500/20">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${getYardTypeColor(currentYard.type)}`}>
-                          {getYardTypeIcon(currentYard.type)}
-                        </div>
-                        <div>
-                          <p className="font-medium">{currentYard.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {currentYard.city}, {currentYard.state}
-                          </p>
-                          <Badge variant="outline" className={`mt-1 ${getYardTypeColor(currentYard.type)}`}>
-                            {currentYard.type === 'full_service' ? 'Full Service' : 'SAAS'}
-                          </Badge>
-                        </div>
-                      </div>
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    <div>
+                      <div className="font-medium">{getClientName(selectedTicket)}</div>
+                      <div className="text-sm text-muted-foreground">{getClientPhone(selectedTicket)}</div>
                     </div>
                   </div>
-                )}
+                </DialogDescription>
+              </DialogHeader>
 
-                {/* Buscador de yardas */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Search Yard</Label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search by name, address, city, state, phone, or zip..."
-                        className="pl-9"
-                        value={yardSearch}
-                        onChange={(e) => {
-                          const newSearch = e.target.value;
-                          setYardSearch(newSearch);
-                          
-                          // Si el usuario empieza a escribir de nuevo, limpiamos la selección
-                          if (newSearch && selectedYardId && !newSearch.toLowerCase().includes(selectedYard?.name?.toLowerCase() || '')) {
-                            setSelectedYardId("");
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          // Si presiona Escape, limpia la búsqueda
-                          if (e.key === 'Escape') {
-                            setYardSearch("");
-                            setSelectedYardId("");
-                          }
-                        }}
+              <div className="grid gap-6">
+                {/* Ticket Metadata - MANTIENE EL MISMO FORMATO */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Ticket Information</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Status</p>
+                        <Select
+                          value={editData.status}
+                          onValueChange={(v) => setEditData(prev => ({ ...prev, status: v }))}
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.values(TicketStatus).map(s => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Priority</p>
+                        <Select
+                          value={editData.priority}
+                          onValueChange={(v) => setEditData(prev => ({ ...prev, priority: v }))}
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.values(TicketPriority).map(p => (
+                              <SelectItem key={p} value={p}>{p}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Assignee</p>
+                        <div className="flex items-center gap-2 h-8">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs">
+                              {getAssigneeInitials(selectedTicket.assignedTo)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">{getAssigneeName(selectedTicket.assignedTo)}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Direction</p>
+                        <div className="flex items-center gap-2 h-8">
+                          {getDirectionIcon(selectedTicket.direction || 'inbound')}
+                          <span className="text-sm">{getDirectionText(selectedTicket.direction || 'inbound')}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Disposition</p>
+                        <Select
+                          value={editData.disposition}
+                          onValueChange={(v) => setEditData(prev => ({ ...prev, disposition: v }))}
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue placeholder="Select disposition" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.values(TicketDisposition).map(d => (
+                              <SelectItem key={d} value={d}>{d}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Onboarding Option</p>
+                        {(selectedTicket.type as string)?.toUpperCase() === 'ONBOARDING' ? (
+                          <Select
+                            value={editData.onboardingOption}
+                            onValueChange={(v) => setEditData(prev => ({ ...prev, onboardingOption: v }))}
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue placeholder="Select option" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.values(OnboardingOption).map(o => (
+                                <SelectItem key={o} value={o}>{o}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="h-8 flex items-center">
+                            <span className="text-xs text-muted-foreground italic">N/A for AR</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Issue Detail</p>
+                      <Textarea
+                        placeholder="Describe the issue..."
+                        value={editData.issueDetail}
+                        onChange={(e) => setEditData(prev => ({ ...prev, issueDetail: e.target.value }))}
+                        className="min-h-[100px] bg-muted/20"
                       />
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                        <Badge variant="outline" className="text-xs">
-                          {selectedYardId ? "1 selected" : `${filteredYards.length} found`}
-                        </Badge>
-                      </div>
-                      
-                    
                     </div>
-                  </div>
 
-                  {/* MOSTRAR SOLO LA YARDA SELECCIONADA */}
-                  {selectedYard && !yardSearch && (
-                    <div className="p-4 bg-blue-50 dark:bg-blue-500/10 rounded-lg border border-blue-200 dark:border-blue-500/20">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3">
-                          <div className={`p-2 rounded-lg ${getYardTypeColor(selectedYard.type)}`}>
-                            {getYardTypeIcon(selectedYard.type)}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium">{selectedYard.name}</p>
-                              <Badge variant="outline" className={getYardTypeColor(selectedYard.type)}>
-                                {selectedYard.type === 'full_service' ? 'Full Service' : 'SAAS'}
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {selectedYard.address ? `${selectedYard.address}, ` : ''}
-                              {selectedYard.city}, {selectedYard.state} {selectedYard.zip}
-                            </p>
-                            
-                            {selectedYard.contactPhone && (
-                              <div className="flex items-center gap-2 mt-2 text-sm">
-                                <span className="font-medium">Contact:</span>
-                                <span>{selectedYard.contactPhone}</span>
-                              </div>
-                            )}
-
-                            {selectedYard.notes && (
-                              <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
-                                <span className="font-medium">Note: </span>
-                                {selectedYard.notes}
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                    <div className="mt-4 space-y-3">
+                      <p className="text-sm font-medium text-muted-foreground">Attachments</p>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Add attachment link or name..."
+                          className="bg-muted/20"
+                          id="new-attachment"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const input = e.currentTarget;
+                              if (input.value.trim()) {
+                                setEditData(prev => ({
+                                  ...prev,
+                                  attachments: [...(prev.attachments || []), input.value.trim()]
+                                }));
+                                input.value = '';
+                              }
+                            }
+                          }}
+                        />
                         <Button
-                          variant="ghost"
-                          size="icon"
+                          variant="outline"
+                          size="sm"
                           onClick={() => {
-                            setSelectedYardId("");
-                            setYardSearch("");
+                            const input = document.getElementById('new-attachment') as HTMLInputElement;
+                            if (input && input.value.trim()) {
+                              setEditData(prev => ({
+                                ...prev,
+                                attachments: [...(prev.attachments || []), input.value.trim()]
+                              }));
+                              input.value = '';
+                            }
                           }}
                         >
-                          <X className="h-4 w-4" />
+                          Add
                         </Button>
                       </div>
-                    </div>
-                  )}
 
-                  {/* MOSTRAR OPCIONES SOLO CUANDO HAY BÚSQUEDA Y NO HAY YARDA SELECCIONADA */}
-                  {yardSearch && !selectedYardId && filteredYards.length > 0 && (
-                    <div className="space-y-2">
-                      <Label className="text-sm">Select a Yard</Label>
-                      <ScrollArea className="h-64 rounded-md border">
-                        <div className="p-2">
-                          {filteredYards.map((yard) => (
-                            <div
-                              key={yard.id}
-                              className="p-3 rounded-lg mb-2 cursor-pointer transition-colors hover:bg-muted/50 bg-card border"
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {(editData.attachments || []).map((att, idx) => (
+                          <Badge key={idx} variant="secondary" className="pl-3 pr-1 py-1 gap-2 group">
+                            <span className="truncate max-w-[200px]">{att}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 hover:bg-transparent"
                               onClick={() => {
-                                // Al hacer clic, selecciona la yarda y limpia la búsqueda
-                                setSelectedYardId(yard.id);
-                                setYardSearch("");
+                                setEditData(prev => ({
+                                  ...prev,
+                                  attachments: (prev.attachments || []).filter((_, i) => i !== idx)
+                                }));
                               }}
                             >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </Badge>
+                        ))}
+                        {(!editData.attachments || editData.attachments.length === 0) && (
+                          <p className="text-xs text-muted-foreground italic">No attachments added</p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+
+
+                  {/* Yard Assignment  */}
+
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5" />
+                      Yard Assignment
+                    </CardTitle>
+                    {!selectedTicket.yardId && (
+                      <CardDescription className="text-amber-600">
+                        <AlertTriangle className="inline h-4 w-4 mr-1" />
+                        Action Required: No yard assigned
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Yard actual asignado */}
+                      {currentYard && (
+                        <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg border border-emerald-200 dark:border-emerald-500/20">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-lg ${getYardTypeColor(currentYard.type)}`}>
+                                {getYardTypeIcon(currentYard.type)}
+                              </div>
+                              <div>
+                                <p className="font-medium">{currentYard.name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {currentYard.city}, {currentYard.state}
+                                </p>
+                                <Badge variant="outline" className={`mt-1 ${getYardTypeColor(currentYard.type)}`}>
+                                  {currentYard.type === 'full_service' ? 'Full Service' : 'SAAS'}
+                                </Badge>
+                              </div>
+                            </div>
+                            <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Buscador de yardas */}
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Search Yard</Label>
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Search by name, address, city, state, phone, or zip..."
+                              className="pl-9"
+                              value={yardSearch}
+                              onChange={(e) => {
+                                const newSearch = e.target.value;
+                                setYardSearch(newSearch);
+
+                                // Si el usuario empieza a escribir de nuevo, limpiamos la selección
+                                if (newSearch && selectedYardId && !newSearch.toLowerCase().includes(selectedYard?.name?.toLowerCase() || '')) {
+                                  setSelectedYardId("");
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                // Si presiona Escape, limpia la búsqueda
+                                if (e.key === 'Escape') {
+                                  setYardSearch("");
+                                  setSelectedYardId("");
+                                }
+                              }}
+                            />
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <Badge variant="outline" className="text-xs">
+                                {selectedYardId ? "1 selected" : `${filteredYards.length} found`}
+                              </Badge>
+                            </div>
+
+
+                          </div>
+                        </div>
+
+                        {/* MOSTRAR SOLO LA YARDA SELECCIONADA */}
+                        {selectedYard && !yardSearch && (
+                          <div className="p-4 bg-blue-50 dark:bg-blue-500/10 rounded-lg border border-blue-200 dark:border-blue-500/20">
+                            <div className="flex items-start justify-between">
                               <div className="flex items-start gap-3">
-                                <div className={`p-2 rounded-lg ${getYardTypeColor(yard.type)}`}>
-                                  {getYardTypeIcon(yard.type)}
+                                <div className={`p-2 rounded-lg ${getYardTypeColor(selectedYard.type)}`}>
+                                  {getYardTypeIcon(selectedYard.type)}
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between">
-                                    <p className="font-medium truncate">{yard.name}</p>
-                                    <Badge
-                                      variant="outline"
-                                      className={`text-[10px] ${getYardTypeColor(yard.type)}`}
-                                    >
-                                      {yard.type === 'full_service' ? 'FS' : 'SAAS'}
+                                <div>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <p className="font-medium">{selectedYard.name}</p>
+                                    <Badge variant="outline" className={getYardTypeColor(selectedYard.type)}>
+                                      {selectedYard.type === 'full_service' ? 'Full Service' : 'SAAS'}
                                     </Badge>
                                   </div>
-                                  <p className="text-sm text-muted-foreground truncate">
-                                    {yard.address ? `${yard.address}, ` : ''}
-                                    {yard.city}, {yard.state} {yard.zip}
+                                  <p className="text-sm text-muted-foreground">
+                                    {selectedYard.address ? `${selectedYard.address}, ` : ''}
+                                    {selectedYard.city}, {selectedYard.state} {selectedYard.zip}
                                   </p>
-                                  {yard.contactPhone && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      📞 {yard.contactPhone}
-                                    </p>
+
+                                  {selectedYard.contactPhone && (
+                                    <div className="flex items-center gap-2 mt-2 text-sm">
+                                      <span className="font-medium">Contact:</span>
+                                      <span>{selectedYard.contactPhone}</span>
+                                    </div>
                                   )}
-                                  {yard.features && yard.features.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-2">
-                                      {yard.features.slice(0, 2).map((feature, index) => (
-                                        <span
-                                          key={index}
-                                          className="text-[10px] px-1.5 py-0.5 bg-muted rounded"
-                                        >
-                                          {feature}
-                                        </span>
-                                      ))}
+
+                                  {selectedYard.notes && (
+                                    <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
+                                      <span className="font-medium">Note: </span>
+                                      {selectedYard.notes}
                                     </div>
                                   )}
                                 </div>
                               </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setSelectedYardId("");
+                                  setYardSearch("");
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
                             </div>
-                          ))}
+                          </div>
+                        )}
+
+                        {/* MOSTRAR OPCIONES SOLO CUANDO HAY BÚSQUEDA Y NO HAY YARDA SELECCIONADA */}
+                        {yardSearch && !selectedYardId && filteredYards.length > 0 && (
+                          <div className="space-y-2">
+                            <Label className="text-sm">Select a Yard</Label>
+                            <ScrollArea className="h-64 rounded-md border">
+                              <div className="p-2">
+                                {filteredYards.map((yard) => (
+                                  <div
+                                    key={yard.id}
+                                    className="p-3 rounded-lg mb-2 cursor-pointer transition-colors hover:bg-muted/50 bg-card border"
+                                    onClick={() => {
+                                      // Al hacer clic, selecciona la yarda y limpia la búsqueda
+                                      setSelectedYardId(yard.id);
+                                      setYardSearch("");
+                                    }}
+                                  >
+                                    <div className="flex items-start gap-3">
+                                      <div className={`p-2 rounded-lg ${getYardTypeColor(yard.type)}`}>
+                                        {getYardTypeIcon(yard.type)}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between">
+                                          <p className="font-medium truncate">{yard.name}</p>
+                                          <Badge
+                                            variant="outline"
+                                            className={`text-[10px] ${getYardTypeColor(yard.type)}`}
+                                          >
+                                            {yard.type === 'full_service' ? 'FS' : 'SAAS'}
+                                          </Badge>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground truncate">
+                                          {yard.address ? `${yard.address}, ` : ''}
+                                          {yard.city}, {yard.state} {yard.zip}
+                                        </p>
+                                        {yard.contactPhone && (
+                                          <p className="text-xs text-muted-foreground mt-1">
+                                            📞 {yard.contactPhone}
+                                          </p>
+                                        )}
+                                        {yard.features && yard.features.length > 0 && (
+                                          <div className="flex flex-wrap gap-1 mt-2">
+                                            {yard.features.slice(0, 2).map((feature, index) => (
+                                              <span
+                                                key={index}
+                                                className="text-[10px] px-1.5 py-0.5 bg-muted rounded"
+                                              >
+                                                {feature}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </ScrollArea>
+                          </div>
+                        )}
+
+                        {/* MENSAJE CUANDO NO HAY RESULTADOS */}
+                        {yardSearch && !selectedYardId && filteredYards.length === 0 && (
+                          <div className="p-6 text-center border rounded-lg">
+                            <Search className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                            <p className="text-muted-foreground">No yards found</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Try a different search term
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Botón para resetear (solo para visualización, no guarda) */}
+                        {selectedTicket.yardId && selectedYardId !== selectedTicket.yardId && (
+                          <div className="pt-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedYardId(selectedTicket.yardId || "");
+                                setYardSearch("");
+                              }}
+                              className="w-full"
+                            >
+                              Reset to Current Yard
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                  {/* Issue Detail  */}
+
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Issue Detail
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {isEditingIssue ? (
+                      <div className="space-y-3">
+                        <Textarea
+                          value={issueDetail}
+                          onChange={(e) => setIssueDetail(e.target.value)}
+                          placeholder="Describe the issue in detail..."
+                          className="min-h-[100px]"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsEditingIssue(false)}
+                          >
+                            Cancel Edit
+                          </Button>
                         </div>
-                      </ScrollArea>
-                    </div>
-                  )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="p-3 bg-muted/30 rounded-lg">
+                          {issueDetail ? (
+                            <p className="whitespace-pre-wrap">{issueDetail}</p>
+                          ) : (
+                            <div className="text-center py-4 text-muted-foreground">
+                              <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                              <p>No issue details added yet</p>
+                              <Button
+                                variant="link"
+                                className="mt-1"
+                                onClick={() => setIsEditingIssue(true)}
+                              >
+                                Add issue details
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-                  {/* MENSAJE CUANDO NO HAY RESULTADOS */}
-                  {yardSearch && !selectedYardId && filteredYards.length === 0 && (
-                    <div className="p-6 text-center border rounded-lg">
-                      <Search className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                      <p className="text-muted-foreground">No yards found</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Try a different search term
-                      </p>
-                    </div>
-                  )}
 
-                  {/* Botón para resetear (solo para visualización, no guarda) */}
-                  {selectedTicket.yardId && selectedYardId !== selectedTicket.yardId && (
-                    <div className="pt-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedYardId(selectedTicket.yardId || "");
-                          setYardSearch("");
-                        }}
-                        className="w-full"
-                      >
-                        Reset to Current Yard
-                      </Button>
-                    </div>
-                  )}
-                </div>
+
               </div>
-            </CardContent>
-               {/* Issue Detail  */}
-        
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Issue Detail
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isEditingIssue ? (
-                <div className="space-y-3">
-                  <Textarea
-                    value={issueDetail}
-                    onChange={(e) => setIssueDetail(e.target.value)}
-                    placeholder="Describe the issue in detail..."
-                    className="min-h-[100px]"
-                  />
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsEditingIssue(false)}
-                    >
-                      Cancel Edit
+
+              <DialogFooter className="mt-8 pt-6 border-t">
+                <div className="flex items-center justify-between w-full">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Changes will be saved to the database.
+                  </p>
+                  <div className="flex gap-3">
+                    <Button variant="outline" onClick={() => setShowDetails(false)} disabled={isUpdating}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleUpdateTicket} disabled={isUpdating} className="min-w-[120px]">
+                      {isUpdating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Changes
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="p-3 bg-muted/30 rounded-lg">
-                    {issueDetail ? (
-                      <p className="whitespace-pre-wrap">{issueDetail}</p>
-                    ) : (
-                      <div className="text-center py-4 text-muted-foreground">
-                        <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                        <p>No issue details added yet</p>
-                        <Button
-                          variant="link"
-                          className="mt-1"
-                          onClick={() => setIsEditingIssue(true)}
-                        >
-                          Add issue details
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-
-         
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setShowDetails(false)}>
-            Close
-          </Button>
-          <Button 
-            onClick={async () => {
-              // 1. Guardar issue detail si está en modo edición
-              if (isEditingIssue && selectedTicket) {
-                selectedTicket.issueDetail = issueDetail;
-                setIsEditingIssue(false);
-              }
-              
-              // 2. Guardar yard assignment si hay una yarda seleccionada
-              if (selectedYardId && selectedTicket && selectedYardId !== selectedTicket.yardId) {
-                setIsAssigningYard(true);
-                
-                // Simular llamada a API
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                // Actualizar el ticket
-                if (selectedYard) {
-                  selectedTicket.yardId = selectedYardId;
-                  selectedTicket.yard = `${selectedYard.name} - ${selectedYard.city}, ${selectedYard.state}`;
-                  selectedTicket.yardType = selectedYard.type;
-                }
-                
-                setIsAssigningYard(false);
-              }
-              
-              // 3. Cerrar el diálogo
-              setShowDetails(false);
-            }}
-            disabled={isAssigningYard}
-          >
-            {isAssigningYard ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              'Save Changes'
-            )}
-          </Button>
-        </DialogFooter>
-      </>
-    )}
-  </DialogContent>
-</Dialog>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

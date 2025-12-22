@@ -199,7 +199,7 @@ export default function AgentStatsPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-muted-foreground">
-                        {agent.name.substring(0, 2).toUpperCase()}
+                        {agent.name ? agent.name.substring(0, 2).toUpperCase() : "NA"}
                       </div>
                       <div>
                         <p className="text-sm font-medium text-foreground">
@@ -215,10 +215,9 @@ export default function AgentStatsPage() {
                   <td className="px-6 py-4 text-center">
                     <span
                       className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase
-                        ${
-                          agent.status === 'online'
-                            ? 'bg-emerald-500 text-white'
-                            : agent.status === 'busy'
+                        ${agent.status === 'online'
+                          ? 'bg-emerald-500 text-white'
+                          : agent.status === 'busy'
                             ? 'bg-amber-500 text-white'
                             : 'bg-muted text-muted-foreground'
                         }`}

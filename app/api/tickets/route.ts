@@ -1,55 +1,64 @@
 import { NextResponse } from "next/server"
-import { mockTickets } from "@/lib/mock-data"
+import { fetchFromBackend } from "@/lib/api-client"
+import * as fs from 'fs'
+import * as path from 'path'
+
+const LOG_FILE = path.join(process.cwd(), 'debug_api.log')
+
+function log(msg: string) {
+  const timestamp = new Date().toISOString()
+  fs.appendFileSync(LOG_FILE, `[${timestamp}] ${msg}\n`)
+}
 
 // GET /api/tickets - Fetch all tickets
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const campaign = searchParams.get("campaign")
-  const status = searchParams.get("status")
-  const type = searchParams.get("type")
+  try {
+    const { searchParams } = new URL(request.url)
+    const page = searchParams.get("page") || "1"
+    const limit = searchParams.get("limit") || "50"
 
-  let filteredTickets = [...mockTickets]
+    log(`GET /api/tickets page=${page} limit=${limit}`)
 
-  if (campaign) {
-    filteredTickets = filteredTickets.filter((t) => t.campaign === campaign)
-  }
-  if (status) {
-    filteredTickets = filteredTickets.filter((t) => t.status === status)
-  }
-  if (type) {
-    filteredTickets = filteredTickets.filter((t) => t.type === type)
-  }
+    const data = await fetchFromBackend(`/ticket?page=${page}&limit=${limit}`)
 
-  return NextResponse.json({
-    success: true,
-    data: filteredTickets,
-    count: filteredTickets.length,
-  })
+    log(`Backend responded: ${JSON.stringify(data).substring(0, 100)}...`)
+
+    return NextResponse.json({
+      success: true,
+      data: data?.data || data || [],
+      count: data?.total || (Array.isArray(data) ? data.length : 0),
+    })
+  } catch (error: any) {
+    log(`ERROR in GET /api/tickets: ${error.message}`)
+    return NextResponse.json(
+      {
+        success: false,
+        message: error.message || "Failed to fetch tickets",
+      },
+      { status: 500 },
+    )
+  }
 }
 
 // POST /api/tickets - Create a new ticket
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-
-    // In production, this would interact with your NestJS backend
-    const newTicket = {
-      id: `TKT-${String(mockTickets.length + 1).padStart(3, "0")}`,
-      ...body,
-      createdAt: new Date().toISOString(),
-      status: "Open" as const,
-    }
+    const data = await fetchFromBackend("/ticket", {
+      method: "POST",
+      body: JSON.stringify(body),
+    })
 
     return NextResponse.json({
       success: true,
-      data: newTicket,
+      data,
       message: "Ticket created successfully",
     })
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to create ticket",
+        message: error.message || "Failed to create ticket",
       },
       { status: 500 },
     )

@@ -1,51 +1,50 @@
 import { NextResponse } from "next/server"
-import { mockUsers } from "@/lib/mock-data"
+import { fetchFromBackend } from "@/lib/api-client"
 
-// GET /api/users - Fetch all users
+// GET /api/users - Fetch all customers (referred as users in frontend)
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const role = searchParams.get("role")
-  const status = searchParams.get("status")
-
-  let filteredUsers = [...mockUsers]
-
-  if (role) {
-    filteredUsers = filteredUsers.filter((u) => u.role === role)
-  }
-  if (status) {
-    filteredUsers = filteredUsers.filter((u) => u.status === status)
-  }
-
-  return NextResponse.json({
-    success: true,
-    data: filteredUsers,
-    count: filteredUsers.length,
-  })
-}
-
-// POST /api/users - Create a new user
-export async function POST(request: Request) {
   try {
-    const body = await request.json()
+    const { searchParams } = new URL(request.url)
+    const page = searchParams.get("page") || "1"
+    const limit = searchParams.get("limit") || "50"
 
-    // In production, this would interact with your NestJS backend
-    const newUser = {
-      id: `USR-${String(mockUsers.length + 1).padStart(3, "0")}`,
-      ...body,
-      ticketsAssigned: 0,
-      status: "Active" as const,
-    }
+    const data = await fetchFromBackend(`/customers?page=${page}&limit=${limit}`)
 
     return NextResponse.json({
       success: true,
-      data: newUser,
-      message: "User created successfully",
+      data: data.data || data,
+      count: data.total || (Array.isArray(data) ? data.length : 0),
     })
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to create user",
+        message: error.message || "Failed to fetch customers",
+      },
+      { status: 500 },
+    )
+  }
+}
+
+// POST /api/users - Create a new customer
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    const data = await fetchFromBackend("/customers", {
+      method: "POST",
+      body: JSON.stringify(body),
+    })
+
+    return NextResponse.json({
+      success: true,
+      data,
+      message: "Customer created successfully",
+    })
+  } catch (error: any) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: error.message || "Failed to create customer",
       },
       { status: 500 },
     )
