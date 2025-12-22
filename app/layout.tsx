@@ -1,6 +1,5 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { ClerkProvider } from "@clerk/nextjs"
 import { RoleProvider } from "@/components/providers/role-provider"
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import "./globals.css"
@@ -17,7 +16,6 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <ClerkProvider>
       <RoleProvider>
         <html lang="en" suppressHydrationWarning>
           <body>
@@ -32,6 +30,5 @@ export default function RootLayout({
           </body>
         </html>
       </RoleProvider>
-    </ClerkProvider>
   )
 }

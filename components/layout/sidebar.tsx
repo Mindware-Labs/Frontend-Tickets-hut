@@ -33,8 +33,6 @@ import {
   Building,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
 import { useRole } from "@/components/providers/role-provider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -447,26 +445,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </div>
           </SidebarMenuItem>
 
-          <SidebarMenuItem>
-            <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors group-data-[collapsible=icon]:justify-center">
-              <UserButton
-                afterSignOutUrl="/sign-in"
-                appearance={{
-                  elements: {
-                    avatarBox: "h-9 w-9 rounded-lg ring-2 ring-border/20",
-                    userButtonPopoverCard: "shadow-xl border border-border/50",
-                    userButtonTrigger: "focus:shadow-none",
-                  },
-                }}
-              />
-              <div className="flex flex-col text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                <span className="font-semibold text-foreground">Account</span>
-                <span className="text-xs text-muted-foreground">
-                  Manage profile
-                </span>
-              </div>
-            </div>
-          </SidebarMenuItem>
+         
         </SidebarMenu>
       </SidebarFooter>
       <SidebarRail />
