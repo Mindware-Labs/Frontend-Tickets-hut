@@ -1,12 +1,11 @@
-const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://127.0.0.1:3001";
+const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:3001";
 
 export async function fetchFromBackend(
   endpoint: string,
   options: RequestInit = {}
 ) {
-  const url = `${BACKEND_API_URL}${
-    endpoint.startsWith("/") ? endpoint : `/${endpoint}`
-  }`;
+  const url = `${BACKEND_API_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`
+    }`;
 
   const response = await fetch(url, {
     ...options,

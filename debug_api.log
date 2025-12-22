@@ -62,3 +62,103 @@
 [2025-12-22T12:39:14.375Z] ERROR in GET /api/tickets: fetch failed
 [2025-12-22T12:39:14.567Z] GET /api/tickets page=1 limit=50
 [2025-12-22T12:39:14.672Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:40:33.417Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:40:33.467Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:40:33.736Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:40:33.823Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:53:42.500Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:53:42.576Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:53:42.796Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:53:42.851Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:54:02.220Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:54:02.323Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:54:02.583Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:54:02.674Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:54:52.626Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:54:52.888Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:54:53.362Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:54:53.466Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:55:00.284Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:55:00.601Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:55:00.929Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:55:01.037Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:55:22.171Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:55:22.242Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:55:22.491Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:55:22.547Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:56:06.414Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:56:06.705Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:56:06.968Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:56:07.019Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:56:35.752Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:56:35.810Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:56:36.109Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:56:36.179Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:56:40.850Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:56:40.917Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:56:41.063Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:56:41.097Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:57:33.834Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:57:33.985Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:57:34.475Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:57:34.589Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:58:20.890Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:58:21.541Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T12:58:21.975Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:58:22.119Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T12:58:30.766Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:58:30.996Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T12:58:31.185Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:58:31.329Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T12:58:34.767Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:58:34.985Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T12:58:35.184Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:58:35.322Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T12:59:21.330Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:59:21.511Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:59:21.782Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:59:21.863Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:59:35.095Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:59:35.134Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T12:59:35.307Z] GET /api/tickets page=1 limit=50
+[2025-12-22T12:59:35.418Z] ERROR in GET /api/tickets: fetch failed
+[2025-12-22T13:02:21.330Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:02:22.187Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:02:22.284Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:02:22.498Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:03:51.232Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:03:51.704Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:03:51.761Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:03:51.868Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:05:22.158Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:05:22.736Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:05:23.035Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:05:23.189Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:05:50.935Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:05:51.499Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:05:51.712Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:05:51.865Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:06:56.216Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:06:56.844Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:06:57.082Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:06:57.264Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:07:10.161Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:07:10.616Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:07:11.021Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:07:11.136Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:07:17.119Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:07:17.255Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:07:17.297Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:07:17.404Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:07:38.251Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:07:38.786Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:07:38.972Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:07:39.113Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:08:36.251Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:08:36.824Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:08:36.951Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:08:37.081Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:09:12.191Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:09:12.453Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
+[2025-12-22T13:09:12.549Z] GET /api/tickets page=1 limit=50
+[2025-12-22T13:09:12.666Z] Backend responded: {"data":[{"id":7,"customer":{"id":1,"name":"DAQUARIUS DAWKINS NFL","phone":"+1 469-338-1031","isOnBo...
