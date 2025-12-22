@@ -42,15 +42,18 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({
       success: true,
       data,
-      message: "Ticket updated successfully",
     })
   } catch (error: any) {
+    const status = error.message.includes("API Error:")
+      ? parseInt(error.message.split(":")[1].trim()) || 500
+      : 500;
+
     return NextResponse.json(
       {
         success: false,
         message: error.message || "Failed to update ticket",
       },
-      { status: 500 },
+      { status },
     )
   }
 }

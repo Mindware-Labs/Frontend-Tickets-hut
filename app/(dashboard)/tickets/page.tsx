@@ -170,40 +170,57 @@ export default function TicketsPage() {
     fetchTickets()
   }, [])
 
-  // Obtener yarda seleccionada
+  // Obtener yarda seleccionada para el selector de búsqueda
   const selectedYard = useMemo(() => {
     return YARDS.find(y => y.id === selectedYardId)
   }, [selectedYardId])
 
-  // Obtener yarda actual del ticket
+  // Yarda actualmente asignada al ticket seleccionado
   const currentYard = useMemo(() => {
-    if (!selectedTicket?.yardId) return null
-    return YARDS.find(y => y.id === selectedTicket.yardId)
-  }, [selectedTicket?.yardId])
+    const yardId = selectedTicket?.yardId;
+    if (!yardId) return null;
+    return YARDS.find(y => y.id === yardId.toString()) || null;
+  }, [selectedTicket?.yardId]);
 
-  // Filtrar yardas
+  // Yardas filtradas por la búsqueda en el modal
   const filteredYards = useMemo(() => {
-    return YARDS.filter(yard => {
-      const matchesSearch = yardSearch === "" ||
-        yard.name.toLowerCase().includes(yardSearch.toLowerCase()) ||
-        yard.commonName.toLowerCase().includes(yardSearch.toLowerCase()) ||
-        yard.city.toLowerCase().includes(yardSearch.toLowerCase()) ||
-        yard.state.toLowerCase().includes(yardSearch.toLowerCase())
+    if (!yardSearch) return YARDS;
+    const search = yardSearch.toLowerCase();
+    return YARDS.filter(yard =>
+      yard.name.toLowerCase().includes(search) ||
+      yard.address?.toLowerCase().includes(search) ||
+      yard.city.toLowerCase().includes(search) ||
+      yard.state.toLowerCase().includes(search) ||
+      yard.zip?.toLowerCase().includes(search)
+    );
+  }, [yardSearch]);
 
-      const matchesCategory = yardCategory === "all" ||
-        yard.type === yardCategory ||
-        yard.category === yardCategory
+  // Obtener yard display name para la tabla y filtrado
+  const getYardDisplayName = (ticket: Ticket) => {
+    if (ticket.yard && typeof ticket.yard === 'object') {
+      const y = ticket.yard as any
+      return `${y.name} - ${y.city || ''}, ${y.state || ''}`.replace(/, $/, '')
+    }
 
-      return matchesSearch && matchesCategory
-    })
-  }, [yardSearch, yardCategory])
+    if (typeof ticket.yard === 'string' && ticket.yard.trim() !== '') {
+      return ticket.yard
+    }
+
+    if (ticket.yardId) {
+      const yard = YARDS.find(y => y.id === ticket.yardId)
+      if (yard) return `${yard.name} - ${yard.city}, ${yard.state}`
+    }
+
+    return null
+  }
 
   // Filter tickets logic
   const filteredTickets = useMemo(() => {
     return tickets.filter(ticket => {
+      const yardName = getYardDisplayName(ticket);
       const matchesSearch =
         (ticket.clientName?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
-        (ticket.yard?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
+        (yardName?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
         ticket.id.toString().toLowerCase().includes(search.toLowerCase()) ||
         (ticket.phone && ticket.phone.toLowerCase().includes(search.toLowerCase()))
 
@@ -257,7 +274,7 @@ export default function TicketsPage() {
 
       const updatePayload: any = {
         ...editData,
-        yardId: selectedYardId ? parseInt(selectedYardId) : null,
+        yardId: selectedYardId ? parseInt(selectedYardId.replace(/[^0-9]/g, '')) || null : null,
         status: editData.status?.toUpperCase().replace(' ', '_'),
         priority: editData.priority?.toUpperCase(),
         disposition: editData.disposition || null,
@@ -435,25 +452,6 @@ export default function TicketsPage() {
       default:
         return <Building className="h-3 w-3" />
     }
-  }
-
-  // Obtener yard display name para la tabla
-  const getYardDisplayName = (ticket: Ticket) => {
-    if (ticket.yard && typeof ticket.yard === 'object') {
-      const y = ticket.yard as any
-      return `${y.name} - ${y.city || ''}, ${y.state || ''}`.replace(/, $/, '')
-    }
-
-    if (typeof ticket.yard === 'string' && ticket.yard.trim() !== '') {
-      return ticket.yard
-    }
-
-    if (ticket.yardId) {
-      const yard = YARDS.find(y => y.id === ticket.yardId)
-      if (yard) return `${yard.name} - ${yard.city}, ${yard.state}`
-    }
-
-    return null
   }
 
   // Safe access to assignee
