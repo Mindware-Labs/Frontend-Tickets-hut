@@ -1,48 +1,48 @@
-import { NextResponse } from "next/server"
-import { fetchFromBackend } from "@/lib/api-client"
+import { NextResponse } from "next/server";
+import { fetchFromBackend } from "@/lib/api-client";
 
 interface RouteParams {
   params: Promise<{
-    id: string
-  }>
+    id: string;
+  }>;
 }
 
 // GET /api/tickets/[id] - Fetch single ticket
 export async function GET(request: Request, { params }: RouteParams) {
   try {
-    const { id } = await params
-    const data = await fetchFromBackend(`/ticket/${id}`)
+    const { id } = await params;
+    const data = await fetchFromBackend(`/tickets/${id}`);
 
     return NextResponse.json({
       success: true,
       data,
-    })
+    });
   } catch (error: any) {
     return NextResponse.json(
       {
         success: false,
         message: error.message || "Failed to fetch ticket",
       },
-      { status: 500 },
-    )
+      { status: 500 }
+    );
   }
 }
 
 // PATCH /api/tickets/[id] - Update ticket
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
-    const { id } = await params
-    const body = await request.json()
+    const { id } = await params;
+    const body = await request.json();
 
-    const data = await fetchFromBackend(`/ticket/${id}`, {
+    const data = await fetchFromBackend(`/tickets/${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
-    })
+    });
 
     return NextResponse.json({
       success: true,
       data,
-    })
+    });
   } catch (error: any) {
     const status = error.message.includes("API Error:")
       ? parseInt(error.message.split(":")[1].trim()) || 500
@@ -53,31 +53,31 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         success: false,
         message: error.message || "Failed to update ticket",
       },
-      { status },
-    )
+      { status }
+    );
   }
 }
 
 // DELETE /api/tickets/[id] - Delete ticket
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
-    const { id } = await params
+    const { id } = await params;
 
-    await fetchFromBackend(`/ticket/${id}`, {
+    await fetchFromBackend(`/tickets/${id}`, {
       method: "DELETE",
-    })
+    });
 
     return NextResponse.json({
       success: true,
       message: "Ticket deleted successfully",
-    })
+    });
   } catch (error: any) {
     return NextResponse.json(
       {
         success: false,
         message: error.message || "Failed to delete ticket",
       },
-      { status: 500 },
-    )
+      { status: 500 }
+    );
   }
 }
