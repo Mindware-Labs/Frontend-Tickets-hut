@@ -118,6 +118,13 @@ export enum TicketPriority {
   EMERGENCY = "EMERGENCY",
 }
 
+// Enum para Campaign (ONBOARDING, AR, OTHER)
+export enum Cam {
+  ONBOARDING = "ONBOARDING",
+  AR = "AR",
+  OTHER = "OTHER",
+}
+
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -153,6 +160,8 @@ export default function TicketsPage() {
 
   // State for updating ticket
   const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Agregamos 'campaign' al estado de edición
   const [editData, setEditData] = useState<{
     disposition?: string;
     issueDetail?: string;
@@ -160,10 +169,10 @@ export default function TicketsPage() {
     status?: string;
     priority?: string;
     attachments?: string[];
+    campaign?: string; 
   }>({});
 
-  // Helper functions moved to top to avoid ReferenceErrors during initialization
-  // Safe access to assignee
+  // Helper functions
   const getAssigneeName = (assignedTo: any) => {
     if (!assignedTo) return "Unassigned";
     if (typeof assignedTo === "string") return assignedTo;
@@ -176,7 +185,6 @@ export default function TicketsPage() {
     return name.substring(0, 2).toUpperCase();
   };
 
-  // Safe access to client/customer
   const getClientName = (ticket: any) => {
     if (ticket.clientName) return ticket.clientName;
     if (ticket.customer?.name) return ticket.customer.name;
@@ -269,11 +277,9 @@ export default function TicketsPage() {
     }
   };
 
-  // Obtener yard display name para la tabla
   const getYardDisplayName = (ticket: Ticket) => {
     if (ticket.yard && typeof ticket.yard === "object") {
       const y = ticket.yard as any;
-      // Handle different backend/mock structures
       const name = y.name || "";
       const secondary = y.commonName || y.city || "";
       const location = y.propertyAddress || y.state || "";
@@ -299,7 +305,6 @@ export default function TicketsPage() {
     return null;
   };
 
-  // Fetch tickets
   const fetchTickets = async () => {
     try {
       setIsLoading(true);
@@ -363,10 +368,8 @@ export default function TicketsPage() {
     });
   }, [yardSearch, yardCategory, yards]);
 
-  // Filter tickets logic
   const filteredTickets = useMemo(() => {
     return tickets.filter((ticket) => {
-      // Safe data mapping
       const yardName =
         typeof ticket.yard === "string"
           ? ticket.yard
@@ -382,14 +385,12 @@ export default function TicketsPage() {
       const priority = (ticket.priority as any)?.toString().toUpperCase();
       const assigneeName = getAssigneeName(ticket.assignedTo);
 
-      // Search matching
       const matchesSearch =
         clientName.toLowerCase().includes(search.toLowerCase()) ||
         yardName.toLowerCase().includes(search.toLowerCase()) ||
         ticket.id.toString().includes(search) ||
         phone.toLowerCase().includes(search.toLowerCase());
 
-      // Filter matching
       const matchesStatus =
         statusFilter === "all" ||
         ticket.status === statusFilter ||
@@ -402,9 +403,8 @@ export default function TicketsPage() {
         directionFilter === "all" ||
         ticket.direction === directionFilter ||
         ticket.direction?.toString().toLowerCase() ===
-          directionFilter.toLowerCase();
+        directionFilter.toLowerCase();
 
-      // View matching
       let matchesView = true;
       if (activeView === "assigned_me") {
         matchesView = assigneeName === "Agent Smith";
@@ -439,14 +439,12 @@ export default function TicketsPage() {
     activeView,
   ]);
 
-  // Paginación
   const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);
   const paginatedTickets = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredTickets.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredTickets, currentPage, itemsPerPage]);
 
-  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [search, statusFilter, priorityFilter, directionFilter, activeView]);
@@ -456,7 +454,6 @@ export default function TicketsPage() {
     setSelectedYardId(ticket.yardId || "");
     setIssueDetail(ticket.issueDetail || "");
 
-    // Initialize edit data
     setEditData({
       disposition: ticket.disposition || "",
       issueDetail: ticket.issueDetail || "",
@@ -464,6 +461,8 @@ export default function TicketsPage() {
       status: ticket.status?.toString().toUpperCase().replace(" ", "_") || "",
       priority: ticket.priority?.toString().toUpperCase() || "",
       attachments: ticket.attachments || [],
+      // Cargar campaña, o dejar vacío si no tiene
+      campaign: ticket.campaign || "", 
     });
 
     setIsEditingIssue(false);
@@ -478,6 +477,8 @@ export default function TicketsPage() {
     try {
       setIsUpdating(true);
 
+      // CORRECCIÓN: Como el backend ya acepta "OTHER", enviamos el valor directamente
+      // Ya no necesitamos convertir "OTHER" a null.
       const updatePayload: any = {
         ...editData,
         yardId: selectedYardId ? parseInt(selectedYardId) : null,
@@ -486,6 +487,7 @@ export default function TicketsPage() {
         disposition: editData.disposition || null,
         onboardingOption: editData.onboardingOption || null,
         issueDetail: editData.issueDetail || null,
+        campaign: editData.campaign || null, // Se envía directo
       };
 
       const response = await fetch(`/api/tickets/${selectedTicket.id}`, {
@@ -499,14 +501,12 @@ export default function TicketsPage() {
       const result = await response.json();
 
       if (result.success) {
-        // Update local tickets state
         setTickets((prev) =>
           prev.map((t) =>
             t.id === selectedTicket.id ? { ...t, ...result.data } : t
           )
         );
 
-        // Update selected ticket in modal
         setSelectedTicket({ ...selectedTicket, ...result.data });
 
         toast({
@@ -541,54 +541,14 @@ export default function TicketsPage() {
 
   const handleAssignYard = async () => {
     if (!selectedTicket || !selectedYardId) return;
-
-    // Función para resaltar coincidencias en el texto
-    const highlightMatch = (
-      text: string,
-      searchTerm: string
-    ): React.ReactNode => {
-      if (!searchTerm || !text) return text;
-
-      const lowerText = text.toString().toLowerCase();
-      const lowerSearch = searchTerm.toLowerCase();
-
-      // Si no hay coincidencia, devolver el texto normal
-      if (!lowerText.includes(lowerSearch)) {
-        return text;
-      }
-
-      // Dividir el texto en partes que coinciden y no coinciden
-      const regex = new RegExp(`(${searchTerm})`, "gi");
-      const parts = text.toString().split(regex);
-
-      return (
-        <span>
-          {parts.map((part, index) =>
-            part.toLowerCase() === lowerSearch ? (
-              <mark
-                key={index}
-                className="bg-yellow-200 dark:bg-yellow-800/70 text-yellow-900 dark:text-yellow-100 px-0.5 rounded font-medium"
-              >
-                {part}
-              </mark>
-            ) : (
-              <span key={index}>{part}</span>
-            )
-          )}
-        </span>
-      );
-    };
-
     setIsAssigningYard(true);
 
-    try {
-      // Simular llamada a API
+      try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       if (selectedTicket && selectedYard) {
         const updatedYard = `${selectedYard.name} - ${selectedYard.commonName}`;
 
-        // Update local tickets state
         setTickets((prev) =>
           prev.map((t) =>
             t.id === selectedTicket.id
@@ -602,7 +562,6 @@ export default function TicketsPage() {
           )
         );
 
-        // Update selected ticket in modal
         setSelectedTicket((prev) =>
           prev
             ? {
@@ -622,16 +581,11 @@ export default function TicketsPage() {
   };
 
   const handleSaveIssueDetail = () => {
-    if (!selectedTicket) return;
-
-    // Update local tickets state
+      if (!selectedTicket) return;
     setTickets((prev) =>
       prev.map((t) => (t.id === selectedTicket.id ? { ...t, issueDetail } : t))
-    );
-
-    // Update selected ticket in modal
-    setSelectedTicket((prev) => (prev ? { ...prev, issueDetail } : null));
-
+      );
+      setSelectedTicket((prev) => (prev ? { ...prev, issueDetail } : null));
     setIsEditingIssue(false);
   };
 
@@ -639,7 +593,8 @@ export default function TicketsPage() {
     <div className="h-screen flex flex-col lg:flex-row gap-6 p-4">
       {/* Sidebar izquierdo */}
       <div className="w-full lg:w-48 flex-shrink-0 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+        {/* ... Sidebar content unchanged ... */}
+         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Ticketing</h2>
           <Button size="icon" variant="ghost">
             <SlidersHorizontal className="h-4 w-4" />
@@ -769,6 +724,7 @@ export default function TicketsPage() {
 
       {/* Área principal */}
       <div className="flex-1 flex flex-col gap-4">
+              {/* ... Main content search/table unchanged ... */}
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -840,7 +796,7 @@ export default function TicketsPage() {
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={() => handleViewDetails(ticket)}
                       >
-                        <TableCell className="font-mono text-xs">
+                         <TableCell className="font-mono text-xs">
                           #{ticket.id}
                         </TableCell>
                         <TableCell>{getClientName(ticket)}</TableCell>
@@ -869,7 +825,7 @@ export default function TicketsPage() {
                                 Pending
                               </Badge>
                               <div className="absolute z-10 hidden group-hover:block bg-white dark:bg-zinc-900 text-xs text-amber-700 dark:text-amber-300 border border-amber-400 rounded px-2 py-1 shadow-lg left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap">
-                                Yarda pendiente de asignar
+                                Yard pending assignment
                               </div>
                             </div>
                           )}
@@ -957,7 +913,7 @@ export default function TicketsPage() {
         </div>
 
         {/* Paginación */}
-        {filteredTickets.length > 0 && (
+         {filteredTickets.length > 0 && (
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
               <p className="text-sm text-muted-foreground">
@@ -1058,7 +1014,7 @@ export default function TicketsPage() {
               </div>
 
               <div className="grid gap-6">
-                {/* Ticket Metadata - MANTIENE EL MISMO FORMATO */}
+                {/* Ticket Metadata */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Ticket Information</CardTitle>
@@ -1109,6 +1065,32 @@ export default function TicketsPage() {
                           </SelectContent>
                         </Select>
                       </div>
+                      
+                      {/* --- SELECTOR CAMPAIGN RESTAURADO --- */}
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Campaign
+                        </p>
+                        <Select
+                          value={editData.campaign}
+                          onValueChange={(v) =>
+                            setEditData((prev) => ({ ...prev, campaign: v }))
+                          }
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue placeholder="Select campaign" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.values(Cam).map((c) => (
+                              <SelectItem key={c} value={c}>
+                                {c}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                       {/* --- FIN NUEVO SELECTOR --- */}
+
                       <div className="space-y-1">
                         <p className="text-sm font-medium text-muted-foreground">
                           Assignee
@@ -1161,10 +1143,8 @@ export default function TicketsPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Onboarding Option
-                        </p>
+                     <div className="space-y-1">
+                        
                         {(selectedTicket.type as string)?.toUpperCase() ===
                         "ONBOARDING" ? (
                           <Select
@@ -1189,9 +1169,7 @@ export default function TicketsPage() {
                           </Select>
                         ) : (
                           <div className="h-8 flex items-center">
-                            <span className="text-xs text-muted-foreground italic">
-                              N/A for AR
-                            </span>
+                        
                           </div>
                         )}
                       </div>

@@ -56,7 +56,7 @@ export default function LoginPage() {
              src="/images/LOGO CQ-13.png"   
              alt="cq Logo"
              fill
-             className="object-contain" // Esto evita que el logo se estire o deforme
+             className="object-contain" //evita que el logo se estire o deforme
              priority
            />
         </div>
