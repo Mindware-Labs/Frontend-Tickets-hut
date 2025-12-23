@@ -28,6 +28,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { fetchFromBackend } from "@/lib/api-client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Card,
@@ -68,13 +69,8 @@ import {
   Sparkles,
   Building,
 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { Ticket } from "@/lib/mock-data";
-import {
-  YARDS,
-  YARD_CATEGORIES,
-  type Yard,
-  type YardType,
-} from "@/lib/yard-data";
 
 // Extender el tipo Ticket
 declare module "@/lib/mock-data" {
@@ -131,6 +127,8 @@ export default function TicketsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [directionFilter, setDirectionFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showDetails, setShowDetails] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [selectedYardId, setSelectedYardId] = useState<string>("");
@@ -145,13 +143,11 @@ export default function TicketsPage() {
       name: string;
       commonName: string;
       propertyAddress: string;
-      address?: string;
       contactInfo: string;
-      contactPhone?: string;
-      yardType: string;
-      type?: string;
-      isActive: boolean;
+      yardLink?: string;
       notes?: string;
+      yardType: string;
+      isActive: boolean;
     }>
   >([]);
 
@@ -245,8 +241,8 @@ export default function TicketsPage() {
     return d === "outbound" ? "Outbound" : "Inbound";
   };
 
-  const getCampaignFromType = (type: string) => {
-    return type === "Onboarding" || type === "ONBOARDING" ? "Onboarding" : "AR";
+  const getCampaign = (ticket: Ticket) => {
+    return ticket.campaign || null;
   };
 
   const getYardTypeColor = (type?: string) => {
@@ -275,8 +271,8 @@ export default function TicketsPage() {
 
   // Obtener yard display name para la tabla
   const getYardDisplayName = (ticket: Ticket) => {
-    if (ticket.yard && typeof ticket.yard === 'object') {
-      const y = ticket.yard as any
+    if (ticket.yard && typeof ticket.yard === "object") {
+      const y = ticket.yard as any;
       // Handle different backend/mock structures
       const name = y.name || "";
       const secondary = y.commonName || y.city || "";
@@ -289,16 +285,18 @@ export default function TicketsPage() {
       return display || "Unknown Yard";
     }
 
-    if (typeof ticket.yard === 'string' && ticket.yard.trim() !== '') {
-      return ticket.yard
+    if (typeof ticket.yard === "string" && ticket.yard.trim() !== "") {
+      return ticket.yard;
     }
 
     if (ticket.yardId) {
-      const yard = YARDS.find(y => y.id.toString() === ticket.yardId?.toString())
-      if (yard) return `${yard.name} - ${yard.city}, ${yard.state}`
+      const yard = yards.find(
+        (y) => y.id.toString() === ticket.yardId?.toString()
+      );
+      if (yard) return yard.commonName || yard.name;
     }
 
-    return null
+    return null;
   };
 
   // Fetch tickets
@@ -319,21 +317,18 @@ export default function TicketsPage() {
     }
   };
 
-  // Fetch yards from backend
   const fetchYards = async () => {
     try {
-      const response = await fetch("/api/yards");
-      const data = await response.json();
+      const data = await fetchFromBackend("/yards");
       if (Array.isArray(data)) {
         setYards(data.filter((yard: any) => yard.isActive));
-      } else if (data && typeof data === 'object' && Array.isArray(data.data)) {
-        setYards(data.data.filter((yard: any) => yard.isActive));
       } else {
         console.error("Yards data is not an array:", data);
         setYards([]);
       }
     } catch (err) {
       console.error("Failed to load yards", err);
+      setYards([]);
     }
   };
 
@@ -342,43 +337,47 @@ export default function TicketsPage() {
     fetchYards();
   }, []);
 
-  // Obtener yarda seleccionada para el selector de búsqueda
   const selectedYard = useMemo(() => {
     return yards.find((y) => y.id.toString() === selectedYardId);
   }, [selectedYardId, yards]);
 
-  // Yarda actualmente asignada al ticket seleccionado
   const currentYard = useMemo(() => {
-    if (!selectedTicket?.yardId) return null
-    return YARDS.find(y => y.id === selectedTicket.yardId)
-  }, [selectedTicket?.yardId])
+    if (!selectedTicket?.yardId) return null;
+    return yards.find(
+      (y) => y.id.toString() === selectedTicket.yardId?.toString()
+    );
+  }, [selectedTicket?.yardId, yards]);
 
-  // Yardas filtradas por la búsqueda en el modal
   const filteredYards = useMemo(() => {
-    return YARDS.filter(yard => {
-      const matchesSearch = yardSearch === "" ||
+    return yards.filter((yard) => {
+      const matchesSearch =
+        yardSearch === "" ||
         yard.name.toLowerCase().includes(yardSearch.toLowerCase()) ||
         yard.commonName.toLowerCase().includes(yardSearch.toLowerCase()) ||
-        yard.city.toLowerCase().includes(yardSearch.toLowerCase()) ||
-        yard.state.toLowerCase().includes(yardSearch.toLowerCase())
+        yard.propertyAddress.toLowerCase().includes(yardSearch.toLowerCase());
 
-      const matchesCategory = yardCategory === "all" ||
-        yard.type === yardCategory ||
-        yard.category === yardCategory
+      const matchesCategory =
+        yardCategory === "all" || yard.yardType === yardCategory;
 
-      return matchesSearch && matchesCategory
-    })
-  }, [yardSearch, yardCategory])
+      return matchesSearch && matchesCategory;
+    });
+  }, [yardSearch, yardCategory, yards]);
 
   // Filter tickets logic
   const filteredTickets = useMemo(() => {
-    return tickets.filter(ticket => {
+    return tickets.filter((ticket) => {
       // Safe data mapping
-      const yardName = typeof ticket.yard === 'string'
-        ? ticket.yard
-        : (ticket.yard as any)?.name || "";
-      const clientName = ticket.clientName || (ticket.customer as any)?.name || "";
-      const phone = ticket.phone || (ticket.customer as any)?.phone || ticket.customerPhone || "";
+      const yardName =
+        typeof ticket.yard === "string"
+          ? ticket.yard
+          : (ticket.yard as any)?.name || "";
+      const clientName =
+        ticket.clientName || (ticket.customer as any)?.name || "";
+      const phone =
+        ticket.phone ||
+        (ticket.customer as any)?.phone ||
+        ticket.customerPhone ||
+        "";
       const status = (ticket.status as any)?.toString().toUpperCase();
       const priority = (ticket.priority as any)?.toString().toUpperCase();
       const assigneeName = getAssigneeName(ticket.assignedTo);
@@ -392,11 +391,18 @@ export default function TicketsPage() {
 
       // Filter matching
       const matchesStatus =
-        statusFilter === "all" || ticket.status === statusFilter || status === statusFilter.toUpperCase();
+        statusFilter === "all" ||
+        ticket.status === statusFilter ||
+        status === statusFilter.toUpperCase();
       const matchesPriority =
-        priorityFilter === "all" || ticket.priority === priorityFilter || priority === priorityFilter.toUpperCase();
+        priorityFilter === "all" ||
+        ticket.priority === priorityFilter ||
+        priority === priorityFilter.toUpperCase();
       const matchesDirection =
-        directionFilter === "all" || ticket.direction === directionFilter || ticket.direction?.toString().toLowerCase() === directionFilter.toLowerCase();
+        directionFilter === "all" ||
+        ticket.direction === directionFilter ||
+        ticket.direction?.toString().toLowerCase() ===
+          directionFilter.toLowerCase();
 
       // View matching
       let matchesView = true;
@@ -405,14 +411,24 @@ export default function TicketsPage() {
       } else if (activeView === "unassigned") {
         matchesView = !ticket.assignedTo;
       } else if (activeView === "active") {
-        matchesView = status === "OPEN" || status === "IN_PROGRESS" || ticket.status === "Open" || ticket.status === "In Progress";
+        matchesView =
+          status === "OPEN" ||
+          status === "IN_PROGRESS" ||
+          ticket.status === "Open" ||
+          ticket.status === "In Progress";
       } else if (activeView === "assigned") {
         matchesView = !!ticket.assignedTo;
       } else if (activeView === "high_priority") {
         matchesView = priority === "HIGH" || ticket.priority === "High";
       }
 
-      return matchesSearch && matchesStatus && matchesPriority && matchesDirection && matchesView;
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesPriority &&
+        matchesDirection &&
+        matchesView
+      );
     });
   }, [
     tickets,
@@ -422,6 +438,18 @@ export default function TicketsPage() {
     directionFilter,
     activeView,
   ]);
+
+  // Paginación
+  const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);
+  const paginatedTickets = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredTickets.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredTickets, currentPage, itemsPerPage]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, priorityFilter, directionFilter, activeView]);
 
   const handleViewDetails = (ticket: Ticket) => {
     setSelectedTicket(ticket);
@@ -453,7 +481,7 @@ export default function TicketsPage() {
       const updatePayload: any = {
         ...editData,
         yardId: selectedYardId ? parseInt(selectedYardId) : null,
-        status: editData.status?.toUpperCase().replace(' ', '_'),
+        status: editData.status?.toUpperCase().replace(" ", "_"),
         priority: editData.priority?.toUpperCase(),
         disposition: editData.disposition || null,
         onboardingOption: editData.onboardingOption || null,
@@ -481,13 +509,31 @@ export default function TicketsPage() {
         // Update selected ticket in modal
         setSelectedTicket({ ...selectedTicket, ...result.data });
 
+        toast({
+          title: "Success",
+          description: (
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span>Ticket updated successfully</span>
+            </div>
+          ),
+        });
+
         setShowDetails(false);
       } else {
-        alert(result.message || "Failed to update ticket");
+        toast({
+          title: "Error",
+          description: result.message || "Failed to update ticket",
+          variant: "destructive",
+        });
       }
     } catch (err) {
       console.error("Update error:", err);
-      alert("Error updating ticket");
+      toast({
+        title: "Error",
+        description: "An error occurred while updating the ticket",
+        variant: "destructive",
+      });
     } finally {
       setIsUpdating(false);
     }
@@ -547,11 +593,11 @@ export default function TicketsPage() {
           prev.map((t) =>
             t.id === selectedTicket.id
               ? {
-                ...t,
-                yardId: selectedYardId,
-                yard: updatedYard,
-                yardType: selectedYard.yardType,
-              }
+                  ...t,
+                  yardId: selectedYardId,
+                  yard: updatedYard,
+                  yardType: selectedYard.yardType,
+                }
               : t
           )
         );
@@ -560,11 +606,11 @@ export default function TicketsPage() {
         setSelectedTicket((prev) =>
           prev
             ? {
-              ...prev,
-              yardId: selectedYardId,
-              yard: updatedYard,
-              yardType: selectedYard.yardType,
-            }
+                ...prev,
+                yardId: selectedYardId,
+                yard: updatedYard,
+                yardType: selectedYard.yardType,
+              }
             : null
         );
       }
@@ -592,7 +638,7 @@ export default function TicketsPage() {
   return (
     <div className="h-screen flex flex-col lg:flex-row gap-6 p-4">
       {/* Sidebar izquierdo */}
-      <div className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-4">
+      <div className="w-full lg:w-48 flex-shrink-0 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Ticketing</h2>
           <Button size="icon" variant="ghost">
@@ -777,14 +823,15 @@ export default function TicketsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredTickets.map((ticket) => {
+                  paginatedTickets.map((ticket) => {
                     const yardDisplayName = getYardDisplayName(ticket);
                     let yardType = ticket.yardType;
 
-                    // Si no tenemos yardType pero sí yardId, buscamos en los datos locales
                     if (!yardType && ticket.yardId) {
-                      const yardObj = YARDS.find((y) => y.id === ticket.yardId);
-                      if (yardObj) yardType = yardObj.type;
+                      const yardObj = yards.find(
+                        (y) => y.id.toString() === ticket.yardId?.toString()
+                      );
+                      if (yardObj) yardType = yardObj.yardType;
                     }
 
                     return (
@@ -813,6 +860,27 @@ export default function TicketsPage() {
                               </Badge>
                             </div>
                           ) : (
+                            <div className="group relative inline-block">
+                              <Badge
+                                variant="outline"
+                                className="border-amber-500/20 bg-amber-500/5 text-amber-600 animate-pulse"
+                              >
+                                <AlertTriangle className="mr-1 h-3 w-3" />
+                                Pending
+                              </Badge>
+                              <div className="absolute z-10 hidden group-hover:block bg-white dark:bg-zinc-900 text-xs text-amber-700 dark:text-amber-300 border border-amber-400 rounded px-2 py-1 shadow-lg left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap">
+                                Yarda pendiente de asignar
+                              </div>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>{getClientPhone(ticket)}</TableCell>
+                        <TableCell>
+                          {getCampaign(ticket) ? (
+                            <Badge variant="outline">
+                              {getCampaign(ticket)}
+                            </Badge>
+                          ) : (
                             <Badge
                               variant="outline"
                               className="border-amber-500/20 bg-amber-500/5 text-amber-600"
@@ -821,12 +889,6 @@ export default function TicketsPage() {
                               Pending
                             </Badge>
                           )}
-                        </TableCell>
-                        <TableCell>{getClientPhone(ticket)}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {getCampaignFromType(ticket.type)}
-                          </Badge>
                         </TableCell>
                         <TableCell>
                           {ticket.assignedTo ? (
@@ -893,6 +955,79 @@ export default function TicketsPage() {
             </Table>
           </ScrollArea>
         </div>
+
+        {/* Paginación */}
+        {filteredTickets.length > 0 && (
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-muted-foreground">
+                Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                {Math.min(currentPage * itemsPerPage, filteredTickets.length)}{" "}
+                of {filteredTickets.length} tickets
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={(value) => {
+                  setItemsPerPage(Number(value));
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-8 w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 / page</SelectItem>
+                  <SelectItem value="10">10 / page</SelectItem>
+                  <SelectItem value="20">20 / page</SelectItem>
+                  <SelectItem value="50">50 / page</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  First
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm px-2">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  Last
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Dialog central para detalles del ticket */}
@@ -904,24 +1039,23 @@ export default function TicketsPage() {
                 <div className="flex items-center justify-between">
                   <DialogTitle className="text-xl">Ticket Details</DialogTitle>
                 </div>
-                <DialogDescription>
-                  <div className="flex items-center gap-3 mt-2">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {getClientInitials(selectedTicket)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">
-                        {getClientName(selectedTicket)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {getClientPhone(selectedTicket)}
-                      </div>
-                    </div>
-                  </div>
-                </DialogDescription>
               </DialogHeader>
+
+              <div className="flex items-center gap-3 -mt-2">
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {getClientInitials(selectedTicket)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-medium">
+                    {getClientName(selectedTicket)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {getClientPhone(selectedTicket)}
+                  </div>
+                </div>
+              </div>
 
               <div className="grid gap-6">
                 {/* Ticket Metadata - MANTIENE EL MISMO FORMATO */}
@@ -1032,7 +1166,7 @@ export default function TicketsPage() {
                           Onboarding Option
                         </p>
                         {(selectedTicket.type as string)?.toUpperCase() ===
-                          "ONBOARDING" ? (
+                        "ONBOARDING" ? (
                           <Select
                             value={editData.onboardingOption}
                             onValueChange={(v) =>
@@ -1157,10 +1291,10 @@ export default function TicketsPage() {
                         ))}
                         {(!editData.attachments ||
                           editData.attachments.length === 0) && (
-                            <p className="text-xs text-muted-foreground italic">
-                              No attachments added
-                            </p>
-                          )}
+                          <p className="text-xs text-muted-foreground italic">
+                            No attachments added
+                          </p>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -1194,10 +1328,14 @@ export default function TicketsPage() {
                                   {currentYard.name}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                  {currentYard.propertyAddress || currentYard.address}
+                                  {currentYard.propertyAddress ||
+                                    currentYard.propertyAddress}
                                 </p>
                                 <Badge variant="outline" className="mt-1">
-                                  {(currentYard.yardType || currentYard.type) === "SAAS" || (currentYard.yardType || currentYard.type) === "saas"
+                                  {(currentYard.yardType ||
+                                    currentYard.yardType) === "SAAS" ||
+                                  (currentYard.yardType ||
+                                    currentYard.yardType) === "saas"
                                     ? "SaaS"
                                     : "Full Service"}
                                 </Badge>
@@ -1227,7 +1365,10 @@ export default function TicketsPage() {
                                       variant="outline"
                                       className="text-[10px]"
                                     >
-                                      {(selectedYard.yardType || selectedYard.type) === "SAAS" || (selectedYard.yardType || selectedYard.type) === "saas"
+                                      {(selectedYard.yardType ||
+                                        selectedYard.yardType) === "SAAS" ||
+                                      (selectedYard.yardType ||
+                                        selectedYard.yardType) === "saas"
                                         ? "SaaS"
                                         : "Full Service"}
                                     </Badge>
@@ -1264,7 +1405,10 @@ export default function TicketsPage() {
                                       value={yard.id.toString()}
                                     >
                                       {yard.name} -{" "}
-                                      {(yard.yardType || yard.type) === "SAAS" || (yard.yardType || yard.type) === "saas"
+                                      {(yard.yardType || yard.yardType) ===
+                                        "SAAS" ||
+                                      (yard.yardType || yard.yardType) ===
+                                        "saas"
                                         ? "SaaS"
                                         : "Full Service"}
                                     </SelectItem>
@@ -1289,21 +1433,29 @@ export default function TicketsPage() {
                                       {selectedYard.name}
                                     </p>
                                     <Badge variant="outline">
-                                      {(selectedYard.yardType || selectedYard.type) === "SAAS" || (selectedYard.yardType || selectedYard.type) === "saas"
+                                      {(selectedYard.yardType ||
+                                        selectedYard.yardType) === "SAAS" ||
+                                      (selectedYard.yardType ||
+                                        selectedYard.yardType) === "saas"
                                         ? "SaaS"
                                         : "Full Service"}
                                     </Badge>
                                   </div>
                                   <p className="text-sm text-muted-foreground">
-                                    {selectedYard.propertyAddress || selectedYard.address}
+                                    {selectedYard.propertyAddress ||
+                                      selectedYard.propertyAddress}
                                   </p>
 
-                                  {(selectedYard.contactInfo || selectedYard.contactPhone) && (
+                                  {(selectedYard.contactInfo ||
+                                    selectedYard.contactInfo) && (
                                     <div className="flex items-center gap-2 mt-2 text-sm">
                                       <span className="font-medium">
                                         Contact:
                                       </span>
-                                      <span>{selectedYard.contactInfo || selectedYard.contactPhone}</span>
+                                      <span>
+                                        {selectedYard.contactInfo ||
+                                          selectedYard.contactInfo}
+                                      </span>
                                     </div>
                                   )}
 
