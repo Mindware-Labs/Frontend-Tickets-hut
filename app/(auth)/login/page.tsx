@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Lock,
   Mail,
@@ -20,8 +20,9 @@ import Image from 'next/image';
 
 import { auth } from '@/lib/auth';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -39,11 +40,30 @@ export default function LoginPage() {
       // Call real backend API
       await auth.login(formData.email, formData.password);
 
-      // Redirect to dashboard on success
-      router.push('/dashboard');
+      // Get redirect URL from query params if exists
+      const redirectTo = searchParams.get('redirect') || '/dashboard';
+
+      // Redirect to dashboard or original destination
+      router.push(redirectTo);
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message || 'Login failed. Please check your credentials.');
+      
+      // Handle specific error cases
+      let errorMessage = err.message || 'Login failed. Please check your credentials.';
+      
+      // Check if it's a connection error
+      if (errorMessage.includes('Cannot connect to the server')) {
+        errorMessage = 'Unable to connect to the server. Please ensure the backend is running and try again.';
+      } else if (errorMessage.includes('fetch')) {
+        errorMessage = 'Network error. Please check your connection and ensure the backend server is running.';
+      } else if (err.message?.toLowerCase().includes('verify') || 
+          err.message?.toLowerCase().includes('email') ||
+          err.message?.toLowerCase().includes('confirm')) {
+        // Check if error indicates email not verified
+        errorMessage = 'Please verify your email before logging in. Check your inbox for the verification link.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -169,5 +189,19 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl overflow-hidden backdrop-blur-sm">
+        <div className="p-8 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto" />
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

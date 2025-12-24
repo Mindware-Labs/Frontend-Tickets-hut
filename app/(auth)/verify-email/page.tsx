@@ -35,7 +35,19 @@ function VerifyEmailContent() {
                 body: JSON.stringify({ token }),
             });
 
-            const data = await response.json();
+            // Read response as text first to avoid parsing issues
+            const responseText = await response.text();
+            let data: any;
+
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                // If JSON parsing fails, use the text as error message
+                if (!response.ok) {
+                    throw new Error(responseText || 'Verification failed. Invalid response from server.');
+                }
+                data = { message: responseText || 'Email verified successfully!' };
+            }
 
             if (response.ok) {
                 setStatus('success');
@@ -47,11 +59,27 @@ function VerifyEmailContent() {
                 }, 3000);
             } else {
                 setStatus('error');
-                setMessage(data.message || 'Verification failed. The link may be invalid or expired.');
+                // Handle NestJS error format
+                const errorMessage = data.message || 
+                    (Array.isArray(data.message) ? data.message.join(', ') : null) ||
+                    data.error ||
+                    'Verification failed. The link may be invalid or expired.';
+                setMessage(errorMessage);
             }
-        } catch (error) {
+        } catch (error: any) {
+            console.error('Verification error:', error);
             setStatus('error');
-            setMessage('An error occurred during verification. Please try again.');
+            
+            // Handle specific error cases
+            let errorMessage = 'An error occurred during verification. Please try again.';
+            
+            if (error instanceof TypeError && error.message.includes('fetch')) {
+                errorMessage = 'Unable to connect to the server. Please ensure the backend is running and try again.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            setMessage(errorMessage);
         }
     };
 

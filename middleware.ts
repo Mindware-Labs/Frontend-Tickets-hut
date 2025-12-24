@@ -5,9 +5,10 @@ import type { NextRequest } from 'next/server'
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // 1. PERMITIR SIEMPRE recursos estáticos
+  // 1. PERMITIR SIEMPRE recursos estáticos y API routes
   if (
     pathname.startsWith('/_next') ||
+    pathname.startsWith('/api/') ||
     pathname.startsWith('/images/') ||
     pathname.includes('.png') ||
     pathname.includes('.jpg') ||
@@ -25,26 +26,21 @@ export function middleware(request: NextRequest) {
   // 2. Rutas públicas que siempre son accesibles
   const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email']
 
-  if (publicRoutes.includes(pathname)) {
-    return NextResponse.next()
-  }
-
   // 3. Verificar autenticación
-  // IMPORTANTE: Asegúrate que el nombre de la cookie coincida con lo que estableces en login
   const authToken = request.cookies.get('auth-token')?.value
 
-  console.log('🔐 Verificando autenticación para:', pathname)
-  console.log('🔐 Token presente:', !!authToken)
-
-  // 4. Si NO está autenticado, redirigir a login (no a register)
-  if (!authToken) {
-    console.log('🚫 No autenticado, redirigiendo a /login')
-    return NextResponse.redirect(new URL('/login', request.url))
+  // 4. Si NO está autenticado y NO está en una ruta pública, redirigir a login
+  if (!authToken && !publicRoutes.includes(pathname)) {
+    const loginUrl = new URL('/login', request.url)
+    // Agregar el pathname original como query param para redirigir después del login
+    if (pathname !== '/') {
+      loginUrl.searchParams.set('redirect', pathname)
+    }
+    return NextResponse.redirect(loginUrl)
   }
 
   // 5. Si ESTÁ autenticado y está intentando acceder a login/register, redirigir al dashboard
   if (authToken && publicRoutes.includes(pathname)) {
-    console.log('✅ Ya autenticado, redirigiendo a /dashboard')
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
