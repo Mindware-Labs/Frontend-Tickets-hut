@@ -446,6 +446,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               />
             </div>
           </SidebarMenuItem>
+
+          {/* Logout Button */}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => {
+                // Import auth dynamically to avoid SSR issues
+                import('@/lib/auth').then(({ auth }) => {
+                  auth.logout();
+                  window.location.href = '/login';
+                });
+              }}
+              className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+            >
+              <LogOut />
+              <span>Logout</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
       <SidebarRail />
