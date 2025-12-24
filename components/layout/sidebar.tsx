@@ -93,17 +93,12 @@ const data = {
       icon: Ticket,
       items: [],
     },
-<<<<<<< HEAD
     {
-=======
-     {
->>>>>>> adde7be574a51010ddb2e928b620c05818d79552
       title: "Yards",
       url: "/yards",
       icon: Building,
       items: [],
     },
-<<<<<<< HEAD
     /*{
       title: "Communication",
       url: "/communication",
@@ -123,8 +118,6 @@ const data = {
         },
       ]
     },*/
-=======
->>>>>>> adde7be574a51010ddb2e928b620c05818d79552
     {
       title: "Campaigns",
       url: "/campaigns",
@@ -374,10 +367,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroup>
             <SidebarGroupLabel>Management</SidebarGroupLabel>
             <SidebarMenu>
-<<<<<<< HEAD
-=======
-              
->>>>>>> adde7be574a51010ddb2e928b620c05818d79552
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
