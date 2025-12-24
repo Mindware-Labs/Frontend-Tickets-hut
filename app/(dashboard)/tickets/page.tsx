@@ -43,6 +43,7 @@ import { Label } from "@/components/ui/label";
 import {
   Search,
   RefreshCw,
+  Plus,
   AlertCircle,
   Inbox,
   User,
@@ -71,6 +72,18 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Ticket } from "@/lib/mock-data";
+import {
+  AgentOption,
+  CallDirection,
+  CreateTicketFormData,
+  CustomerOption,
+  ManagementType,
+  TicketDisposition,
+  TicketPriority,
+  TicketStatus,
+  YardOption,
+} from "./types";
+import { CreateTicketModal } from "./components/CreateTicketModal";
 
 // Extender el tipo Ticket
 declare module "@/lib/mock-data" {
@@ -86,36 +99,11 @@ declare module "@/lib/mock-data" {
   }
 }
 
-// Enums para los selectores
-export enum TicketDisposition {
-  BOOKING = "BOOKING",
-  GENERAL_INFO = "GENERAL_INFO",
-  COMPLAINT = "COMPLAINT",
-  SUPPORT = "SUPPORT",
-  BILLING = "BILLING",
-  TECHNICAL_ISSUE = "TECHNICAL_ISSUE",
-  OTHER = "OTHER",
-}
-
 export enum OnboardingOption {
   NOT_REGISTER = "NOT_REGISTER",
   REGISTER = "REGISTER",
   PAID_WITH_LL = "PAID_WITH_LL",
   CANCELLED = "CANCELLED",
-}
-
-export enum TicketStatus {
-  OPEN = "OPEN",
-  IN_PROGRESS = "IN_PROGRESS",
-  RESOLVED = "RESOLVED",
-  CLOSED = "CLOSED",
-}
-
-export enum TicketPriority {
-  LOW = "LOW",
-  MEDIUM = "MEDIUM",
-  HIGH = "HIGH",
-  EMERGENCY = "EMERGENCY",
 }
 
 export default function TicketsPage() {
@@ -137,19 +125,33 @@ export default function TicketsPage() {
   const [isEditingIssue, setIsEditingIssue] = useState(false);
   const [yardSearch, setYardSearch] = useState("");
   const [yardCategory, setYardCategory] = useState<string>("all");
-  const [yards, setYards] = useState<
-    Array<{
-      id: number;
-      name: string;
-      commonName: string;
-      propertyAddress: string;
-      contactInfo: string;
-      yardLink?: string;
-      notes?: string;
-      yardType: string;
-      isActive: boolean;
-    }>
-  >([]);
+  const [yards, setYards] = useState<YardOption[]>([]);
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
+  const [agents, setAgents] = useState<AgentOption[]>([]);
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createValidationErrors, setCreateValidationErrors] = useState<
+    Record<string, string>
+  >({});
+  const [newAttachment, setNewAttachment] = useState("");
+  const [customerSearchCreate, setCustomerSearchCreate] = useState("");
+  const [yardSearchCreate, setYardSearchCreate] = useState("");
+  const [agentSearchCreate, setAgentSearchCreate] = useState("");
+  const [createFormData, setCreateFormData] = useState<CreateTicketFormData>({
+    customerId: "",
+    customerPhone: "",
+    yardId: "",
+    campaign: "",
+    agentId: "",
+    status: TicketStatus.IN_PROGRESS,
+    priority: TicketPriority.LOW,
+    direction: CallDirection.INBOUND,
+    callDate: "",
+    disposition: "",
+    issueDetail: "",
+    attachments: [] as string[],
+  });
 
   // State for updating ticket
   const [isUpdating, setIsUpdating] = useState(false);
@@ -239,6 +241,20 @@ export default function TicketsPage() {
   const getDirectionText = (direction: string) => {
     const d = direction?.toString().toLowerCase();
     return d === "outbound" ? "Outbound" : "Inbound";
+  };
+
+  const formatEnumLabel = (value?: string) => {
+    if (!value) return "-";
+    return value
+      .toString()
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  const normalizeEnumValue = (value?: string) => {
+    if (!value) return "";
+    return value.toString().trim().toUpperCase().replace(/\s+/g, "_");
   };
 
   const getCampaign = (ticket: Ticket) => {
@@ -332,9 +348,42 @@ export default function TicketsPage() {
     }
   };
 
+  const fetchCustomers = async () => {
+    try {
+      const response = await fetch("/api/users?page=1&limit=500");
+      const result = await response.json();
+      if (result?.success) {
+        setCustomers(result.data || []);
+      } else {
+        setCustomers([]);
+      }
+    } catch (err) {
+      console.error("Failed to load customers", err);
+      setCustomers([]);
+    }
+  };
+
+  const fetchAgents = async () => {
+    try {
+      const response = await fetch("/api/agents");
+      const result = await response.json();
+      if (result?.success) {
+        const list = result.data || [];
+        setAgents(list.filter((agent: any) => agent.isActive !== false));
+      } else {
+        setAgents([]);
+      }
+    } catch (err) {
+      console.error("Failed to load agents", err);
+      setAgents([]);
+    }
+  };
+
   useEffect(() => {
     fetchTickets();
     fetchYards();
+    fetchCustomers();
+    fetchAgents();
   }, []);
 
   const selectedYard = useMemo(() => {
@@ -363,6 +412,7 @@ export default function TicketsPage() {
     });
   }, [yardSearch, yardCategory, yards]);
 
+
   // Filter tickets logic
   const filteredTickets = useMemo(() => {
     return tickets.filter((ticket) => {
@@ -378,7 +428,7 @@ export default function TicketsPage() {
         (ticket.customer as any)?.phone ||
         ticket.customerPhone ||
         "";
-      const status = (ticket.status as any)?.toString().toUpperCase();
+      const status = normalizeEnumValue(ticket.status as any);
       const priority = (ticket.priority as any)?.toString().toUpperCase();
       const assigneeName = getAssigneeName(ticket.assignedTo);
 
@@ -392,8 +442,7 @@ export default function TicketsPage() {
       // Filter matching
       const matchesStatus =
         statusFilter === "all" ||
-        ticket.status === statusFilter ||
-        status === statusFilter.toUpperCase();
+        status === normalizeEnumValue(statusFilter);
       const matchesPriority =
         priorityFilter === "all" ||
         ticket.priority === priorityFilter ||
@@ -635,6 +684,110 @@ export default function TicketsPage() {
     setIsEditingIssue(false);
   };
 
+  const resetCreateForm = () => {
+    setCreateFormData({
+      customerId: "",
+      customerPhone: "",
+      yardId: "",
+      campaign: "",
+      agentId: "",
+      status: TicketStatus.IN_PROGRESS,
+      priority: TicketPriority.LOW,
+      direction: CallDirection.INBOUND,
+      callDate: "",
+      disposition: "",
+      issueDetail: "",
+      attachments: [],
+    });
+    setNewAttachment("");
+    setCustomerSearchCreate("");
+    setYardSearchCreate("");
+    setAgentSearchCreate("");
+    setCreateValidationErrors({});
+  };
+
+  const handleCreateTicket = async () => {
+    const errors: Record<string, string> = {};
+    if (!createFormData.customerId) {
+      errors.customerId = "Customer is required";
+    }
+    if (!createFormData.direction) {
+      errors.direction = "Direction is required";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setCreateValidationErrors(errors);
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+      const payload = {
+        customerId: Number(createFormData.customerId),
+        direction: createFormData.direction,
+        yardId: createFormData.yardId
+          ? Number(createFormData.yardId)
+          : undefined,
+        customerPhone: createFormData.customerPhone || undefined,
+        campaign: createFormData.campaign || undefined,
+        agentId: createFormData.agentId
+          ? Number(createFormData.agentId)
+          : undefined,
+        status: createFormData.status || undefined,
+        priority: createFormData.priority || undefined,
+        disposition: createFormData.disposition || undefined,
+        issueDetail: createFormData.issueDetail?.trim() || undefined,
+        attachments: createFormData.attachments.length
+          ? createFormData.attachments
+          : undefined,
+      };
+
+      const response = await fetch("/api/tickets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: (
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span>Ticket created successfully</span>
+            </div>
+          ),
+        });
+        setShowCreateModal(false);
+        resetCreateForm();
+        fetchTickets();
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to create ticket",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error("Create ticket error:", err);
+      toast({
+        title: "Error",
+        description: "An error occurred while creating the ticket",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col lg:flex-row gap-6 p-4">
       {/* Sidebar izquierdo */}
@@ -645,6 +798,15 @@ export default function TicketsPage() {
             <SlidersHorizontal className="h-4 w-4" />
           </Button>
         </div>
+
+        <Button
+          onClick={() => setShowCreateModal(true)}
+          className="w-full"
+          size="sm"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          New Ticket
+        </Button>
 
         <div className="space-y-1">
           <Button
@@ -729,9 +891,11 @@ export default function TicketsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Open">Open</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="Closed">Closed</SelectItem>
+                {Object.values(TicketStatus).map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {formatEnumLabel(value)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -913,7 +1077,7 @@ export default function TicketsPage() {
                             variant="outline"
                             className={getStatusBadgeColor(ticket.status)}
                           >
-                            {ticket.status}
+                            {formatEnumLabel(ticket.status)}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -922,7 +1086,7 @@ export default function TicketsPage() {
                               variant="outline"
                               className={getPriorityColor(ticket.priority)}
                             >
-                              {ticket.priority}
+                              {formatEnumLabel(ticket.priority)}
                             </Badge>
                           ) : (
                             <span className="text-sm text-muted-foreground">
@@ -1030,6 +1194,31 @@ export default function TicketsPage() {
         )}
       </div>
 
+      <CreateTicketModal
+        open={showCreateModal}
+        onOpenChange={(open) => {
+          setShowCreateModal(open);
+          if (!open) resetCreateForm();
+        }}
+        customers={customers}
+        yards={yards}
+        agents={agents}
+        createFormData={createFormData}
+        setCreateFormData={setCreateFormData}
+        createValidationErrors={createValidationErrors}
+        setCreateValidationErrors={setCreateValidationErrors}
+        customerSearchCreate={customerSearchCreate}
+        setCustomerSearchCreate={setCustomerSearchCreate}
+        yardSearchCreate={yardSearchCreate}
+        setYardSearchCreate={setYardSearchCreate}
+        agentSearchCreate={agentSearchCreate}
+        setAgentSearchCreate={setAgentSearchCreate}
+        newAttachment={newAttachment}
+        setNewAttachment={setNewAttachment}
+        isCreating={isCreating}
+        onSubmit={handleCreateTicket}
+      />
+
       {/* Dialog central para detalles del ticket */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -1081,7 +1270,7 @@ export default function TicketsPage() {
                           <SelectContent>
                             {Object.values(TicketStatus).map((s) => (
                               <SelectItem key={s} value={s}>
-                                {s}
+                                {formatEnumLabel(s)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1103,7 +1292,7 @@ export default function TicketsPage() {
                           <SelectContent>
                             {Object.values(TicketPriority).map((p) => (
                               <SelectItem key={p} value={p}>
-                                {p}
+                                {formatEnumLabel(p)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1155,7 +1344,7 @@ export default function TicketsPage() {
                           <SelectContent>
                             {Object.values(TicketDisposition).map((d) => (
                               <SelectItem key={d} value={d}>
-                                {d}
+                                {formatEnumLabel(d)}
                               </SelectItem>
                             ))}
                           </SelectContent>

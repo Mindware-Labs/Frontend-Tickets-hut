@@ -107,6 +107,12 @@ const data = {
       icon: Ticket,
       items: [],
     },
+    {
+      title: "Yards",
+      url: "/yards",
+      icon: Building,
+      items: [],
+    },
     /*{
       title: "Communication",
       url: "/communication",
@@ -271,7 +277,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
           <SidebarMenu>
             {filteredNavMain.map((item) => {
-              if (item.title === "Tickets") {
+              if (!item.items?.length) {
                 const active = pathname === item.url;
                 return (
                   <SidebarMenuItem key={item.title}>
@@ -345,22 +351,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroup>
             <SidebarGroupLabel>Management</SidebarGroupLabel>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  tooltip="Yards"
-                  isActive={pathname.startsWith("/yards")}
-                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
-                >
-                  <a href="/yards">
-                    {pathname.startsWith("/yards") && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
-                    )}
-                    <Building />
-                    <span>Yards</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
