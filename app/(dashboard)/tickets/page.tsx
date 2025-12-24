@@ -79,8 +79,6 @@ import {
   CustomerOption,
   ManagementType,
   TicketDisposition,
-  TicketPriority,
-  TicketStatus,
   YardOption,
 } from "./types";
 import { CreateTicketModal } from "./components/CreateTicketModal";
@@ -106,8 +104,6 @@ export enum OnboardingOption {
   CANCELLED = "CANCELLED",
 }
 
-<<<<<<< HEAD
-=======
 export enum TicketStatus {
   OPEN = "OPEN",
   IN_PROGRESS = "IN_PROGRESS",
@@ -129,7 +125,6 @@ export enum Cam {
   OTHER = "OTHER",
 }
 
->>>>>>> adde7be574a51010ddb2e928b620c05818d79552
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -179,7 +174,7 @@ export default function TicketsPage() {
 
   // State for updating ticket
   const [isUpdating, setIsUpdating] = useState(false);
-  
+
   // Agregamos 'campaign' al estado de edición
   const [editData, setEditData] = useState<{
     disposition?: string;
@@ -188,7 +183,7 @@ export default function TicketsPage() {
     status?: string;
     priority?: string;
     attachments?: string[];
-    campaign?: string; 
+    campaign?: string;
   }>({});
 
   // Helper functions
@@ -434,11 +429,6 @@ export default function TicketsPage() {
     });
   }, [yardSearch, yardCategory, yards]);
 
-<<<<<<< HEAD
-
-  // Filter tickets logic
-=======
->>>>>>> adde7be574a51010ddb2e928b620c05818d79552
   const filteredTickets = useMemo(() => {
     return tickets.filter((ticket) => {
       const yardName =
@@ -463,8 +453,7 @@ export default function TicketsPage() {
         phone.toLowerCase().includes(search.toLowerCase());
 
       const matchesStatus =
-        statusFilter === "all" ||
-        status === normalizeEnumValue(statusFilter);
+        statusFilter === "all" || status === normalizeEnumValue(statusFilter);
       const matchesPriority =
         priorityFilter === "all" ||
         ticket.priority === priorityFilter ||
@@ -473,7 +462,7 @@ export default function TicketsPage() {
         directionFilter === "all" ||
         ticket.direction === directionFilter ||
         ticket.direction?.toString().toLowerCase() ===
-        directionFilter.toLowerCase();
+          directionFilter.toLowerCase();
 
       let matchesView = true;
       if (activeView === "assigned_me") {
@@ -532,7 +521,7 @@ export default function TicketsPage() {
       priority: ticket.priority?.toString().toUpperCase() || "",
       attachments: ticket.attachments || [],
       // Cargar campaña, o dejar vacío si no tiene
-      campaign: ticket.campaign || "", 
+      campaign: ticket.campaign || "",
     });
 
     setIsEditingIssue(false);
@@ -613,7 +602,7 @@ export default function TicketsPage() {
     if (!selectedTicket || !selectedYardId) return;
     setIsAssigningYard(true);
 
-      try {
+    try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       if (selectedTicket && selectedYard) {
@@ -651,11 +640,11 @@ export default function TicketsPage() {
   };
 
   const handleSaveIssueDetail = () => {
-      if (!selectedTicket) return;
+    if (!selectedTicket) return;
     setTickets((prev) =>
       prev.map((t) => (t.id === selectedTicket.id ? { ...t, issueDetail } : t))
-      );
-      setSelectedTicket((prev) => (prev ? { ...prev, issueDetail } : null));
+    );
+    setSelectedTicket((prev) => (prev ? { ...prev, issueDetail } : null));
     setIsEditingIssue(false);
   };
 
@@ -768,7 +757,7 @@ export default function TicketsPage() {
       {/* Sidebar izquierdo */}
       <div className="w-full lg:w-48 flex-shrink-0 flex flex-col gap-4">
         {/* ... Sidebar content unchanged ... */}
-         <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Ticketing</h2>
           <Button size="icon" variant="ghost">
             <SlidersHorizontal className="h-4 w-4" />
@@ -909,7 +898,7 @@ export default function TicketsPage() {
 
       {/* Área principal */}
       <div className="flex-1 flex flex-col gap-4">
-              {/* ... Main content search/table unchanged ... */}
+        {/* ... Main content search/table unchanged ... */}
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -981,7 +970,7 @@ export default function TicketsPage() {
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={() => handleViewDetails(ticket)}
                       >
-                         <TableCell className="font-mono text-xs">
+                        <TableCell className="font-mono text-xs">
                           #{ticket.id}
                         </TableCell>
                         <TableCell>{getClientName(ticket)}</TableCell>
@@ -1098,7 +1087,7 @@ export default function TicketsPage() {
         </div>
 
         {/* Paginación */}
-         {filteredTickets.length > 0 && (
+        {filteredTickets.length > 0 && (
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
               <p className="text-sm text-muted-foreground">
@@ -1275,7 +1264,7 @@ export default function TicketsPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       {/* --- SELECTOR CAMPAIGN RESTAURADO --- */}
                       <div className="space-y-1">
                         <p className="text-sm font-medium text-muted-foreground">
@@ -1299,7 +1288,7 @@ export default function TicketsPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                       {/* --- FIN NUEVO SELECTOR --- */}
+                      {/* --- FIN NUEVO SELECTOR --- */}
 
                       <div className="space-y-1">
                         <p className="text-sm font-medium text-muted-foreground">
@@ -1353,8 +1342,7 @@ export default function TicketsPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                     <div className="space-y-1">
-                        
+                      <div className="space-y-1">
                         {(selectedTicket.type as string)?.toUpperCase() ===
                         "ONBOARDING" ? (
                           <Select
@@ -1378,9 +1366,7 @@ export default function TicketsPage() {
                             </SelectContent>
                           </Select>
                         ) : (
-                          <div className="h-8 flex items-center">
-                        
-                          </div>
+                          <div className="h-8 flex items-center"></div>
                         )}
                       </div>
                     </div>
