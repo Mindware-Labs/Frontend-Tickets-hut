@@ -82,24 +82,10 @@ const user = {
 const data = {
   navMain: [
     {
-      title: "Platform",
+      title: "Dashboard",
       url: "/dashboard",
       icon: LayoutDashboard,
-      isActive: true,
-      items: [
-        {
-          title: "Overview",
-          url: "/dashboard",
-        },
-        {
-          title: "Analytics",
-          url: "/dashboard/analytics",
-        },
-        {
-          title: "Real-time Monitor",
-          url: "/dashboard/monitor",
-        },
-      ],
+      items: [],
     },
     {
       title: "Tickets",
@@ -107,12 +93,17 @@ const data = {
       icon: Ticket,
       items: [],
     },
+<<<<<<< HEAD
     {
+=======
+     {
+>>>>>>> adde7be574a51010ddb2e928b620c05818d79552
       title: "Yards",
       url: "/yards",
       icon: Building,
       items: [],
     },
+<<<<<<< HEAD
     /*{
       title: "Communication",
       url: "/communication",
@@ -132,6 +123,8 @@ const data = {
         },
       ]
     },*/
+=======
+>>>>>>> adde7be574a51010ddb2e928b620c05818d79552
     {
       title: "Campaigns",
       url: "/campaigns",
@@ -144,10 +137,6 @@ const data = {
         {
           title: "Archived",
           url: "/campaigns/archived",
-        },
-        {
-          title: "Templates",
-          url: "/campaigns/templates",
         },
       ],
     },
@@ -179,10 +168,7 @@ const data = {
           title: "Agent Stats",
           url: "/reports/agents",
         },
-        {
-          title: "Campaign ROI",
-          url: "/reports/roi",
-        },
+
       ],
     },
   ],
@@ -192,11 +178,7 @@ const data = {
       url: "#",
       icon: LifeBuoy,
     },
-    {
-      title: "Feedback",
-      url: "#",
-      icon: Send,
-    },
+ 
   ],
   projects: [
     {
@@ -226,7 +208,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     if (role === "Agent") {
       // Agents can see Platform, Tickets, Yards, Communication, Knowledge
       return [
-        "Platform",
+        "Dashboard",
         "Tickets",
         "Yards",
         "Communication",
@@ -297,6 +279,48 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
+              } 
+              if (item.title === "Dashboard") {
+                const active = pathname === item.url;
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={item.title}
+                      isActive={active}
+                      className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-medium relative overflow-hidden transition-all duration-200"
+                    >
+                      <a href={item.url}>
+                        {active && (
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
+                        )}
+                        {item.icon && <item.icon />}
+                        <span>{item.title}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              }
+              if (item.title === "Yards") {
+                const active = pathname === item.url;
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={item.title}
+                      isActive={active}
+                      className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-medium relative overflow-hidden transition-all duration-200"
+                    >
+                      <a href={item.url}>
+                        {active && (
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
+                        )}
+                        {item.icon && <item.icon />}
+                        <span>{item.title}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
               }
               // Resto igual (colapsable)
               const active = isGroupActive(item);
@@ -304,7 +328,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <Collapsible
                   key={item.title}
                   asChild
-                  defaultOpen={active || item.isActive}
                   className="group/collapsible"
                 >
                   <SidebarMenuItem>
@@ -351,6 +374,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroup>
             <SidebarGroupLabel>Management</SidebarGroupLabel>
             <SidebarMenu>
+<<<<<<< HEAD
+=======
+              
+>>>>>>> adde7be574a51010ddb2e928b620c05818d79552
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
