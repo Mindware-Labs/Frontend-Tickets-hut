@@ -57,13 +57,13 @@ export default function LoginPage() {
 
         {/* --- CAMBIO: Reemplazamos el div del icono por el logo --- */}
         <div className="mx-auto w-50 h-26 relative ">
-          <Image
-            src="/images/LOGO CQ-13.png"
-            alt="cq Logo"
-            fill
-            className="object-contain" // Esto evita que el logo se estire o deforme
-            priority
-          />
+           <Image 
+             src="/images/LOGO CQ-13.png"   
+             alt="cq Logo"
+             fill
+             className="object-contain" // Esto evita que el logo se estire o deforme
+             priority
+           />
         </div>
         {/* --------------------------------------------------------- */}
 

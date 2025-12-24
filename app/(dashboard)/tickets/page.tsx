@@ -43,6 +43,7 @@ import { Label } from "@/components/ui/label";
 import {
   Search,
   RefreshCw,
+  Plus,
   AlertCircle,
   Inbox,
   User,
@@ -71,6 +72,16 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Ticket } from "@/lib/mock-data";
+import {
+  AgentOption,
+  CallDirection,
+  CreateTicketFormData,
+  CustomerOption,
+  ManagementType,
+  TicketDisposition,
+  YardOption,
+} from "./types";
+import { CreateTicketModal } from "./components/CreateTicketModal";
 
 // Extender el tipo Ticket
 declare module "@/lib/mock-data" {
@@ -84,17 +95,6 @@ declare module "@/lib/mock-data" {
     onboardingOption?: string;
     attachments?: string[];
   }
-}
-
-// Enums para los selectores
-export enum TicketDisposition {
-  BOOKING = "BOOKING",
-  GENERAL_INFO = "GENERAL_INFO",
-  COMPLAINT = "COMPLAINT",
-  SUPPORT = "SUPPORT",
-  BILLING = "BILLING",
-  TECHNICAL_ISSUE = "TECHNICAL_ISSUE",
-  OTHER = "OTHER",
 }
 
 export enum OnboardingOption {
@@ -118,6 +118,13 @@ export enum TicketPriority {
   EMERGENCY = "EMERGENCY",
 }
 
+// Enum para Campaign (ONBOARDING, AR, OTHER)
+export enum Cam {
+  ONBOARDING = "ONBOARDING",
+  AR = "AR",
+  OTHER = "OTHER",
+}
+
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -137,22 +144,38 @@ export default function TicketsPage() {
   const [isEditingIssue, setIsEditingIssue] = useState(false);
   const [yardSearch, setYardSearch] = useState("");
   const [yardCategory, setYardCategory] = useState<string>("all");
-  const [yards, setYards] = useState<
-    Array<{
-      id: number;
-      name: string;
-      commonName: string;
-      propertyAddress: string;
-      contactInfo: string;
-      yardLink?: string;
-      notes?: string;
-      yardType: string;
-      isActive: boolean;
-    }>
-  >([]);
+  const [yards, setYards] = useState<YardOption[]>([]);
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
+  const [agents, setAgents] = useState<AgentOption[]>([]);
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createValidationErrors, setCreateValidationErrors] = useState<
+    Record<string, string>
+  >({});
+  const [newAttachment, setNewAttachment] = useState("");
+  const [customerSearchCreate, setCustomerSearchCreate] = useState("");
+  const [yardSearchCreate, setYardSearchCreate] = useState("");
+  const [agentSearchCreate, setAgentSearchCreate] = useState("");
+  const [createFormData, setCreateFormData] = useState<CreateTicketFormData>({
+    customerId: "",
+    customerPhone: "",
+    yardId: "",
+    campaign: "",
+    agentId: "",
+    status: TicketStatus.IN_PROGRESS,
+    priority: TicketPriority.LOW,
+    direction: CallDirection.INBOUND,
+    callDate: "",
+    disposition: "",
+    issueDetail: "",
+    attachments: [] as string[],
+  });
 
   // State for updating ticket
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Agregamos 'campaign' al estado de edición
   const [editData, setEditData] = useState<{
     disposition?: string;
     issueDetail?: string;
@@ -160,10 +183,10 @@ export default function TicketsPage() {
     status?: string;
     priority?: string;
     attachments?: string[];
+    campaign?: string;
   }>({});
 
-  // Helper functions moved to top to avoid ReferenceErrors during initialization
-  // Safe access to assignee
+  // Helper functions
   const getAssigneeName = (assignedTo: any) => {
     if (!assignedTo) return "Unassigned";
     if (typeof assignedTo === "string") return assignedTo;
@@ -176,7 +199,6 @@ export default function TicketsPage() {
     return name.substring(0, 2).toUpperCase();
   };
 
-  // Safe access to client/customer
   const getClientName = (ticket: any) => {
     if (ticket.clientName) return ticket.clientName;
     if (ticket.customer?.name) return ticket.customer.name;
@@ -241,6 +263,20 @@ export default function TicketsPage() {
     return d === "outbound" ? "Outbound" : "Inbound";
   };
 
+  const formatEnumLabel = (value?: string) => {
+    if (!value) return "-";
+    return value
+      .toString()
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  const normalizeEnumValue = (value?: string) => {
+    if (!value) return "";
+    return value.toString().trim().toUpperCase().replace(/\s+/g, "_");
+  };
+
   const getCampaign = (ticket: Ticket) => {
     return ticket.campaign || null;
   };
@@ -269,11 +305,9 @@ export default function TicketsPage() {
     }
   };
 
-  // Obtener yard display name para la tabla
   const getYardDisplayName = (ticket: Ticket) => {
     if (ticket.yard && typeof ticket.yard === "object") {
       const y = ticket.yard as any;
-      // Handle different backend/mock structures
       const name = y.name || "";
       const secondary = y.commonName || y.city || "";
       const location = y.propertyAddress || y.state || "";
@@ -299,7 +333,6 @@ export default function TicketsPage() {
     return null;
   };
 
-  // Fetch tickets
   const fetchTickets = async () => {
     try {
       setIsLoading(true);
@@ -332,9 +365,42 @@ export default function TicketsPage() {
     }
   };
 
+  const fetchCustomers = async () => {
+    try {
+      const response = await fetch("/api/users?page=1&limit=500");
+      const result = await response.json();
+      if (result?.success) {
+        setCustomers(result.data || []);
+      } else {
+        setCustomers([]);
+      }
+    } catch (err) {
+      console.error("Failed to load customers", err);
+      setCustomers([]);
+    }
+  };
+
+  const fetchAgents = async () => {
+    try {
+      const response = await fetch("/api/agents");
+      const result = await response.json();
+      if (result?.success) {
+        const list = result.data || [];
+        setAgents(list.filter((agent: any) => agent.isActive !== false));
+      } else {
+        setAgents([]);
+      }
+    } catch (err) {
+      console.error("Failed to load agents", err);
+      setAgents([]);
+    }
+  };
+
   useEffect(() => {
     fetchTickets();
     fetchYards();
+    fetchCustomers();
+    fetchAgents();
   }, []);
 
   const selectedYard = useMemo(() => {
@@ -363,10 +429,8 @@ export default function TicketsPage() {
     });
   }, [yardSearch, yardCategory, yards]);
 
-  // Filter tickets logic
   const filteredTickets = useMemo(() => {
     return tickets.filter((ticket) => {
-      // Safe data mapping
       const yardName =
         typeof ticket.yard === "string"
           ? ticket.yard
@@ -378,22 +442,18 @@ export default function TicketsPage() {
         (ticket.customer as any)?.phone ||
         ticket.customerPhone ||
         "";
-      const status = (ticket.status as any)?.toString().toUpperCase();
+      const status = normalizeEnumValue(ticket.status as any);
       const priority = (ticket.priority as any)?.toString().toUpperCase();
       const assigneeName = getAssigneeName(ticket.assignedTo);
 
-      // Search matching
       const matchesSearch =
         clientName.toLowerCase().includes(search.toLowerCase()) ||
         yardName.toLowerCase().includes(search.toLowerCase()) ||
         ticket.id.toString().includes(search) ||
         phone.toLowerCase().includes(search.toLowerCase());
 
-      // Filter matching
       const matchesStatus =
-        statusFilter === "all" ||
-        ticket.status === statusFilter ||
-        status === statusFilter.toUpperCase();
+        statusFilter === "all" || status === normalizeEnumValue(statusFilter);
       const matchesPriority =
         priorityFilter === "all" ||
         ticket.priority === priorityFilter ||
@@ -404,7 +464,6 @@ export default function TicketsPage() {
         ticket.direction?.toString().toLowerCase() ===
           directionFilter.toLowerCase();
 
-      // View matching
       let matchesView = true;
       if (activeView === "assigned_me") {
         matchesView = assigneeName === "Agent Smith";
@@ -439,14 +498,12 @@ export default function TicketsPage() {
     activeView,
   ]);
 
-  // Paginación
   const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);
   const paginatedTickets = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredTickets.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredTickets, currentPage, itemsPerPage]);
 
-  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [search, statusFilter, priorityFilter, directionFilter, activeView]);
@@ -456,7 +513,6 @@ export default function TicketsPage() {
     setSelectedYardId(ticket.yardId || "");
     setIssueDetail(ticket.issueDetail || "");
 
-    // Initialize edit data
     setEditData({
       disposition: ticket.disposition || "",
       issueDetail: ticket.issueDetail || "",
@@ -464,6 +520,8 @@ export default function TicketsPage() {
       status: ticket.status?.toString().toUpperCase().replace(" ", "_") || "",
       priority: ticket.priority?.toString().toUpperCase() || "",
       attachments: ticket.attachments || [],
+      // Cargar campaña, o dejar vacío si no tiene
+      campaign: ticket.campaign || "",
     });
 
     setIsEditingIssue(false);
@@ -478,6 +536,8 @@ export default function TicketsPage() {
     try {
       setIsUpdating(true);
 
+      // CORRECCIÓN: Como el backend ya acepta "OTHER", enviamos el valor directamente
+      // Ya no necesitamos convertir "OTHER" a null.
       const updatePayload: any = {
         ...editData,
         yardId: selectedYardId ? parseInt(selectedYardId) : null,
@@ -486,6 +546,7 @@ export default function TicketsPage() {
         disposition: editData.disposition || null,
         onboardingOption: editData.onboardingOption || null,
         issueDetail: editData.issueDetail || null,
+        campaign: editData.campaign || null, // Se envía directo
       };
 
       const response = await fetch(`/api/tickets/${selectedTicket.id}`, {
@@ -499,14 +560,12 @@ export default function TicketsPage() {
       const result = await response.json();
 
       if (result.success) {
-        // Update local tickets state
         setTickets((prev) =>
           prev.map((t) =>
             t.id === selectedTicket.id ? { ...t, ...result.data } : t
           )
         );
 
-        // Update selected ticket in modal
         setSelectedTicket({ ...selectedTicket, ...result.data });
 
         toast({
@@ -541,54 +600,14 @@ export default function TicketsPage() {
 
   const handleAssignYard = async () => {
     if (!selectedTicket || !selectedYardId) return;
-
-    // Función para resaltar coincidencias en el texto
-    const highlightMatch = (
-      text: string,
-      searchTerm: string
-    ): React.ReactNode => {
-      if (!searchTerm || !text) return text;
-
-      const lowerText = text.toString().toLowerCase();
-      const lowerSearch = searchTerm.toLowerCase();
-
-      // Si no hay coincidencia, devolver el texto normal
-      if (!lowerText.includes(lowerSearch)) {
-        return text;
-      }
-
-      // Dividir el texto en partes que coinciden y no coinciden
-      const regex = new RegExp(`(${searchTerm})`, "gi");
-      const parts = text.toString().split(regex);
-
-      return (
-        <span>
-          {parts.map((part, index) =>
-            part.toLowerCase() === lowerSearch ? (
-              <mark
-                key={index}
-                className="bg-yellow-200 dark:bg-yellow-800/70 text-yellow-900 dark:text-yellow-100 px-0.5 rounded font-medium"
-              >
-                {part}
-              </mark>
-            ) : (
-              <span key={index}>{part}</span>
-            )
-          )}
-        </span>
-      );
-    };
-
     setIsAssigningYard(true);
 
     try {
-      // Simular llamada a API
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       if (selectedTicket && selectedYard) {
         const updatedYard = `${selectedYard.name} - ${selectedYard.commonName}`;
 
-        // Update local tickets state
         setTickets((prev) =>
           prev.map((t) =>
             t.id === selectedTicket.id
@@ -602,7 +621,6 @@ export default function TicketsPage() {
           )
         );
 
-        // Update selected ticket in modal
         setSelectedTicket((prev) =>
           prev
             ? {
@@ -623,28 +641,137 @@ export default function TicketsPage() {
 
   const handleSaveIssueDetail = () => {
     if (!selectedTicket) return;
-
-    // Update local tickets state
     setTickets((prev) =>
       prev.map((t) => (t.id === selectedTicket.id ? { ...t, issueDetail } : t))
     );
-
-    // Update selected ticket in modal
     setSelectedTicket((prev) => (prev ? { ...prev, issueDetail } : null));
-
     setIsEditingIssue(false);
+  };
+
+  const resetCreateForm = () => {
+    setCreateFormData({
+      customerId: "",
+      customerPhone: "",
+      yardId: "",
+      campaign: "",
+      agentId: "",
+      status: TicketStatus.IN_PROGRESS,
+      priority: TicketPriority.LOW,
+      direction: CallDirection.INBOUND,
+      callDate: "",
+      disposition: "",
+      issueDetail: "",
+      attachments: [],
+    });
+    setNewAttachment("");
+    setCustomerSearchCreate("");
+    setYardSearchCreate("");
+    setAgentSearchCreate("");
+    setCreateValidationErrors({});
+  };
+
+  const handleCreateTicket = async () => {
+    const errors: Record<string, string> = {};
+    if (!createFormData.customerId) {
+      errors.customerId = "Customer is required";
+    }
+    if (!createFormData.direction) {
+      errors.direction = "Direction is required";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setCreateValidationErrors(errors);
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+      const payload = {
+        customerId: Number(createFormData.customerId),
+        direction: createFormData.direction,
+        yardId: createFormData.yardId
+          ? Number(createFormData.yardId)
+          : undefined,
+        customerPhone: createFormData.customerPhone || undefined,
+        campaign: createFormData.campaign || undefined,
+        agentId: createFormData.agentId
+          ? Number(createFormData.agentId)
+          : undefined,
+        status: createFormData.status || undefined,
+        priority: createFormData.priority || undefined,
+        disposition: createFormData.disposition || undefined,
+        issueDetail: createFormData.issueDetail?.trim() || undefined,
+        attachments: createFormData.attachments.length
+          ? createFormData.attachments
+          : undefined,
+      };
+
+      const response = await fetch("/api/tickets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: (
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span>Ticket created successfully</span>
+            </div>
+          ),
+        });
+        setShowCreateModal(false);
+        resetCreateForm();
+        fetchTickets();
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to create ticket",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error("Create ticket error:", err);
+      toast({
+        title: "Error",
+        description: "An error occurred while creating the ticket",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
     <div className="h-screen flex flex-col lg:flex-row gap-6 p-4">
       {/* Sidebar izquierdo */}
       <div className="w-full lg:w-48 flex-shrink-0 flex flex-col gap-4">
+        {/* ... Sidebar content unchanged ... */}
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Ticketing</h2>
           <Button size="icon" variant="ghost">
             <SlidersHorizontal className="h-4 w-4" />
           </Button>
         </div>
+
+        <Button
+          onClick={() => setShowCreateModal(true)}
+          className="w-full"
+          size="sm"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          New Ticket
+        </Button>
 
         <div className="space-y-1">
           <Button
@@ -729,9 +856,11 @@ export default function TicketsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Open">Open</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="Closed">Closed</SelectItem>
+                {Object.values(TicketStatus).map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {formatEnumLabel(value)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -769,6 +898,7 @@ export default function TicketsPage() {
 
       {/* Área principal */}
       <div className="flex-1 flex flex-col gap-4">
+        {/* ... Main content search/table unchanged ... */}
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -869,7 +999,7 @@ export default function TicketsPage() {
                                 Pending
                               </Badge>
                               <div className="absolute z-10 hidden group-hover:block bg-white dark:bg-zinc-900 text-xs text-amber-700 dark:text-amber-300 border border-amber-400 rounded px-2 py-1 shadow-lg left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap">
-                                Yarda pendiente de asignar
+                                Yard pending assignment
                               </div>
                             </div>
                           )}
@@ -913,7 +1043,7 @@ export default function TicketsPage() {
                             variant="outline"
                             className={getStatusBadgeColor(ticket.status)}
                           >
-                            {ticket.status}
+                            {formatEnumLabel(ticket.status)}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -922,7 +1052,7 @@ export default function TicketsPage() {
                               variant="outline"
                               className={getPriorityColor(ticket.priority)}
                             >
-                              {ticket.priority}
+                              {formatEnumLabel(ticket.priority)}
                             </Badge>
                           ) : (
                             <span className="text-sm text-muted-foreground">
@@ -1030,6 +1160,31 @@ export default function TicketsPage() {
         )}
       </div>
 
+      <CreateTicketModal
+        open={showCreateModal}
+        onOpenChange={(open) => {
+          setShowCreateModal(open);
+          if (!open) resetCreateForm();
+        }}
+        customers={customers}
+        yards={yards}
+        agents={agents}
+        createFormData={createFormData}
+        setCreateFormData={setCreateFormData}
+        createValidationErrors={createValidationErrors}
+        setCreateValidationErrors={setCreateValidationErrors}
+        customerSearchCreate={customerSearchCreate}
+        setCustomerSearchCreate={setCustomerSearchCreate}
+        yardSearchCreate={yardSearchCreate}
+        setYardSearchCreate={setYardSearchCreate}
+        agentSearchCreate={agentSearchCreate}
+        setAgentSearchCreate={setAgentSearchCreate}
+        newAttachment={newAttachment}
+        setNewAttachment={setNewAttachment}
+        isCreating={isCreating}
+        onSubmit={handleCreateTicket}
+      />
+
       {/* Dialog central para detalles del ticket */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -1058,7 +1213,7 @@ export default function TicketsPage() {
               </div>
 
               <div className="grid gap-6">
-                {/* Ticket Metadata - MANTIENE EL MISMO FORMATO */}
+                {/* Ticket Metadata */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Ticket Information</CardTitle>
@@ -1081,7 +1236,7 @@ export default function TicketsPage() {
                           <SelectContent>
                             {Object.values(TicketStatus).map((s) => (
                               <SelectItem key={s} value={s}>
-                                {s}
+                                {formatEnumLabel(s)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1103,12 +1258,38 @@ export default function TicketsPage() {
                           <SelectContent>
                             {Object.values(TicketPriority).map((p) => (
                               <SelectItem key={p} value={p}>
-                                {p}
+                                {formatEnumLabel(p)}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
+
+                      {/* --- SELECTOR CAMPAIGN RESTAURADO --- */}
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Campaign
+                        </p>
+                        <Select
+                          value={editData.campaign}
+                          onValueChange={(v) =>
+                            setEditData((prev) => ({ ...prev, campaign: v }))
+                          }
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue placeholder="Select campaign" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.values(Cam).map((c) => (
+                              <SelectItem key={c} value={c}>
+                                {c}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {/* --- FIN NUEVO SELECTOR --- */}
+
                       <div className="space-y-1">
                         <p className="text-sm font-medium text-muted-foreground">
                           Assignee
@@ -1155,16 +1336,13 @@ export default function TicketsPage() {
                           <SelectContent>
                             {Object.values(TicketDisposition).map((d) => (
                               <SelectItem key={d} value={d}>
-                                {d}
+                                {formatEnumLabel(d)}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Onboarding Option
-                        </p>
                         {(selectedTicket.type as string)?.toUpperCase() ===
                         "ONBOARDING" ? (
                           <Select
@@ -1188,11 +1366,7 @@ export default function TicketsPage() {
                             </SelectContent>
                           </Select>
                         ) : (
-                          <div className="h-8 flex items-center">
-                            <span className="text-xs text-muted-foreground italic">
-                              N/A for AR
-                            </span>
-                          </div>
+                          <div className="h-8 flex items-center"></div>
                         )}
                       </div>
                     </div>
