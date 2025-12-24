@@ -1,38 +1,48 @@
 import { NextResponse } from "next/server"
-import { mockCampaigns } from "@/lib/mock-data"
+import { fetchFromBackend } from "@/lib/api-client"
 
 // GET /api/campaigns - Fetch all campaigns
-export async function GET() {
-  return NextResponse.json({
-    success: true,
-    data: mockCampaigns,
-    count: mockCampaigns.length,
-  })
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const query = searchParams.toString()
+    const data = await fetchFromBackend(query ? `/campaign?${query}` : "/campaign")
+
+    return NextResponse.json({
+      success: true,
+      data: data?.data || data || [],
+      count: data?.total || (Array.isArray(data) ? data.length : 0),
+    })
+  } catch (error: any) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: error.message || "Failed to fetch campaigns",
+      },
+      { status: 500 },
+    )
+  }
 }
 
 // POST /api/campaigns - Create a new campaign
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-
-    // In production, this would interact with your NestJS backend
-    const newCampaign = {
-      id: `CMP-${String(mockCampaigns.length + 1).padStart(3, "0")}`,
-      ...body,
-      ticketCount: 0,
-      startDate: new Date().toISOString(),
-    }
+    const data = await fetchFromBackend("/campaign", {
+      method: "POST",
+      body: JSON.stringify(body),
+    })
 
     return NextResponse.json({
       success: true,
-      data: newCampaign,
+      data,
       message: "Campaign created successfully",
     })
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to create campaign",
+        message: error.message || "Failed to create campaign",
       },
       { status: 500 },
     )
