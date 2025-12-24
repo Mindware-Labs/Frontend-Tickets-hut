@@ -411,47 +411,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
-        <SidebarMenu>
-          {/* Role Simulator (Dev Only) */}
-          <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
-            <div className="flex items-center justify-between p-2 rounded-lg bg-sidebar-accent/50 mb-2">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Simulate Role
-                </span>
-                <Badge variant="outline" className="w-fit text-[10px] h-4 px-1">
-                  {role}
-                </Badge>
-              </div>
-              <Switch
-                checked={role === "Admin"}
-                onCheckedChange={(checked) =>
-                  setRole(checked ? "Admin" : "Agent")
-                }
-                className="scale-75"
-              />
-            </div>
-          </SidebarMenuItem>
-
-          {/* Logout Button */}
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => {
-                // Import auth dynamically to avoid SSR issues
-                import('@/lib/auth').then(({ auth }) => {
-                  auth.logout();
-                  window.location.href = '/login';
-                });
-              }}
-              className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-            >
-              <LogOut />
-              <span>Logout</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+   
       <SidebarRail />
     </Sidebar>
   );

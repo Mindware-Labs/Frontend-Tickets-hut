@@ -114,7 +114,7 @@ export function CreateTicketModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Manual Ticket</DialogTitle>
           <DialogDescription>
@@ -292,7 +292,7 @@ export function CreateTicketModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label>Campaign</Label>
               <Select
@@ -316,44 +316,46 @@ export function CreateTicketModal({
                   ))}
                 </SelectContent>
               </Select>
+
+              <div className="space-y-2 mt-6">
+                <Label>Direction *</Label>
+                <Select
+                  value={createFormData.direction}
+                  onValueChange={(value) => {
+                    setCreateFormData({
+                      ...createFormData,
+                      direction: value as CallDirection,
+                    });
+                    setCreateValidationErrors({
+                      ...createValidationErrors,
+                      direction: "",
+                    });
+                  }}
+                >
+                  <SelectTrigger
+                    className={
+                      createValidationErrors.direction ? "border-red-500" : ""
+                    }
+                  >
+                    <SelectValue placeholder="Select direction" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(CallDirection).map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {formatEnumLabel(value)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {createValidationErrors.direction && (
+                  <p className="text-xs text-red-500">
+                    {createValidationErrors.direction}
+                  </p>
+                )}
+              </div>
+
             </div>
 
-            <div className="space-y-2">
-              <Label>Direction *</Label>
-              <Select
-                value={createFormData.direction}
-                onValueChange={(value) => {
-                  setCreateFormData({
-                    ...createFormData,
-                    direction: value as CallDirection,
-                  });
-                  setCreateValidationErrors({
-                    ...createValidationErrors,
-                    direction: "",
-                  });
-                }}
-              >
-                <SelectTrigger
-                  className={
-                    createValidationErrors.direction ? "border-red-500" : ""
-                  }
-                >
-                  <SelectValue placeholder="Select direction" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(CallDirection).map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {formatEnumLabel(value)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {createValidationErrors.direction && (
-                <p className="text-xs text-red-500">
-                  {createValidationErrors.direction}
-                </p>
-              )}
-            </div>
 
             <div className="space-y-2">
               <Label>Status</Label>

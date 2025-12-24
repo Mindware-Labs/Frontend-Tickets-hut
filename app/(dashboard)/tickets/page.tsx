@@ -462,7 +462,7 @@ export default function TicketsPage() {
         directionFilter === "all" ||
         ticket.direction === directionFilter ||
         ticket.direction?.toString().toLowerCase() ===
-          directionFilter.toLowerCase();
+        directionFilter.toLowerCase();
 
       let matchesView = true;
       if (activeView === "assigned_me") {
@@ -612,11 +612,11 @@ export default function TicketsPage() {
           prev.map((t) =>
             t.id === selectedTicket.id
               ? {
-                  ...t,
-                  yardId: selectedYardId,
-                  yard: updatedYard,
-                  yardType: selectedYard.yardType,
-                }
+                ...t,
+                yardId: selectedYardId,
+                yard: updatedYard,
+                yardType: selectedYard.yardType,
+              }
               : t
           )
         );
@@ -624,11 +624,11 @@ export default function TicketsPage() {
         setSelectedTicket((prev) =>
           prev
             ? {
-                ...prev,
-                yardId: selectedYardId,
-                yard: updatedYard,
-                yardType: selectedYard.yardType,
-              }
+              ...prev,
+              yardId: selectedYardId,
+              yard: updatedYard,
+              yardType: selectedYard.yardType,
+            }
             : null
         );
       }
@@ -1344,7 +1344,7 @@ export default function TicketsPage() {
                       </div>
                       <div className="space-y-1">
                         {(selectedTicket.type as string)?.toUpperCase() ===
-                        "ONBOARDING" ? (
+                          "ONBOARDING" ? (
                           <Select
                             value={editData.onboardingOption}
                             onValueChange={(v) =>
@@ -1465,10 +1465,10 @@ export default function TicketsPage() {
                         ))}
                         {(!editData.attachments ||
                           editData.attachments.length === 0) && (
-                          <p className="text-xs text-muted-foreground italic">
-                            No attachments added
-                          </p>
-                        )}
+                            <p className="text-xs text-muted-foreground italic">
+                              No attachments added
+                            </p>
+                          )}
                       </div>
                     </div>
                   </CardContent>
@@ -1508,8 +1508,8 @@ export default function TicketsPage() {
                                 <Badge variant="outline" className="mt-1">
                                   {(currentYard.yardType ||
                                     currentYard.yardType) === "SAAS" ||
-                                  (currentYard.yardType ||
-                                    currentYard.yardType) === "saas"
+                                    (currentYard.yardType ||
+                                      currentYard.yardType) === "saas"
                                     ? "SaaS"
                                     : "Full Service"}
                                 </Badge>
@@ -1541,8 +1541,8 @@ export default function TicketsPage() {
                                     >
                                       {(selectedYard.yardType ||
                                         selectedYard.yardType) === "SAAS" ||
-                                      (selectedYard.yardType ||
-                                        selectedYard.yardType) === "saas"
+                                        (selectedYard.yardType ||
+                                          selectedYard.yardType) === "saas"
                                         ? "SaaS"
                                         : "Full Service"}
                                     </Badge>
@@ -1581,7 +1581,7 @@ export default function TicketsPage() {
                                       {yard.name} -{" "}
                                       {(yard.yardType || yard.yardType) ===
                                         "SAAS" ||
-                                      (yard.yardType || yard.yardType) ===
+                                        (yard.yardType || yard.yardType) ===
                                         "saas"
                                         ? "SaaS"
                                         : "Full Service"}
@@ -1609,8 +1609,8 @@ export default function TicketsPage() {
                                     <Badge variant="outline">
                                       {(selectedYard.yardType ||
                                         selectedYard.yardType) === "SAAS" ||
-                                      (selectedYard.yardType ||
-                                        selectedYard.yardType) === "saas"
+                                        (selectedYard.yardType ||
+                                          selectedYard.yardType) === "saas"
                                         ? "SaaS"
                                         : "Full Service"}
                                     </Badge>
@@ -1622,16 +1622,16 @@ export default function TicketsPage() {
 
                                   {(selectedYard.contactInfo ||
                                     selectedYard.contactInfo) && (
-                                    <div className="flex items-center gap-2 mt-2 text-sm">
-                                      <span className="font-medium">
-                                        Contact:
-                                      </span>
-                                      <span>
-                                        {selectedYard.contactInfo ||
-                                          selectedYard.contactInfo}
-                                      </span>
-                                    </div>
-                                  )}
+                                      <div className="flex items-center gap-2 mt-2 text-sm">
+                                        <span className="font-medium">
+                                          Contact:
+                                        </span>
+                                        <span>
+                                          {selectedYard.contactInfo ||
+                                            selectedYard.contactInfo}
+                                        </span>
+                                      </div>
+                                    )}
 
                                   {selectedYard.notes && (
                                     <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
