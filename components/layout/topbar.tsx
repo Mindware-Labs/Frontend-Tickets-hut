@@ -122,9 +122,7 @@ export default function Topbar() {
 
                 <div className="hidden lg:block text-left">
                   <p className="text-sm font-medium">{currentUser.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {currentUser.email || " "}
-                  </p>
+                 
                 </div>
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </button>
