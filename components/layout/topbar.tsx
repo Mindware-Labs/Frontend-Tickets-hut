@@ -39,13 +39,14 @@ const currentUser = {
   name: "John Doe",
   email: "john@example.com",
 }
+import Link from "next/link"
 
 export default function Topbar() {
   const { isMobile } = useSidebar()
   const pathname = usePathname()
   const pathSegments = pathname.split('/').filter(Boolean)
   const currentPage = pathSegments[pathSegments.length - 1] || "Dashboard"
-  
+
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -107,7 +108,7 @@ export default function Topbar() {
                     {userInitials}
                   </span>
                 </div>
-                
+
                 <div className="hidden lg:block text-left">
                   <p className="text-sm font-medium">{currentUser.name}</p>
                   <p className="text-xs text-muted-foreground">
@@ -116,7 +117,7 @@ export default function Topbar() {
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
-            
+
             <DropdownMenuContent align="end" className="w-56">
               {/* Header del dropdown con info del usuario */}
               <div className="flex items-center gap-3 p-3">
@@ -132,21 +133,24 @@ export default function Topbar() {
                   </p>
                 </div>
               </div>
-              
+
               <DropdownMenuSeparator />
-              
               <DropdownMenuItem className="cursor-pointer">
-                <User className="mr-2 h-4 w-4" />
-                <span>My Profile</span>
+                <Link href="/settings" className="flex items-center w-full">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>My Profile</span>
+                </Link>
               </DropdownMenuItem>
-              
+
               <DropdownMenuItem className="cursor-pointer">
+                <Link href="/settings" className="flex items-center w-full">
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Account Settings</span>
+                </Link>
               </DropdownMenuItem>
-              
+
               <DropdownMenuSeparator />
-              
+
               <DropdownMenuItem
                 className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
                 onClick={() => setShowLogoutDialog(true)}

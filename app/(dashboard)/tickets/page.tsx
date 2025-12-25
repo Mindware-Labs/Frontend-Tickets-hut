@@ -1198,8 +1198,6 @@ export default function TicketsPage() {
             className="min-h-[100px] bg-muted/20"
           />
         </div>
-
-        
       ),
     },
   ];
@@ -1791,7 +1789,6 @@ export default function TicketsPage() {
                     {getClientPhone(selectedTicket)}
                   </div>
                 </div>
-                
               </div>
 
               <TicketDetailsFields
@@ -1804,7 +1801,8 @@ export default function TicketsPage() {
               <DialogFooter className="mt-8 pt-6 border-t">
                 <div className="flex items-center justify-between w-full">
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
-
+                    <Clock className="h-3 w-3" />
+                    Changes will be saved to the database.
                   </p>
                   <div className="flex gap-3">
                     <Button

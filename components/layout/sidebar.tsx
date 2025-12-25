@@ -70,6 +70,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { HelpCircle, Mail } from "lucide-react"
+import Image from 'next/image';
+
 
 // User Mock Data
 const user = {
@@ -152,7 +155,7 @@ const data = {
       url: "#",
       icon: LifeBuoy,
     },
- 
+
   ],
   projects: [
     {
@@ -212,14 +215,34 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="/dashboard">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <Command className="size-4" />
+              <a href="/dashboard" className="relative overflow-hidden">
+                {/* Efecto de fondo sutil */}
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                {/* Logo con imagen - Reemplazado el icono Command */}
+                <div className="flex aspect-square size-12 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20 backdrop-blur-sm overflow-hidden">
+                  <div className="relative w-full h-full">
+                    <Image 
+                      src="/images/LOGO CQ-10.png"   
+                      alt="Center Quest Logo"
+                      fill
+                           className="object-contain scale-210" /* Zoom 125% */
+
+                      sizes="40px"
+                      priority
+                    />
+                  </div>
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Pulse Ops</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    Enterprise v2.0
+
+                <div className="grid flex-1 text-left text-sm leading-tight relative z-10">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-bold text-foreground">
+                      Center Quest
+                    </span>
+                    <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                  </div>
+                  <span className="truncate text-xs text-muted-foreground mt-0.5">
+                    Tickets System
                   </span>
                 </div>
               </a>
@@ -253,7 +276,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
-              } 
+              }
               if (item.title === "Dashboard") {
                 const active = pathname === item.url;
                 return (
@@ -380,14 +403,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Audit Logs">
-                  <a href="/audit">
-                    <ShieldCheck />
-                    <span>Audit Logs</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
         )}
@@ -398,20 +413,50 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenu>
               {data.navSecondary.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild size="sm">
-                    <a href={item.url}>
+                  {item.title === "Support" ? (
+                    // Botón que abre Gmail web específicamente
+                    <SidebarMenuButton
+                      size="sm"
+                      onClick={() => {
+                        const gmailEmail = "labsmindware@gmail.com"
+                        const subject = "Support"
+                        const body = "Hello, I need assistance with..."
+
+                        // URL de Gmail web (NO mailto:)
+                        const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(gmailEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+
+                        // Abrir Gmail en nueva pestaña
+                        window.open(gmailUrl, "_blank", "noopener,noreferrer")
+                      }}
+                      className="cursor-pointer hover:bg-accent"
+                    >
                       <item.icon />
                       <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
+ 
+                    </SidebarMenuButton>
+                  ) : (
+                    // Otros enlaces normales
+                    <SidebarMenuButton asChild size="sm">
+                      <a href={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  )}
                 </SidebarMenuItem>
               ))}
+              
+              {/* Footer del copyright */}
+              <div className="px-2 py-3 mt-1 border-t border-border/50">
+                <footer className="text-xs text-muted-foreground text-center">
+                  © {new Date().getFullYear()} Mindware Labs. All rights reserved.
+                </footer>
+              </div>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-   
       <SidebarRail />
     </Sidebar>
   );
