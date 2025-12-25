@@ -14,7 +14,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,12 +33,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { User, Settings, ChevronDown } from "lucide-react"
-
-// Mock user data - deberías obtener esto de tu sistema de autenticación
-const currentUser = {
-  name: "John Doe",
-  email: "john@example.com",
-}
+import { auth } from "@/lib/auth"
 
 export default function Topbar() {
   const { isMobile } = useSidebar()
@@ -49,6 +44,20 @@ export default function Topbar() {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [currentUser, setCurrentUser] = useState({ name: "User", email: "" })
+
+  useEffect(() => {
+    const storedUser = auth.getUser()
+    if (storedUser) {
+      const fullName = [storedUser.name, storedUser.lastName]
+        .filter(Boolean)
+        .join(" ")
+      setCurrentUser({
+        name: fullName || storedUser.email || "User",
+        email: storedUser.email || "",
+      })
+    }
+  }, [])
 
   const handleLogout = async () => {
     try {
@@ -111,6 +120,7 @@ export default function Topbar() {
                 <div className="hidden lg:block text-left">
                   <p className="text-sm font-medium">{currentUser.name}</p>
                   <p className="text-xs text-muted-foreground">
+                    {currentUser.email || " "}
                   </p>
                 </div>
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />

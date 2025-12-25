@@ -28,6 +28,9 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     lastName: '',
@@ -79,11 +82,6 @@ export default function RegisterPage() {
       // Show success message
       setSuccess(true);
       setRegisteredEmail(result.email);
-      
-      // Redirect to login after 5 seconds
-      setTimeout(() => {
-        router.push('/login');
-      }, 5000);
     } catch (err: any) {
       console.error('Registration error:', err);
       console.error('Error details:', {
@@ -144,6 +142,27 @@ export default function RegisterPage() {
       setError(errorMessage);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    setError('');
+    if (!verificationCode.trim() || verificationCode.trim().length !== 6) {
+      setError('Please enter the 6-digit verification code.');
+      return;
+    }
+
+    try {
+      setIsVerifying(true);
+      await auth.verifyEmailCode(registeredEmail, verificationCode.trim());
+      setIsVerified(true);
+      setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+    } catch (err: any) {
+      setError(err.message || 'Verification failed. Please try again.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -302,14 +321,16 @@ export default function RegisterPage() {
                 </p>
               </div>
               <p className="text-xs text-slate-300 text-center">
-                We've sent a verification email to <span className="font-semibold text-blue-400">{registeredEmail}</span>
+                We've sent a verification code to <span className="font-semibold text-blue-400">{registeredEmail}</span>
               </p>
               <p className="text-xs text-slate-400 text-center">
-                Please check your inbox and click the verification link to activate your account.
+                Enter the 6-digit code to activate your account.
               </p>
-              <p className="text-xs text-slate-500 text-center mt-2">
-                Redirecting to login in 5 seconds...
-              </p>
+              {isVerified && (
+                <p className="text-xs text-slate-500 text-center mt-2">
+                  Verified! Redirecting to login...
+                </p>
+              )}
             </div>
           )}
 
@@ -335,14 +356,42 @@ export default function RegisterPage() {
           )}
 
           {success && (
-            <Button 
-              type="button"
-              onClick={() => router.push('/login')}
-              className="w-full h-11 mt-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium shadow-lg shadow-blue-900/20 transition-all duration-200"
-            >
-              Go to Login
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="verificationCode" className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
+                  Verification Code
+                </Label>
+                <Input
+                  id="verificationCode"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="123456"
+                  maxLength={6}
+                  className="bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-600 focus:border-blue-500 focus:ring-blue-500/20 transition-all h-11 text-center tracking-[0.3em]"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  disabled={isVerifying || isVerified}
+                />
+              </div>
+              <Button
+                type="button"
+                onClick={handleVerifyCode}
+                className="w-full h-11 mt-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium shadow-lg shadow-blue-900/20 transition-all duration-200"
+                disabled={isVerifying || isVerified}
+              >
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    Verify Email
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </>
           )}
         </form>
 

@@ -56,11 +56,6 @@ function LoginForm() {
         errorMessage = 'Unable to connect to the server. Please ensure the backend is running and try again.';
       } else if (errorMessage.includes('fetch')) {
         errorMessage = 'Network error. Please check your connection and ensure the backend server is running.';
-      } else if (err.message?.toLowerCase().includes('verify') || 
-          err.message?.toLowerCase().includes('email') ||
-          err.message?.toLowerCase().includes('confirm')) {
-        // Check if error indicates email not verified
-        errorMessage = 'Please verify your email before logging in. Check your inbox for the verification link.';
       }
       
       setError(errorMessage);
@@ -119,7 +114,7 @@ function LoginForm() {
               <Label htmlFor="password" className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
                 Password
               </Label>
-              <Link href="#" className="text-xs text-blue-500 hover:text-blue-400 font-medium hover:underline">
+              <Link href="/forgot-password" className="text-xs text-blue-500 hover:text-blue-400 font-medium hover:underline">
                 Forgot password?
               </Link>
             </div>

@@ -386,10 +386,11 @@ export default function PoliciesPage() {
 
             <div className="space-y-2">
               <Label htmlFor="policy-file">Attachment</Label>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <Input
                   id="policy-file"
                   type="file"
+                  className="sr-only"
                   onChange={(event) =>
                     setFormState({
                       ...formState,
@@ -397,6 +398,14 @@ export default function PoliciesPage() {
                     })
                   }
                 />
+                <Button asChild variant="outline" size="sm">
+                  <Label htmlFor="policy-file" className="cursor-pointer">
+                    Choose files
+                  </Label>
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {formState.file ? formState.file.name : "No files selected"}
+                </span>
                 <UploadCloud className="h-5 w-5 text-muted-foreground" />
               </div>
               {formMode === "edit" && activePolicy?.fileUrl && !formState.file && (
