@@ -26,6 +26,22 @@ interface RegisterResponse {
     email: string;
 }
 
+interface VerifyEmailCodeResponse {
+    message: string;
+}
+
+interface ForgotPasswordResponse {
+    message: string;
+}
+
+interface ResetPasswordResponse {
+    message: string;
+}
+
+interface VerifyResetCodeResponse {
+    message: string;
+}
+
 export const auth = {
     /**
      * Login user with email and password
@@ -182,6 +198,122 @@ export const auth = {
             // Fallback error
             throw new Error('Registration failed. Please try again.');
         }
+    },
+
+    /**
+     * Verify email with a 6-digit code
+     */
+    async verifyEmailCode(email: string, code: string): Promise<VerifyEmailCodeResponse> {
+        const response = await fetch(`${API_URL}/auth/verify-email-code`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, code }),
+        });
+
+        const responseText = await response.text();
+        let data: any;
+
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            throw new Error(responseText || 'Invalid response from server');
+        }
+
+        if (!response.ok) {
+            const errorMessage = data.message || data.error || 'Verification failed';
+            throw new Error(errorMessage);
+        }
+
+        return data as VerifyEmailCodeResponse;
+    },
+
+    /**
+     * Request a password reset code
+     */
+    async requestPasswordReset(email: string): Promise<ForgotPasswordResponse> {
+        const response = await fetch(`${API_URL}/auth/forgot-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email }),
+        });
+
+        const responseText = await response.text();
+        let data: any;
+
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            throw new Error(responseText || 'Invalid response from server');
+        }
+
+        if (!response.ok) {
+            const errorMessage = data.message || data.error || 'Request failed';
+            throw new Error(errorMessage);
+        }
+
+        return data as ForgotPasswordResponse;
+    },
+
+    /**
+     * Reset password with a 6-digit code
+     */
+    async resetPasswordWithCode(email: string, code: string, newPassword: string): Promise<ResetPasswordResponse> {
+        const response = await fetch(`${API_URL}/auth/reset-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, code, newPassword }),
+        });
+
+        const responseText = await response.text();
+        let data: any;
+
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            throw new Error(responseText || 'Invalid response from server');
+        }
+
+        if (!response.ok) {
+            const errorMessage = data.message || data.error || 'Reset failed';
+            throw new Error(errorMessage);
+        }
+
+        return data as ResetPasswordResponse;
+    },
+
+    /**
+     * Verify password reset code before allowing reset
+     */
+    async verifyResetCode(email: string, code: string): Promise<VerifyResetCodeResponse> {
+        const response = await fetch(`${API_URL}/auth/verify-reset-code`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, code }),
+        });
+
+        const responseText = await response.text();
+        let data: any;
+
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            throw new Error(responseText || 'Invalid response from server');
+        }
+
+        if (!response.ok) {
+            const errorMessage = data.message || data.error || 'Code verification failed';
+            throw new Error(errorMessage);
+        }
+
+        return data as VerifyResetCodeResponse;
     },
 
     /**

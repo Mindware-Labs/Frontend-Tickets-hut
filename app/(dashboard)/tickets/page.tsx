@@ -157,6 +157,9 @@ export default function TicketsPage() {
     Record<string, string>
   >({});
   const [newAttachment, setNewAttachment] = useState("");
+  const [createAttachmentFiles, setCreateAttachmentFiles] = useState<File[]>(
+    []
+  );
   const [customerSearchCreate, setCustomerSearchCreate] = useState("");
   const [yardSearchCreate, setYardSearchCreate] = useState("");
   const [agentSearchCreate, setAgentSearchCreate] = useState("");
@@ -722,6 +725,7 @@ export default function TicketsPage() {
       attachments: [],
     });
     setNewAttachment("");
+    setCreateAttachmentFiles([]);
     setCustomerSearchCreate("");
     setYardSearchCreate("");
     setAgentSearchCreate("");
@@ -780,6 +784,42 @@ export default function TicketsPage() {
 
       const result = await response.json();
       if (result.success) {
+        let createdTicket = result.data;
+        if (createAttachmentFiles.length > 0 && createdTicket?.id) {
+          try {
+            const formData = new FormData();
+            createAttachmentFiles.forEach((file) =>
+              formData.append("files", file)
+            );
+            const uploadResponse = await fetch(
+              `/api/tickets/${createdTicket.id}/attachments`,
+              {
+                method: "POST",
+                body: formData,
+              }
+            );
+            const uploadResult = await uploadResponse.json();
+            if (uploadResult?.success) {
+              createdTicket = uploadResult.data;
+            } else {
+              toast({
+                title: "Warning",
+                description:
+                  uploadResult?.message ||
+                  "Ticket created, but attachments failed to upload",
+                variant: "destructive",
+              });
+            }
+          } catch (uploadError) {
+            console.error("Upload attachments error:", uploadError);
+            toast({
+              title: "Warning",
+              description:
+                "Ticket created, but attachments failed to upload",
+              variant: "destructive",
+            });
+          }
+        }
         toast({
           title: "Success",
           description: (
@@ -1760,6 +1800,8 @@ export default function TicketsPage() {
         setAgentSearchCreate={setAgentSearchCreate}
         newAttachment={newAttachment}
         setNewAttachment={setNewAttachment}
+        attachmentFiles={createAttachmentFiles}
+        setAttachmentFiles={setCreateAttachmentFiles}
         isCreating={isCreating}
         onSubmit={handleCreateTicket}
       />

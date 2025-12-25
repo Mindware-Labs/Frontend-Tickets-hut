@@ -54,6 +54,8 @@ interface CreateTicketModalProps {
   setAgentSearchCreate: (value: string) => void;
   newAttachment: string;
   setNewAttachment: (value: string) => void;
+  attachmentFiles: File[];
+  setAttachmentFiles: (next: File[]) => void;
   isCreating: boolean;
   onSubmit: () => void;
 }
@@ -76,6 +78,8 @@ export function CreateTicketModal({
   setAgentSearchCreate,
   newAttachment,
   setNewAttachment,
+  attachmentFiles,
+  setAttachmentFiles,
   isCreating,
   onSubmit,
 }: CreateTicketModalProps) {
@@ -385,9 +389,7 @@ export function CreateTicketModal({
                   </p>
                 )}
               </div>
-
             </div>
-
 
             <div className="space-y-2">
               <Label>Status</Label>
@@ -497,72 +499,62 @@ export function CreateTicketModal({
           </div>
 
           <div className="space-y-4">
-            <Label>Attachments</Label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Add attachment link or name..."
-                value={newAttachment}
-                onChange={(e) => setNewAttachment(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    const value = newAttachment.trim();
-                    if (!value) return;
-                    setCreateFormData({
-                      ...createFormData,
-                      attachments: [...createFormData.attachments, value],
-                    });
-                    setNewAttachment("");
-                  }
-                }}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const value = newAttachment.trim();
-                  if (!value) return;
-                  setCreateFormData({
-                    ...createFormData,
-                    attachments: [...createFormData.attachments, value],
-                  });
-                  setNewAttachment("");
-                }}
-              >
-                Add
-              </Button>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {createFormData.attachments.map((att, idx) => (
-                <Badge
-                  key={`${att}-${idx}`}
-                  variant="secondary"
-                  className="pl-3 pr-1 py-1 gap-2 group"
-                >
-                  <span className="truncate max-w-[200px]">{att}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 hover:bg-transparent"
-                    onClick={() => {
-                      setCreateFormData({
-                        ...createFormData,
-                        attachments: createFormData.attachments.filter(
-                          (_, i) => i !== idx
-                        ),
-                      });
-                    }}
+            <div className="space-y-2">
+              <Label>Upload files</Label>
+              <div className="flex flex-wrap items-center gap-3">
+                <Input
+                  id="create-ticket-files"
+                  type="file"
+                  multiple
+                  className="sr-only"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length === 0) return;
+                    setAttachmentFiles([...attachmentFiles, ...files]);
+                    e.currentTarget.value = "";
+                  }}
+                />
+                <Button asChild variant="outline" size="sm">
+                  <Label htmlFor="create-ticket-files" className="cursor-pointer">
+                    Choose files
+                  </Label>
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {attachmentFiles.length > 0
+                    ? `${attachmentFiles.length} file${
+                        attachmentFiles.length > 1 ? "s" : ""
+                      } selected`
+                    : "No files selected"}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {attachmentFiles.map((file, idx) => (
+                  <Badge
+                    key={`${file.name}-${idx}`}
+                    variant="secondary"
+                    className="pl-3 pr-1 py-1 gap-2 group"
                   >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              ))}
-              {createFormData.attachments.length === 0 && (
-                <p className="text-xs text-muted-foreground italic">
-                  No attachments added
-                </p>
-              )}
+                    <span className="truncate max-w-[200px]">{file.name}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-4 w-4 hover:bg-transparent"
+                      onClick={() =>
+                        setAttachmentFiles(
+                          attachmentFiles.filter((_, i) => i !== idx)
+                        )
+                      }
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ))}
+                {attachmentFiles.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic">
+                    No files selected
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>

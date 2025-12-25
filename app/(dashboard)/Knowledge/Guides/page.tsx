@@ -379,10 +379,11 @@ export default function GuidesPage() {
 
             <div className="space-y-2">
               <Label htmlFor="guide-file">Attachment</Label>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <Input
                   id="guide-file"
                   type="file"
+                  className="sr-only"
                   onChange={(event) =>
                     setFormState({
                       ...formState,
@@ -390,6 +391,14 @@ export default function GuidesPage() {
                     })
                   }
                 />
+                <Button asChild variant="outline" size="sm">
+                  <Label htmlFor="guide-file" className="cursor-pointer">
+                    Choose files
+                  </Label>
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {formState.file ? formState.file.name : "No files selected"}
+                </span>
                 <UploadCloud className="h-5 w-5 text-muted-foreground" />
               </div>
               {formMode === "edit" && activeGuide?.fileUrl && !formState.file && (
