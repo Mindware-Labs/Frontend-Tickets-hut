@@ -1,166 +1,456 @@
 'use client';
 
-import React, { useState } from 'react';
-import { 
-  ShieldAlert, 
-  Search, 
-  FileText, 
-  ChevronDown, 
-  ChevronUp, 
-  Clock,
-  Globe
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Download,
+  Edit2,
+  FileText,
+  Loader2,
+  Plus,
+  Search,
+  ShieldAlert,
+  Trash2,
+  UploadCloud,
 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
 
-// --- TEXTO OFICIAL (Política de Privacidad Rig Hut) ---
-const PRIVACY_POLICY_TEXT = `
-THE RIG HUT, LLC., A Florida limited liability company ("Company," "we," "us" or "THE RIG HUT") respects your privacy and we are committed to protecting it through our compliance with this privacy policy.
+interface PolicyItem {
+  id: number;
+  name: string;
+  description: string;
+  fileUrl?: string;
+  date?: string;
+}
 
-This policy describes the types of information we may collect from you or that you may provide when you visit the website www.therighut.com (our "Website") or our mobile applications ("Mobile App") (together the Website and Mobile Apps are referred to as the "Platform") and our practices for collecting, using, maintaining, protecting, and disclosing that information.
-`;
+interface PolicyFormState {
+  name: string;
+  description: string;
+  file: File | null;
+}
 
-const POLICIES = [
-  { 
-    id: 1, 
-    title: "Privacy Policy", 
-    category: "Legal", 
-    updated: "Dec 16, 2025", 
-    status: "Active",
-    content: PRIVACY_POLICY_TEXT
-  },
-]
+const initialForm: PolicyFormState = {
+  name: "",
+  description: "",
+  file: null,
+};
 
 export default function PoliciesPage() {
   const [search, setSearch] = useState("");
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [policies, setPolicies] = useState<PolicyItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [formMode, setFormMode] = useState<"create" | "edit">("create");
+  const [activePolicy, setActivePolicy] = useState<PolicyItem | null>(null);
+  const [formState, setFormState] = useState<PolicyFormState>(initialForm);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<PolicyItem | null>(null);
 
-  const filteredPolicies = POLICIES.filter(policy => 
-    policy.title.toLowerCase().includes(search.toLowerCase())
-  );
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-  const toggleExpand = (id: number) => {
-    if (expandedId === id) {
-      setExpandedId(null);
-    } else {
-      setExpandedId(id);
+  const fetchPolicies = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/policies?page=1&limit=200");
+      const result = await response.json();
+      if (result?.success) {
+        setPolicies(result.data || []);
+      } else {
+        setPolicies([]);
+      }
+    } catch (error) {
+      console.error("Failed to load policies", error);
+      setPolicies([]);
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchPolicies();
+  }, []);
+
+  const resetForm = () => {
+    setFormState(initialForm);
+    setValidationErrors({});
+    setActivePolicy(null);
+  };
+
+  const openCreate = () => {
+    setFormMode("create");
+    resetForm();
+    setShowForm(true);
+  };
+
+  const openEdit = (policy: PolicyItem) => {
+    setFormMode("edit");
+    setActivePolicy(policy);
+    setFormState({
+      name: policy.name,
+      description: policy.description || "",
+      file: null,
+    });
+    setValidationErrors({});
+    setShowForm(true);
+  };
+
+  const getDownloadUrl = (policy: PolicyItem) => {
+    if (!policy.fileUrl) return null;
+    return `${apiBase}/policies/${policy.id}/download`;
+  };
+
+  const getFileName = (fileUrl?: string) => {
+    if (!fileUrl) return "No file";
+    const parts = fileUrl.split("/");
+    return parts[parts.length - 1] || "file";
+  };
+
+  const filteredPolicies = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const list = term
+      ? policies.filter((policy) =>
+          policy.name.toLowerCase().includes(term)
+        )
+      : policies;
+    return [...list].sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [policies, search]);
+
+  const handleSubmit = async () => {
+    const errors: Record<string, string> = {};
+    if (!formState.name.trim()) {
+      errors.name = "Name is required";
+    }
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const payload = new FormData();
+      payload.append("name", formState.name.trim());
+      payload.append("description", formState.description.trim());
+      if (formState.file) {
+        payload.append("file", formState.file);
+      }
+
+      const url =
+        formMode === "create"
+          ? "/api/policies"
+          : `/api/policies/${activePolicy?.id}`;
+      const method = formMode === "create" ? "POST" : "PATCH";
+      const response = await fetch(url, {
+        method,
+        body: payload,
+      });
+      const result = await response.json();
+
+      if (result?.success) {
+        toast({
+          title: "Success",
+          description:
+            formMode === "create"
+              ? "Policy created successfully"
+              : "Policy updated successfully",
+        });
+        setShowForm(false);
+        resetForm();
+        await fetchPolicies();
+      } else {
+        toast({
+          title: "Error",
+          description: result?.message || "Failed to save policy",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Policy save error", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while saving the policy",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (policy: PolicyItem) => {
+    if (!policy) return;
+    try {
+      const response = await fetch(`/api/policies/${policy.id}`, {
+        method: "DELETE",
+      });
+      const result = await response.json();
+      if (result?.success) {
+        toast({
+          title: "Deleted",
+          description: "Policy removed successfully",
+        });
+        await fetchPolicies();
+      } else {
+        toast({
+          title: "Error",
+          description: result?.message || "Failed to delete policy",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Delete policy error", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while deleting the policy",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openDeleteDialog = (policy: PolicyItem) => {
+    setDeleteTarget(policy);
+    setShowDeleteDialog(true);
+  };
+
+  const closeDeleteDialog = () => {
+    setShowDeleteDialog(false);
+    setDeleteTarget(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    await handleDelete(deleteTarget);
+    closeDeleteDialog();
   };
 
   return (
     <div className="p-6 space-y-6 bg-background min-h-screen text-foreground">
-      
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <ShieldAlert className="h-6 w-6 text-primary" />
             Rig Hut Policies
           </h1>
-          <p className="text-muted-foreground text-sm">Documentación legal y normativas oficiales.</p>
+          <p className="text-muted-foreground text-sm">
+            Documentación legal y normativas oficiales.
+          </p>
         </div>
-        <div className="relative w-full md:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search policies..." 
-            className="pl-9 bg-card border-border focus-visible:ring-primary text-foreground placeholder:text-muted-foreground"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search policies..."
+              className="pl-9 bg-card border-border focus-visible:ring-primary text-foreground placeholder:text-muted-foreground"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Button onClick={openCreate} className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Policy
+          </Button>
         </div>
       </div>
 
-      {/* Policies List (Accordion Style) */}
-      <div className="grid gap-4">
-        {filteredPolicies.map((policy) => {
-          const isExpanded = expandedId === policy.id;
-
-          return (
-            <Card 
-              key={policy.id} 
-              className={`border transition-all duration-200 overflow-hidden ${
-                isExpanded 
-                  ? 'bg-card border-primary/50 shadow-lg shadow-primary/10' 
-                  : 'bg-card/50 border-border hover:border-muted-foreground/30'
-              }`}
-            >
-              {/* Header de la Tarjeta (Clickeable) */}
-              <div 
-                onClick={() => toggleExpand(policy.id)}
-                className="flex items-center justify-between p-4 cursor-pointer"
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading policies...
+        </div>
+      ) : filteredPolicies.length === 0 ? (
+        <Card className="border-dashed border-muted-foreground/40">
+          <CardContent className="py-10 text-center text-muted-foreground">
+            No policies found. Create a new policy to get started.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredPolicies.map((policy) => {
+            const downloadUrl = getDownloadUrl(policy);
+            return (
+              <Card
+                key={policy.id}
+                className="bg-card border-border hover:border-primary/50 transition-all group"
               >
-                <div className="flex items-center gap-4">
-                  <div className={`h-10 w-10 rounded-lg flex items-center justify-center transition-colors ${
-                    isExpanded ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
-                  }`}>
-                    <FileText className="h-5 w-5" />
+                <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-2">
+                  <div className="p-2 rounded-lg bg-muted text-primary group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+                    <FileText className="h-6 w-6" />
                   </div>
-                  <div>
-                    <h3 className={`font-semibold transition-colors ${isExpanded ? 'text-primary' : 'text-foreground'}`}>
-                      {policy.title}
-                    </h3>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                      <Badge variant="outline" className="text-[10px] py-0 h-4 border-muted text-muted-foreground">
-                        {policy.category}
-                      </Badge>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> Updated: {policy.updated}
-                      </span>
-                    </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-base text-foreground leading-tight">
+                      {policy.name}
+                    </CardTitle>
+                    <CardDescription className="text-xs text-muted-foreground mt-1">
+                      {policy.fileUrl ? getFileName(policy.fileUrl) : "No attachment"}
+                    </CardDescription>
                   </div>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  {policy.status === "Mandatory" && (
-                    <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-500/20 dark:text-amber-400">
-                      Mandatory
-                    </Badge>
-                  )}
-                  {policy.status === "Active" && (
-                    <Badge className="bg-green-500/10 text-green-600 border-green-500/20 dark:bg-green-500/20 dark:text-green-400">
-                      Active
-                    </Badge>
-                  )}
-                  
-                  <div className={`p-2 rounded-full transition-all ${isExpanded ? 'bg-muted text-primary' : 'text-muted-foreground'}`}>
-                    {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                  </div>
-                </div>
-              </div>
+                </CardHeader>
 
-              {/* Contenido Expandible */}
-              {isExpanded && (
-                <div className="border-t border-border animate-in slide-in-from-top-2 duration-200">
-                  <ScrollArea className="h-[400px] w-full p-6 bg-background/50">
-                    <div className="prose prose-invert prose-sm max-w-none text-foreground">
-                      
-                      {/* Título interno */}
-                      <div className="flex items-center gap-2 mb-6 pb-4 border-b border-border">
-                         <Globe className="h-4 w-4 text-primary" />
-                         <span className="font-bold text-lg text-foreground">{policy.title}</span>
-                      </div>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {policy.description || "No description provided."}
+                  </p>
+                </CardContent>
 
-                      {/* Texto del documento */}
-                      {policy.content.split('\n').map((paragraph, index) => (
-                        <p key={index} className="mb-4 leading-relaxed text-foreground/90">
-                          {paragraph}
-                        </p>
-                      ))}
-                      
-                      {/* Pie de página */}
-                      <div className="mt-8 pt-8 border-t border-border text-xs text-muted-foreground italic">
-                        <p>This document is for informational purposes only. Last revision: {policy.updated}</p>
-                      </div>
-                    </div>
-                  </ScrollArea>
-                </div>
+                <CardFooter className="flex flex-wrap gap-2 pt-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 border-border bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
+                    onClick={() => openEdit(policy)}
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" /> Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                    onClick={() => {
+                      if (downloadUrl) {
+                        window.open(downloadUrl, "_blank");
+                      }
+                    }}
+                    disabled={!downloadUrl}
+                  >
+                    <Download className="h-4 w-4 mr-2" /> Download
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
+                    onClick={() => openDeleteDialog(policy)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </CardFooter>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{formMode === "create" ? "Add Policy" : "Edit Policy"}</DialogTitle>
+            <DialogDescription>
+              {formMode === "create"
+                ? "Create a new policy document with optional attachment."
+                : "Update the selected policy details and file."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="policy-name">Name *</Label>
+              <Input
+                id="policy-name"
+                value={formState.name}
+                onChange={(event) => {
+                  setFormState({ ...formState, name: event.target.value });
+                  setValidationErrors({ ...validationErrors, name: "" });
+                }}
+                className={validationErrors.name ? "border-red-500" : ""}
+              />
+              {validationErrors.name && (
+                <p className="text-xs text-red-500">{validationErrors.name}</p>
               )}
-            </Card>
-          );
-        })}
-      </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="policy-description">Description</Label>
+              <Textarea
+                id="policy-description"
+                value={formState.description}
+                onChange={(event) => {
+                  setFormState({ ...formState, description: event.target.value });
+                }}
+                rows={5}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="policy-file">Attachment</Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="policy-file"
+                  type="file"
+                  onChange={(event) =>
+                    setFormState({
+                      ...formState,
+                      file: event.target.files?.[0] || null,
+                    })
+                  }
+                />
+                <UploadCloud className="h-5 w-5 text-muted-foreground" />
+              </div>
+              {formMode === "edit" && activePolicy?.fileUrl && !formState.file && (
+                <p className="text-xs text-muted-foreground">
+                  Current file: {getFileName(activePolicy.fileUrl)}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowForm(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : formMode === "create" ? (
+                "Create Policy"
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete policy</DialogTitle>
+            <DialogDescription>
+              {deleteTarget
+                ? `This will permanently remove "${deleteTarget.name}".`
+                : "This will permanently remove the selected policy."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDeleteDialog}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

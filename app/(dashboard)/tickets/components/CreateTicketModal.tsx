@@ -29,6 +29,7 @@ import {
   CreateTicketFormData,
   CustomerOption,
   ManagementType,
+  OnboardingOption,
   TicketDisposition,
   TicketPriority,
   TicketStatus,
@@ -301,6 +302,10 @@ export function CreateTicketModal({
                   setCreateFormData({
                     ...createFormData,
                     campaign: value === "none" ? "" : value,
+                    onboardingOption:
+                      value === ManagementType.ONBOARDING
+                        ? createFormData.onboardingOption
+                        : "",
                   })
                 }
               >
@@ -316,6 +321,33 @@ export function CreateTicketModal({
                   ))}
                 </SelectContent>
               </Select>
+
+              {createFormData.campaign === ManagementType.ONBOARDING && (
+                <div className="space-y-2 mt-6">
+                  <Label>Onboarding Option</Label>
+                  <Select
+                    value={createFormData.onboardingOption}
+                    onValueChange={(value) =>
+                      setCreateFormData({
+                        ...createFormData,
+                        onboardingOption: value === "none" ? "" : value,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select option" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No option</SelectItem>
+                      {Object.values(OnboardingOption).map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {formatEnumLabel(value)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2 mt-6">
                 <Label>Direction *</Label>

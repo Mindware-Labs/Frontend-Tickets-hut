@@ -28,6 +28,13 @@ export enum ManagementType {
   OTHER = "OTHER",
 }
 
+export enum OnboardingOption {
+  NOT_REGISTER = "NOT_REGISTER",
+  REGISTER = "REGISTER",
+  PAID_WITH_LL = "PAID_WITH_LL",
+  CANCELLED = "CANCELLED",
+}
+
 export enum CallDirection {
   INBOUND = "INBOUND",
   OUTBOUND = "OUTBOUND",
@@ -63,6 +70,7 @@ export interface CreateTicketFormData {
   customerPhone: string;
   yardId: string;
   campaign: string;
+  onboardingOption: string;
   agentId: string;
   status: TicketStatus;
   priority: TicketPriority;

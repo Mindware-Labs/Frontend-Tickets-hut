@@ -162,6 +162,7 @@ export default function TicketsPage() {
     customerPhone: "",
     yardId: "",
     campaign: "",
+    onboardingOption: "",
     agentId: "",
     status: TicketStatus.IN_PROGRESS,
     priority: TicketPriority.LOW,
@@ -654,6 +655,7 @@ export default function TicketsPage() {
       customerPhone: "",
       yardId: "",
       campaign: "",
+      onboardingOption: "",
       agentId: "",
       status: TicketStatus.IN_PROGRESS,
       priority: TicketPriority.LOW,
@@ -699,6 +701,7 @@ export default function TicketsPage() {
           : undefined,
         customerPhone: createFormData.customerPhone || undefined,
         campaign: createFormData.campaign || undefined,
+        onboardingOption: createFormData.onboardingOption || undefined,
         agentId: createFormData.agentId
           ? Number(createFormData.agentId)
           : undefined,
