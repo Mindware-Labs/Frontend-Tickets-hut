@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, JSX } from "react";
 import {
   Table,
   TableBody,
@@ -57,6 +57,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Loader2,
+  Download,
   X,
   FileText,
   Edit2,
@@ -82,6 +83,7 @@ import {
   YardOption,
 } from "./types";
 import { CreateTicketModal } from "./components/CreateTicketModal";
+import { TicketDetailsFields } from "./components/TicketDetailsFields";
 
 // Extender el tipo Ticket
 declare module "@/lib/mock-data" {
@@ -140,13 +142,14 @@ export default function TicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [selectedYardId, setSelectedYardId] = useState<string>("");
   const [isAssigningYard, setIsAssigningYard] = useState(false);
-  const [issueDetail, setIssueDetail] = useState("");
-  const [isEditingIssue, setIsEditingIssue] = useState(false);
   const [yardSearch, setYardSearch] = useState("");
   const [yardCategory, setYardCategory] = useState<string>("all");
   const [yards, setYards] = useState<YardOption[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [agents, setAgents] = useState<AgentOption[]>([]);
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -334,6 +337,19 @@ export default function TicketsPage() {
     return null;
   };
 
+  const getAttachmentUrl = (value: string) => {
+    if (!value) return "";
+    if (value.startsWith("http")) return value;
+    const normalized = value.startsWith("/") ? value : `/${value}`;
+    return `${apiBase}${normalized}`;
+  };
+
+  const getAttachmentLabel = (value: string) => {
+    if (!value) return "Attachment";
+    const parts = value.split("/");
+    return parts[parts.length - 1] || value;
+  };
+
   const fetchTickets = async () => {
     try {
       setIsLoading(true);
@@ -463,7 +479,7 @@ export default function TicketsPage() {
         directionFilter === "all" ||
         ticket.direction === directionFilter ||
         ticket.direction?.toString().toLowerCase() ===
-        directionFilter.toLowerCase();
+          directionFilter.toLowerCase();
 
       let matchesView = true;
       if (activeView === "assigned_me") {
@@ -512,7 +528,7 @@ export default function TicketsPage() {
   const handleViewDetails = (ticket: Ticket) => {
     setSelectedTicket(ticket);
     setSelectedYardId(ticket.yardId || "");
-    setIssueDetail(ticket.issueDetail || "");
+    setAttachmentFiles([]);
 
     setEditData({
       disposition: ticket.disposition || "",
@@ -525,7 +541,6 @@ export default function TicketsPage() {
       campaign: ticket.campaign || "",
     });
 
-    setIsEditingIssue(false);
     setShowDetails(true);
     setYardSearch("");
     setYardCategory("all");
@@ -599,6 +614,56 @@ export default function TicketsPage() {
     }
   };
 
+  const handleUploadAttachments = async () => {
+    if (!selectedTicket || attachmentFiles.length === 0) return;
+
+    try {
+      setIsUploadingAttachments(true);
+      const formData = new FormData();
+      attachmentFiles.forEach((file) => formData.append("files", file));
+
+      const response = await fetch(
+        `/api/tickets/${selectedTicket.id}/attachments`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      const result = await response.json();
+
+      if (result?.success) {
+        setSelectedTicket(result.data);
+        setTickets((prev) =>
+          prev.map((t) => (t.id === selectedTicket.id ? result.data : t))
+        );
+        setEditData((prev) => ({
+          ...prev,
+          attachments: result.data.attachments || prev.attachments || [],
+        }));
+        setAttachmentFiles([]);
+        toast({
+          title: "Success",
+          description: "Attachments uploaded successfully",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result?.message || "Failed to upload attachments",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Upload attachments error", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while uploading attachments",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingAttachments(false);
+    }
+  };
+
   const handleAssignYard = async () => {
     if (!selectedTicket || !selectedYardId) return;
     setIsAssigningYard(true);
@@ -613,11 +678,11 @@ export default function TicketsPage() {
           prev.map((t) =>
             t.id === selectedTicket.id
               ? {
-                ...t,
-                yardId: selectedYardId,
-                yard: updatedYard,
-                yardType: selectedYard.yardType,
-              }
+                  ...t,
+                  yardId: selectedYardId,
+                  yard: updatedYard,
+                  yardType: selectedYard.yardType,
+                }
               : t
           )
         );
@@ -625,11 +690,11 @@ export default function TicketsPage() {
         setSelectedTicket((prev) =>
           prev
             ? {
-              ...prev,
-              yardId: selectedYardId,
-              yard: updatedYard,
-              yardType: selectedYard.yardType,
-            }
+                ...prev,
+                yardId: selectedYardId,
+                yard: updatedYard,
+                yardType: selectedYard.yardType,
+              }
             : null
         );
       }
@@ -638,15 +703,6 @@ export default function TicketsPage() {
     } finally {
       setIsAssigningYard(false);
     }
-  };
-
-  const handleSaveIssueDetail = () => {
-    if (!selectedTicket) return;
-    setTickets((prev) =>
-      prev.map((t) => (t.id === selectedTicket.id ? { ...t, issueDetail } : t))
-    );
-    setSelectedTicket((prev) => (prev ? { ...prev, issueDetail } : null));
-    setIsEditingIssue(false);
   };
 
   const resetCreateForm = () => {
@@ -754,6 +810,526 @@ export default function TicketsPage() {
       setIsCreating(false);
     }
   };
+
+  const hasIssueDetail = Boolean(editData.issueDetail?.trim());
+  const savedAttachments = selectedTicket?.attachments || [];
+  const pendingAttachments = (editData.attachments || []).filter(
+    (att) => !savedAttachments.includes(att)
+  );
+  const hasSavedAttachments = savedAttachments.length > 0;
+  const hasPendingAttachments = pendingAttachments.length > 0;
+  const hasYardAssigned = Boolean(selectedYardId || selectedTicket?.yardId);
+  const showOnboardingOption =
+    (editData.campaign || selectedTicket?.campaign || "")
+      .toString()
+      .toUpperCase() === "ONBOARDING";
+
+  const metadataFields = [
+    {
+      key: "status",
+      filled: Boolean(editData.status),
+      node: (
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">Status</p>
+          <Select
+            value={editData.status}
+            onValueChange={(v) =>
+              setEditData((prev) => ({ ...prev, status: v }))
+            }
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(TicketStatus).map((s) => (
+                <SelectItem key={s} value={s}>
+                  {formatEnumLabel(s)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ),
+    },
+    {
+      key: "priority",
+      filled: Boolean(editData.priority),
+      node: (
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">Priority</p>
+          <Select
+            value={editData.priority}
+            onValueChange={(v) =>
+              setEditData((prev) => ({ ...prev, priority: v }))
+            }
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(TicketPriority).map((p) => (
+                <SelectItem key={p} value={p}>
+                  {formatEnumLabel(p)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ),
+    },
+    {
+      key: "campaign",
+      filled: Boolean(editData.campaign),
+      node: (
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">Campaign</p>
+          <Select
+            value={editData.campaign}
+            onValueChange={(v) =>
+              setEditData((prev) => ({ ...prev, campaign: v }))
+            }
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Select campaign" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(Cam).map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ),
+    },
+    {
+      key: "assignee",
+      filled: true,
+      node: (
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">Assignee</p>
+          <div className="flex items-center gap-2 h-8">
+            <Avatar className="h-6 w-6">
+              <AvatarFallback className="text-xs">
+                {getAssigneeInitials(selectedTicket?.assignedTo)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-sm">
+              {getAssigneeName(selectedTicket?.assignedTo)}
+            </span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "direction",
+      filled: true,
+      node: (
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">Direction</p>
+          <div className="flex items-center gap-2 h-8">
+            {getDirectionIcon(selectedTicket?.direction || "inbound")}
+            <span className="text-sm">
+              {getDirectionText(selectedTicket?.direction || "inbound")}
+            </span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "disposition",
+      filled: Boolean(editData.disposition),
+      node: (
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">
+            Disposition
+          </p>
+          <Select
+            value={editData.disposition}
+            onValueChange={(v) =>
+              setEditData((prev) => ({ ...prev, disposition: v }))
+            }
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Select disposition" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(TicketDisposition).map((d) => (
+                <SelectItem key={d} value={d}>
+                  {formatEnumLabel(d)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ),
+    },
+    showOnboardingOption
+      ? {
+          key: "onboardingOption",
+          filled: Boolean(editData.onboardingOption),
+          node: (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">
+                Onboarding Option
+              </p>
+              <Select
+                value={editData.onboardingOption}
+                onValueChange={(v) =>
+                  setEditData((prev) => ({
+                    ...prev,
+                    onboardingOption: v,
+                  }))
+                }
+              >
+                <SelectTrigger className="h-8">
+                  <SelectValue placeholder="Select option" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(OnboardingOption).map((o) => (
+                    <SelectItem key={o} value={o}>
+                      {formatEnumLabel(o)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ),
+        }
+      : null,
+  ].filter(Boolean) as { key: string; filled: boolean; node: JSX.Element }[];
+
+  const baseFullFields = [
+    {
+      key: "yardAssignment",
+      filled: hasYardAssigned,
+      node: (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              <p className="text-sm font-medium text-muted-foreground">
+                Yard Assignment
+              </p>
+            </div>
+            {!hasYardAssigned && (
+              <Badge
+                variant="outline"
+                className="border-amber-500/30 text-amber-600"
+              >
+                Missing
+              </Badge>
+            )}
+          </div>
+          {!hasYardAssigned && (
+            <div className="text-xs text-amber-600 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Action Required: No yard assigned</span>
+            </div>
+          )}
+          {currentYard && (
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg border border-emerald-200 dark:border-emerald-500/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900">
+                    <Building className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{currentYard.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {currentYard.propertyAddress ||
+                        currentYard.propertyAddress}
+                    </p>
+                    <Badge variant="outline" className="mt-1">
+                      {(currentYard.yardType || currentYard.yardType) ===
+                        "SAAS" ||
+                      (currentYard.yardType || currentYard.yardType) === "saas"
+                        ? "SaaS"
+                        : "Full Service"}
+                    </Badge>
+                  </div>
+                </div>
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Select Yard</Label>
+              <Select
+                value={selectedYardId}
+                onValueChange={(value) => setSelectedYardId(value)}
+              >
+                <SelectTrigger className="h-11 bg-muted/30 border-border/60">
+                  <SelectValue placeholder="Select a yard...">
+                    {selectedYard ? (
+                      <div className="flex items-center gap-2">
+                        <span className="truncate">{selectedYard.name}</span>
+                        <Badge variant="outline" className="text-[10px]">
+                          {(selectedYard.yardType || selectedYard.yardType) ===
+                            "SAAS" ||
+                          (selectedYard.yardType || selectedYard.yardType) ===
+                            "saas"
+                            ? "SaaS"
+                            : "Full Service"}
+                        </Badge>
+                      </div>
+                    ) : (
+                      "Select a yard..."
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="p-0">
+                  <div className="p-3 border-b border-border/60 bg-muted/20">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search yards..."
+                        className="pl-8 bg-background"
+                        value={yardSearch}
+                        onChange={(e) => setYardSearch(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  </div>
+                  <ScrollArea className="h-64">
+                    {filteredYards.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                        No yards found
+                      </div>
+                    ) : (
+                      filteredYards.map((yard) => (
+                        <SelectItem key={yard.id} value={yard.id.toString()}>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">
+                              {yard.commonName || yard.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {yard.propertyAddress}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </ScrollArea>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedYard && (
+              <div className="p-4 bg-blue-50 dark:bg-blue-500/10 rounded-lg border border-blue-200 dark:border-blue-500/20">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
+                      <Building className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium">{selectedYard.name}</p>
+                        <Badge variant="outline">
+                          {(selectedYard.yardType || selectedYard.yardType) ===
+                            "SAAS" ||
+                          (selectedYard.yardType || selectedYard.yardType) ===
+                            "saas"
+                            ? "SaaS"
+                            : "Full Service"}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedYard.propertyAddress ||
+                          selectedYard.propertyAddress}
+                      </p>
+
+                      {(selectedYard.contactInfo ||
+                        selectedYard.contactInfo) && (
+                        <div className="flex items-center gap-2 mt-2 text-sm">
+                          <span className="font-medium">Contact:</span>
+                          <span>
+                            {selectedYard.contactInfo ||
+                              selectedYard.contactInfo}
+                          </span>
+                        </div>
+                      )}
+
+                      {selectedYard.notes && (
+                        <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
+                          <span className="font-medium">Note: </span>
+                          {selectedYard.notes}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setSelectedYardId("");
+                      setYardSearch("");
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "issueDetail",
+      filled: hasIssueDetail,
+      node: (
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-muted-foreground">
+            Issue Detail
+          </p>
+          <Textarea
+            placeholder="Describe the issue..."
+            value={editData.issueDetail || ""}
+            onChange={(e) =>
+              setEditData((prev) => ({
+                ...prev,
+                issueDetail: e.target.value,
+              }))
+            }
+            className="min-h-[100px] bg-muted/20"
+          />
+        </div>
+      ),
+    },
+  ];
+
+  const filledMetadataFields: Array<{ key: string; node: JSX.Element }> =
+    metadataFields
+      .filter((field) => field.filled)
+      .map((field) => ({ key: field.key, node: field.node }));
+  const missingMetadataFields: Array<{ key: string; node: JSX.Element }> =
+    metadataFields
+      .filter((field) => !field.filled)
+      .map((field) => ({ key: field.key, node: field.node }));
+  const filledFullFields: Array<{ key: string; node: JSX.Element }> =
+    baseFullFields
+      .filter((field) => field.filled)
+      .map((field) => ({ key: field.key, node: field.node }));
+  const missingFullFields: Array<{ key: string; node: JSX.Element }> =
+    baseFullFields
+      .filter((field) => !field.filled)
+      .map((field) => ({ key: field.key, node: field.node }));
+
+  const attachmentControlsNode = (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Input
+          id="ticket-attachments-upload"
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) =>
+            setAttachmentFiles(Array.from(e.target.files || []))
+          }
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const input = document.getElementById(
+              "ticket-attachments-upload"
+            ) as HTMLInputElement | null;
+            input?.click();
+          }}
+        >
+          Attachment
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleUploadAttachments}
+          disabled={isUploadingAttachments || attachmentFiles.length === 0}
+        >
+          {isUploadingAttachments ? "Uploading..." : "Upload"}
+        </Button>
+      </div>
+      {attachmentFiles.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Selected files: {attachmentFiles.map((file) => file.name).join(", ")}
+        </p>
+      )}
+
+      {hasPendingAttachments && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {pendingAttachments.map((att, idx) => (
+            <Badge
+              key={`${att}-${idx}`}
+              variant="secondary"
+              className="pl-3 pr-1 py-1 gap-2 group"
+            >
+              <span className="truncate max-w-50">{att}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-4 w-4 hover:bg-transparent"
+                onClick={() => {
+                  setEditData((prev) => ({
+                    ...prev,
+                    attachments: (() => {
+                      const next = [...(prev.attachments || [])];
+                      const removeIndex = next.indexOf(att);
+                      if (removeIndex >= 0) {
+                        next.splice(removeIndex, 1);
+                      }
+                      return next;
+                    })(),
+                  }));
+                }}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </Badge>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  if (hasSavedAttachments) {
+    filledFullFields.push({
+      key: "attachmentsSaved",
+      node: (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            {savedAttachments.map((att, idx) => (
+              <div
+                key={`${att}-${idx}`}
+                className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2"
+              >
+                <span className="text-sm truncate">
+                  {getAttachmentLabel(att)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => window.open(getAttachmentUrl(att), "_blank")}
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
+              </div>
+            ))}
+          </div>
+          {attachmentControlsNode}
+        </div>
+      ),
+    });
+  } else {
+    missingFullFields.push({
+      key: "attachmentsPending",
+      node: attachmentControlsNode,
+    });
+  }
 
   return (
     <div className="h-screen flex flex-col lg:flex-row gap-6 p-4">
@@ -1190,7 +1766,7 @@ export default function TicketsPage() {
 
       {/* Dialog central para detalles del ticket */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
           {selectedTicket && (
             <>
               <DialogHeader>
@@ -1215,506 +1791,12 @@ export default function TicketsPage() {
                 </div>
               </div>
 
-              <div className="grid gap-6">
-                {/* Ticket Metadata */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Ticket Information</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Status
-                        </p>
-                        <Select
-                          value={editData.status}
-                          onValueChange={(v) =>
-                            setEditData((prev) => ({ ...prev, status: v }))
-                          }
-                        >
-                          <SelectTrigger className="h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.values(TicketStatus).map((s) => (
-                              <SelectItem key={s} value={s}>
-                                {formatEnumLabel(s)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Priority
-                        </p>
-                        <Select
-                          value={editData.priority}
-                          onValueChange={(v) =>
-                            setEditData((prev) => ({ ...prev, priority: v }))
-                          }
-                        >
-                          <SelectTrigger className="h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.values(TicketPriority).map((p) => (
-                              <SelectItem key={p} value={p}>
-                                {formatEnumLabel(p)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* --- SELECTOR CAMPAIGN RESTAURADO --- */}
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Campaign
-                        </p>
-                        <Select
-                          value={editData.campaign}
-                          onValueChange={(v) =>
-                            setEditData((prev) => ({ ...prev, campaign: v }))
-                          }
-                        >
-                          <SelectTrigger className="h-8">
-                            <SelectValue placeholder="Select campaign" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.values(Cam).map((c) => (
-                              <SelectItem key={c} value={c}>
-                                {c}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {/* --- FIN NUEVO SELECTOR --- */}
-
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Assignee
-                        </p>
-                        <div className="flex items-center gap-2 h-8">
-                          <Avatar className="h-6 w-6">
-                            <AvatarFallback className="text-xs">
-                              {getAssigneeInitials(selectedTicket.assignedTo)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm">
-                            {getAssigneeName(selectedTicket.assignedTo)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Direction
-                        </p>
-                        <div className="flex items-center gap-2 h-8">
-                          {getDirectionIcon(
-                            selectedTicket.direction || "inbound"
-                          )}
-                          <span className="text-sm">
-                            {getDirectionText(
-                              selectedTicket.direction || "inbound"
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Disposition
-                        </p>
-                        <Select
-                          value={editData.disposition}
-                          onValueChange={(v) =>
-                            setEditData((prev) => ({ ...prev, disposition: v }))
-                          }
-                        >
-                          <SelectTrigger className="h-8">
-                            <SelectValue placeholder="Select disposition" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.values(TicketDisposition).map((d) => (
-                              <SelectItem key={d} value={d}>
-                                {formatEnumLabel(d)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        {(selectedTicket.type as string)?.toUpperCase() ===
-                          "ONBOARDING" ? (
-                          <Select
-                            value={editData.onboardingOption}
-                            onValueChange={(v) =>
-                              setEditData((prev) => ({
-                                ...prev,
-                                onboardingOption: v,
-                              }))
-                            }
-                          >
-                            <SelectTrigger className="h-8">
-                              <SelectValue placeholder="Select option" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.values(OnboardingOption).map((o) => (
-                                <SelectItem key={o} value={o}>
-                                  {o}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <div className="h-8 flex items-center"></div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Issue Detail
-                      </p>
-                      <Textarea
-                        placeholder="Describe the issue..."
-                        value={editData.issueDetail}
-                        onChange={(e) =>
-                          setEditData((prev) => ({
-                            ...prev,
-                            issueDetail: e.target.value,
-                          }))
-                        }
-                        className="min-h-[100px] bg-muted/20"
-                      />
-                    </div>
-
-                    <div className="mt-4 space-y-3">
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Attachments
-                      </p>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Add attachment link or name..."
-                          className="bg-muted/20"
-                          id="new-attachment"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              const input = e.currentTarget;
-                              if (input.value.trim()) {
-                                setEditData((prev) => ({
-                                  ...prev,
-                                  attachments: [
-                                    ...(prev.attachments || []),
-                                    input.value.trim(),
-                                  ],
-                                }));
-                                input.value = "";
-                              }
-                            }
-                          }}
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const input = document.getElementById(
-                              "new-attachment"
-                            ) as HTMLInputElement;
-                            if (input && input.value.trim()) {
-                              setEditData((prev) => ({
-                                ...prev,
-                                attachments: [
-                                  ...(prev.attachments || []),
-                                  input.value.trim(),
-                                ],
-                              }));
-                              input.value = "";
-                            }
-                          }}
-                        >
-                          Add
-                        </Button>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {(editData.attachments || []).map((att, idx) => (
-                          <Badge
-                            key={idx}
-                            variant="secondary"
-                            className="pl-3 pr-1 py-1 gap-2 group"
-                          >
-                            <span className="truncate max-w-[200px]">
-                              {att}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-4 w-4 hover:bg-transparent"
-                              onClick={() => {
-                                setEditData((prev) => ({
-                                  ...prev,
-                                  attachments: (prev.attachments || []).filter(
-                                    (_, i) => i !== idx
-                                  ),
-                                }));
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </Badge>
-                        ))}
-                        {(!editData.attachments ||
-                          editData.attachments.length === 0) && (
-                            <p className="text-xs text-muted-foreground italic">
-                              No attachments added
-                            </p>
-                          )}
-                      </div>
-                    </div>
-                  </CardContent>
-
-                  {/* Yard Assignment  */}
-
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5" />
-                      Yard Assignment
-                    </CardTitle>
-                    {!selectedTicket.yardId && (
-                      <CardDescription className="text-amber-600">
-                        <AlertTriangle className="inline h-4 w-4 mr-1" />
-                        Action Required: No yard assigned
-                      </CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {/* Yard actual asignado */}
-                      {currentYard && (
-                        <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg border border-emerald-200 dark:border-emerald-500/20">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900">
-                                <Building className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                              </div>
-                              <div>
-                                <p className="font-medium">
-                                  {currentYard.name}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  {currentYard.propertyAddress ||
-                                    currentYard.propertyAddress}
-                                </p>
-                                <Badge variant="outline" className="mt-1">
-                                  {(currentYard.yardType ||
-                                    currentYard.yardType) === "SAAS" ||
-                                    (currentYard.yardType ||
-                                      currentYard.yardType) === "saas"
-                                    ? "SaaS"
-                                    : "Full Service"}
-                                </Badge>
-                              </div>
-                            </div>
-                            <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Selector de yardas con búsqueda */}
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Select Yard</Label>
-                          <Select
-                            value={selectedYardId}
-                            onValueChange={(value) => setSelectedYardId(value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a yard...">
-                                {selectedYard ? (
-                                  <div className="flex items-center gap-2">
-                                    <span className="truncate">
-                                      {selectedYard.name}
-                                    </span>
-                                    <Badge
-                                      variant="outline"
-                                      className="text-[10px]"
-                                    >
-                                      {(selectedYard.yardType ||
-                                        selectedYard.yardType) === "SAAS" ||
-                                        (selectedYard.yardType ||
-                                          selectedYard.yardType) === "saas"
-                                        ? "SaaS"
-                                        : "Full Service"}
-                                    </Badge>
-                                  </div>
-                                ) : (
-                                  "Select a yard..."
-                                )}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <div className="p-2">
-                                <div className="relative mb-2">
-                                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                  <Input
-                                    placeholder="Search yards..."
-                                    className="pl-8"
-                                    value={yardSearch}
-                                    onChange={(e) =>
-                                      setYardSearch(e.target.value)
-                                    }
-                                    onClick={(e) => e.stopPropagation()}
-                                  />
-                                </div>
-                              </div>
-                              <ScrollArea className="h-64">
-                                {filteredYards.length === 0 ? (
-                                  <div className="p-4 text-center text-sm text-muted-foreground">
-                                    No yards found
-                                  </div>
-                                ) : (
-                                  filteredYards.map((yard) => (
-                                    <SelectItem
-                                      key={yard.id}
-                                      value={yard.id.toString()}
-                                    >
-                                      {yard.name} -{" "}
-                                      {(yard.yardType || yard.yardType) ===
-                                        "SAAS" ||
-                                        (yard.yardType || yard.yardType) ===
-                                        "saas"
-                                        ? "SaaS"
-                                        : "Full Service"}
-                                    </SelectItem>
-                                  ))
-                                )}
-                              </ScrollArea>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Mostrar yarda seleccionada */}
-                        {selectedYard && (
-                          <div className="p-4 bg-blue-50 dark:bg-blue-500/10 rounded-lg border border-blue-200 dark:border-blue-500/20">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-start gap-3">
-                                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
-                                  <Building className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <p className="font-medium">
-                                      {selectedYard.name}
-                                    </p>
-                                    <Badge variant="outline">
-                                      {(selectedYard.yardType ||
-                                        selectedYard.yardType) === "SAAS" ||
-                                        (selectedYard.yardType ||
-                                          selectedYard.yardType) === "saas"
-                                        ? "SaaS"
-                                        : "Full Service"}
-                                    </Badge>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground">
-                                    {selectedYard.propertyAddress ||
-                                      selectedYard.propertyAddress}
-                                  </p>
-
-                                  {(selectedYard.contactInfo ||
-                                    selectedYard.contactInfo) && (
-                                      <div className="flex items-center gap-2 mt-2 text-sm">
-                                        <span className="font-medium">
-                                          Contact:
-                                        </span>
-                                        <span>
-                                          {selectedYard.contactInfo ||
-                                            selectedYard.contactInfo}
-                                        </span>
-                                      </div>
-                                    )}
-
-                                  {selectedYard.notes && (
-                                    <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
-                                      <span className="font-medium">
-                                        Note:{" "}
-                                      </span>
-                                      {selectedYard.notes}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setSelectedYardId("");
-                                  setYardSearch("");
-                                }}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Issue Detail  */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Issue Detail
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {isEditingIssue ? (
-                      <div className="space-y-3">
-                        <Textarea
-                          value={issueDetail}
-                          onChange={(e) => setIssueDetail(e.target.value)}
-                          placeholder="Describe the issue in detail..."
-                          className="min-h-[100px]"
-                        />
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setIsEditingIssue(false)}
-                          >
-                            Cancel Edit
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="p-3 bg-muted/30 rounded-lg">
-                          {issueDetail ? (
-                            <p className="whitespace-pre-wrap">{issueDetail}</p>
-                          ) : (
-                            <div className="text-center py-4 text-muted-foreground">
-                              <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                              <p>No issue details added yet</p>
-                              <Button
-                                variant="link"
-                                className="mt-1"
-                                onClick={() => setIsEditingIssue(true)}
-                              >
-                                Add issue details
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+              <TicketDetailsFields
+                filledMetadataFields={filledMetadataFields}
+                filledFullFields={filledFullFields}
+                missingMetadataFields={missingMetadataFields}
+                missingFullFields={missingFullFields}
+              />
 
               <DialogFooter className="mt-8 pt-6 border-t">
                 <div className="flex items-center justify-between w-full">
