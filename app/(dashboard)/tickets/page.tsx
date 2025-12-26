@@ -343,6 +343,11 @@ export default function TicketsPage() {
   const getAttachmentUrl = (value: string) => {
     if (!value) return "";
     if (value.startsWith("http")) return value;
+    if (value.startsWith("s3://")) {
+      return `${apiBase}/tickets/attachments/download?fileUrl=${encodeURIComponent(
+        value
+      )}`;
+    }
     const normalized = value.startsWith("/") ? value : `/${value}`;
     return `${apiBase}${normalized}`;
   };

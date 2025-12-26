@@ -9,8 +9,9 @@ import {
   Loader2,
   Plus,
   Trash2,
-  UploadCloud,
+  X,
 } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -406,7 +407,7 @@ export default function GuidesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="guide-file">Attachment</Label>
+              <Label>Upload files</Label>
               <div className="flex flex-wrap items-center gap-3">
                 <Input
                   id="guide-file"
@@ -425,9 +426,37 @@ export default function GuidesPage() {
                   </Label>
                 </Button>
                 <span className="text-xs text-muted-foreground">
-                  {formState.file ? formState.file.name : "No files selected"}
+                  {formState.file ? "1 file selected" : "No files selected"}
                 </span>
-                <UploadCloud className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {formState.file ? (
+                  <Badge
+                    variant="secondary"
+                    className="pl-3 pr-1 py-1 gap-2 group"
+                  >
+                    <span className="truncate max-w-[200px]">
+                      {formState.file.name}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-4 w-4 hover:bg-transparent"
+                      onClick={() =>
+                        setFormState({
+                          ...formState,
+                          file: null,
+                        })
+                      }
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">
+                    No files selected
+                  </p>
+                )}
               </div>
               {formMode === "edit" && activeGuide?.fileUrl && !formState.file && (
                 <p className="text-xs text-muted-foreground">
