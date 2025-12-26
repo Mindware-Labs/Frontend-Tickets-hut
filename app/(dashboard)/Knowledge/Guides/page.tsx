@@ -263,7 +263,7 @@ export default function GuidesPage() {
             Operational Guides
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Handbooks, tutoriales e instrucciones operativas para agentes.
+            Handbooks, tutorials and operating instructions for agents.
           </p>
         </div>
         <Button onClick={openCreate} className="gap-2">

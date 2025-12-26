@@ -100,16 +100,14 @@ declare module "@/lib/mock-data" {
 }
 
 export enum OnboardingOption {
-  NOT_REGISTER = "NOT_REGISTER",
-  REGISTER = "REGISTER",
-  PAID_WITH_LL = "PAID_WITH_LL",
-  CANCELLED = "CANCELLED",
+  NOT_REGISTER = "NOT_REGISTERED",
+  REGISTER = "REGISTERED",
+  PAID_WITH_LL = "PAID_WITH_LL", 
 }
 
 export enum TicketStatus {
   OPEN = "OPEN",
   IN_PROGRESS = "IN_PROGRESS",
-  RESOLVED = "RESOLVED",
   CLOSED = "CLOSED",
 }
 
@@ -234,8 +232,6 @@ export default function TicketsPage() {
         return "border-amber-500/20 bg-amber-500/5 text-amber-600";
       case "Closed":
       case "CLOSED":
-      case "RESOLVED":
-        return "border-rose-500/20 bg-rose-500/5 text-rose-600";
       default:
         return "";
     }
@@ -270,8 +266,12 @@ export default function TicketsPage() {
     return d === "outbound" ? "Outbound" : "Inbound";
   };
 
-  const formatEnumLabel = (value?: string) => {
+ const formatEnumLabel = (value?: string) => {
     if (!value) return "-";
+
+    if (value === OnboardingOption.PAID_WITH_LL || value === "PAID_WITH_LL") {
+      return "Paid with LL";
+    }
     return value
       .toString()
       .replace(/_/g, " ")
@@ -1848,8 +1848,7 @@ export default function TicketsPage() {
               <DialogFooter className="mt-8 pt-6 border-t">
                 <div className="flex items-center justify-between w-full">
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    Changes will be saved to the database.
+           
                   </p>
                   <div className="flex gap-3">
                     <Button

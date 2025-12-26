@@ -524,7 +524,7 @@ export function CreateTicketModal({
                     ? `${attachmentFiles.length} file${
                         attachmentFiles.length > 1 ? "s" : ""
                       } selected`
-                    : "No files selected"}
+                    :""}
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">

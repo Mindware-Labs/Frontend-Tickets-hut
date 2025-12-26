@@ -37,7 +37,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false)
 
   // Mock State
-  const [siteName, setSiteName] = useState("Pulse Ops Console")
+  const [siteName, setSiteName] = useState("My Workspace")
   const [emailNotifs, setEmailNotifs] = useState(true)
   const [pushNotifs, setPushNotifs] = useState(false)
 
@@ -67,8 +67,6 @@ export default function SettingsPage() {
             General
           </TabsTrigger>
           <TabsTrigger value="notifications" className="data-[state=active]:bg-secondary">
-            <Bell className="mr-2 h-4 w-4" />
-            Notifications
           </TabsTrigger>
           <TabsTrigger value="display" className="data-[state=active]:bg-secondary">
             <Laptop className="mr-2 h-4 w-4" />
@@ -95,10 +93,10 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-6">
                   <Avatar className="h-20 w-20 border-2 border-border/50">
                     <AvatarImage src="/avatars/shadcn.jpg" />
-                    <AvatarFallback className="text-lg">GL</AvatarFallback>
+                    <AvatarFallback className="text-lg">JD</AvatarFallback>
                   </Avatar>
                   <div className="space-y-1">
-                    <h3 className="font-medium text-lg leading-none">Gerald Luciano</h3>
+                    <h3 className="font-medium text-lg leading-none">John Doe</h3>
                     <p className="text-sm text-muted-foreground">{role} Account</p>
                     <Button variant="outline" size="sm" className="mt-2 h-8">Change Avatar</Button>
                   </div>
@@ -113,7 +111,7 @@ export default function SettingsPage() {
                     <Label>Email Address</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input defaultValue="gerald@example.com" className="pl-9" disabled />
+                      <Input defaultValue="john@example.com" className="pl-9" disabled />
                     </div>
                   </div>
                 </div>
@@ -151,41 +149,7 @@ export default function SettingsPage() {
           </div>
         </TabsContent>
 
-        {/* --- NOTIFICATIONS TAB --- */}
-        <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
-              <CardDescription>Choose how you want to be notified about activity.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between space-x-2">
-                <div className="flex flex-col space-y-1">
-                  <Label className="text-base font-medium leading-none">Email Notifications</Label>
-                  <span className="text-sm text-muted-foreground">Receive daily digests and critical alerts via email.</span>
-                </div>
-                <Switch checked={emailNotifs} onCheckedChange={setEmailNotifs} />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between space-x-2">
-                <div className="flex flex-col space-y-1">
-                  <Label className="text-base font-medium leading-none">Push Notifications</Label>
-                  <span className="text-sm text-muted-foreground">Receive real-time alerts in your browser.</span>
-                </div>
-                <Switch checked={pushNotifs} onCheckedChange={setPushNotifs} />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between space-x-2 opacity-50 cursor-not-allowed">
-                <div className="flex flex-col space-y-1">
-                  <Label className="text-base font-medium leading-none">Slack Integration</Label>
-                  <span className="text-sm text-muted-foreground">Connect your workspace to Slack (Coming Soon).</span>
-                </div>
-                <Switch disabled />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
+   
         {/* --- DISPLAY TAB --- */}
         <TabsContent value="display" className="space-y-6">
           <Card>

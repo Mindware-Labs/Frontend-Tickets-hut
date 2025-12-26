@@ -11,7 +11,6 @@ export enum TicketDisposition {
 export enum TicketStatus {
   OPEN = "OPEN",
   IN_PROGRESS = "IN_PROGRESS",
-  RESOLVED = "RESOLVED",
   CLOSED = "CLOSED",
 }
 
@@ -29,10 +28,9 @@ export enum ManagementType {
 }
 
 export enum OnboardingOption {
-  NOT_REGISTER = "NOT_REGISTER",
-  REGISTER = "REGISTER",
+  NOT_REGISTER = "NOT_REGISTERED",
+  REGISTER = "REGISTERED",
   PAID_WITH_LL = "PAID_WITH_LL",
-  CANCELLED = "CANCELLED",
 }
 
 export enum CallDirection {
