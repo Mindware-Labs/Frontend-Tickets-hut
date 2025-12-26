@@ -8,7 +8,7 @@ interface BarChartProps {
 }
 
 export default function BarChart({ data, color = "rgb(var(--primary))" }: BarChartProps) {
-  const maxValue = Math.max(...data.map((d) => d.count))
+  const maxValue = Math.max(1, ...data.map((d) => d.count))
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
   return (

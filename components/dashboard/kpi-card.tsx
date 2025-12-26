@@ -1,11 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowUpRight, ArrowDownRight, type LucideIcon } from "lucide-react"
+import { ArrowUpRight, ArrowDownRight } from "lucide-react"
+import type { ComponentType } from "react"
 
 interface KPICardProps {
   title: string
   value: string | number
   secondaryValue?: string
-  icon: LucideIcon
+  icon: ComponentType<{ className?: string }>
   iconBg: string
   trend?: string
   trendUp?: boolean

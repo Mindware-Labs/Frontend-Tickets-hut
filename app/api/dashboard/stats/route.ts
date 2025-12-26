@@ -1,20 +1,210 @@
 import { NextResponse } from "next/server"
-import { getDashboardStats } from "@/lib/mock-data"
+import { fetchFromBackend } from "@/lib/api-client"
+
+type Ticket = {
+  id: number
+  status?: string
+  campaign?: string | null
+  disposition?: string | null
+  createdAt?: string
+  priority?: string | null
+  customer?: { name?: string | null }
+}
+
+type Campaign = {
+  id: number
+  nombre: string
+  tipo?: string | null
+  isActive?: boolean
+}
+
+const STATUS_ACTIVE = new Set(["OPEN", "IN_PROGRESS"])
+const STATUS_CLOSED = new Set(["CLOSED", "RESOLVED"])
+const PRIORITY_ALERT = new Set(["HIGH", "EMERGENCY"])
+
+const CAMPAIGN_LABELS: Record<string, string> = {
+  ONBOARDING: "Onboarding",
+  AR: "AR",
+  OTHER: "Other",
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  OPEN: "Open",
+  IN_PROGRESS: "In Progress",
+  RESOLVED: "Resolved",
+  CLOSED: "Closed",
+}
+
+const FALLBACK_CHART_ITEM = [{ name: "No data", count: 0 }]
+
+function toTitleCase(value: string) {
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ")
+}
+
+function normalizeLabel(value: string | null | undefined, labels: Record<string, string>) {
+  if (!value) return "Unspecified"
+  return labels[value] || toTitleCase(value)
+}
+
+function formatDateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+async function fetchTicketsWithLimit(limit: number, maxPages: number) {
+  const tickets: Ticket[] = []
+  let total = 0
+
+  for (let page = 1; page <= maxPages; page += 1) {
+    const response = await fetchFromBackend(`/tickets?page=${page}&limit=${limit}`)
+    const pageTickets: Ticket[] = response?.data || response || []
+    if (page === 1 && typeof response?.total === "number") {
+      total = response.total
+    }
+
+    tickets.push(...pageTickets)
+
+    if (pageTickets.length < limit) break
+    if (total && tickets.length >= total) break
+  }
+
+  return { tickets, total: total || tickets.length }
+}
+
+async function fetchCampaigns(limit: number) {
+  const response = await fetchFromBackend(`/campaign?page=1&limit=${limit}`)
+  const campaigns: Campaign[] = response?.data || response || []
+  return campaigns
+}
 
 // GET /api/dashboard/stats - Fetch dashboard statistics
 export async function GET() {
   try {
-    const stats = getDashboardStats()
+    const { tickets, total } = await fetchTicketsWithLimit(200, 5)
+    let campaigns: Campaign[] = []
+    try {
+      campaigns = await fetchCampaigns(200)
+    } catch {
+      campaigns = []
+    }
+    const totalTickets = total
+    const totalCalls = totalTickets
+
+    const openTickets = tickets.filter((ticket) => ticket.status === "OPEN").length
+    const inProgressTickets = tickets.filter((ticket) => ticket.status === "IN_PROGRESS").length
+    const activeTickets = openTickets + inProgressTickets
+    const closedTickets = tickets.filter((ticket) => STATUS_CLOSED.has(ticket.status || "")).length
+    const pendingActions = tickets.filter(
+      (ticket) =>
+        PRIORITY_ALERT.has(ticket.priority || "") &&
+        !STATUS_CLOSED.has(ticket.status || ""),
+    ).length
+
+    const resolutionRate = totalTickets > 0 ? Math.round((closedTickets / totalTickets) * 100) : 0
+
+    const campaignCounts = tickets.reduce<Record<string, number>>((acc, ticket) => {
+      const label = normalizeLabel(ticket.campaign || "Unspecified", CAMPAIGN_LABELS)
+      acc[label] = (acc[label] || 0) + 1
+      return acc
+    }, {})
+
+    const dispositionCounts = tickets.reduce<Record<string, number>>((acc, ticket) => {
+      const label = normalizeLabel(ticket.disposition || "Unspecified", {})
+      acc[label] = (acc[label] || 0) + 1
+      return acc
+    }, {})
+
+    const now = new Date()
+    const dayBuckets = Array.from({ length: 7 }).map((_, index) => {
+      const date = new Date(now)
+      date.setDate(now.getDate() - (6 - index))
+      date.setHours(0, 0, 0, 0)
+      return {
+        key: formatDateKey(date),
+        label: date.toLocaleDateString("en-US", { weekday: "short" }),
+        count: 0,
+      }
+    })
+
+    const bucketMap = dayBuckets.reduce<Record<string, number>>((acc, bucket, index) => {
+      acc[bucket.key] = index
+      return acc
+    }, {})
+
+    tickets.forEach((ticket) => {
+      if (!ticket.createdAt) return
+      const date = new Date(ticket.createdAt)
+      if (Number.isNaN(date.getTime())) return
+      const key = formatDateKey(date)
+      const bucketIndex = bucketMap[key]
+      if (bucketIndex === undefined) return
+      dayBuckets[bucketIndex].count += 1
+    })
+
+    const callsByDay = dayBuckets.map((bucket) => ({
+      day: bucket.label,
+      calls: bucket.count,
+    }))
+
+    const campaignsByName = campaigns.map((campaign) => ({
+      name: campaign.nombre,
+      count: 1,
+    }))
+
+    const ticketsByCampaign = campaignsByName.length
+      ? campaignsByName
+      : Object.entries(campaignCounts).map(([name, count]) => ({
+          name,
+          count,
+        }))
+
+    const ticketsByDisposition = Object.entries(dispositionCounts).map(([name, count]) => ({
+      name,
+      count,
+    }))
+
+    const recentTickets = tickets.slice(0, 5).map((ticket) => ({
+      id: ticket.id,
+      clientName: ticket.customer?.name || "Unassigned",
+      type: normalizeLabel(ticket.campaign || "Unspecified", CAMPAIGN_LABELS),
+      status: normalizeLabel(ticket.status || "Unspecified", STATUS_LABELS),
+      createdAt: ticket.createdAt || new Date().toISOString(),
+    }))
 
     return NextResponse.json({
       success: true,
-      data: stats,
+      data: {
+        generatedAt: new Date().toISOString(),
+        kpis: {
+          totalCalls,
+          totalTickets,
+          activeTickets,
+          openTickets,
+          inProgressTickets,
+          closedTickets,
+          pendingActions,
+          resolutionRate,
+          callsLast7Days: callsByDay.reduce((sum, item) => sum + item.calls, 0),
+        },
+        charts: {
+          callsByDay,
+          ticketsByCampaign: ticketsByCampaign.length ? ticketsByCampaign : FALLBACK_CHART_ITEM,
+          ticketsByDisposition: ticketsByDisposition.length ? ticketsByDisposition : FALLBACK_CHART_ITEM,
+        },
+        recentTickets,
+      },
     })
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to fetch dashboard stats",
+        message: error.message || "Failed to fetch dashboard stats",
       },
       { status: 500 },
     )

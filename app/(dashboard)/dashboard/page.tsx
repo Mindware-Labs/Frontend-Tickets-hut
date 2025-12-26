@@ -1,26 +1,22 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import KPICard from "@/components/dashboard/kpi-card"
-import ChartCard from "@/components/dashboard/chart-card"
-import BarChart from "@/components/dashboard/bar-chart"
-import LineChart from "@/components/dashboard/line-chart"
-import { TicketActions } from "@/components/dashboard/ticket-actions"
-import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton"
-import { useRealTimeSimulation } from "@/hooks/use-real-time-simulation"
-import { getTicketsByCampaign, getTicketsByType, getCallsPerDay, mockTickets } from "@/lib/mock-data"
+import { useState, useEffect, useCallback } from "react";
+import KPICard from "@/components/dashboard/kpi-card";
+import ChartCard from "@/components/dashboard/chart-card";
+import BarChart from "@/components/dashboard/bar-chart";
+import LineChart from "@/components/dashboard/line-chart";
+import { TicketActions } from "@/components/dashboard/ticket-actions";
+import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 import {
-  Phone,
   Ticket as TicketIcon,
-  CheckCircle2,
-  CircleDollarSign,
   Calendar,
   RotateCcw,
-  Users
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { toast } from "sonner"
+  TrendingUp,
+} from "lucide-react";
+import { FiPhoneCall, FiCheckCircle, FiAlertTriangle } from "react-icons/fi";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 import {
   Table,
   TableBody,
@@ -28,49 +24,191 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+
+type DashboardTicket = {
+  id: number;
+  clientName: string;
+  type: string;
+  status: string;
+  createdAt: string;
+};
+
+type DashboardData = {
+  generatedAt: string;
+  kpis: {
+    totalCalls: number;
+    totalTickets: number;
+    activeTickets: number;
+    openTickets: number;
+    inProgressTickets: number;
+    closedTickets: number;
+    pendingActions: number;
+    resolutionRate: number;
+    callsLast7Days: number;
+  };
+  charts: {
+    callsByDay: { day: string; calls: number }[];
+    ticketsByCampaign: { name: string; count: number }[];
+    ticketsByDisposition: { name: string; count: number }[];
+  };
+  recentTickets: DashboardTicket[];
+};
+
+type Agent = {
+  id: number;
+  name: string;
+  email?: string | null;
+  isActive?: boolean;
+};
 
 export default function DashboardPage() {
-  const [isLoading, setIsLoading] = useState(true)
-  const { stats } = useRealTimeSimulation()
-  const campaignData = getTicketsByCampaign()
-  const typeData = getTicketsByType()
-  const callsData = getCallsPerDay()
-  const recentTickets = mockTickets.slice(0, 5)
+  const [isLoading, setIsLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null
+  );
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [agentsError, setAgentsError] = useState<string | null>(null);
+
+  const loadDashboard = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    setAgentsError(null);
+    try {
+      const response = await fetch("/api/dashboard/stats", {
+        cache: "no-store",
+      });
+      const payload = await response.json();
+      if (!payload?.success) {
+        throw new Error(payload?.message || "Unable to load dashboard data.");
+      }
+      setDashboardData(payload.data);
+
+      try {
+        const agentsResponse = await fetch("/api/agents", {
+          cache: "no-store",
+        });
+        const agentsPayload = await agentsResponse.json();
+        if (!agentsPayload?.success) {
+          throw new Error(agentsPayload?.message || "Unable to load agents.");
+        }
+        setAgents(Array.isArray(agentsPayload.data) ? agentsPayload.data : []);
+      } catch (error: any) {
+        setAgents([]);
+        setAgentsError(error.message || "Unable to load agents.");
+      }
+    } catch (error: any) {
+      setLoadError(error.message || "Unable to load dashboard data.");
+      toast.error("Failed to load dashboard data.", {
+        description: error.message || "Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    // Force a small delay to simulate loading or hydration smoothing
-    const timer = setTimeout(() => setIsLoading(false), 800)
-    return () => clearTimeout(timer)
-  }, [])
+    loadDashboard();
+  }, [loadDashboard]);
 
-  if (isLoading) return <DashboardSkeleton />
+  if (isLoading && !dashboardData) return <DashboardSkeleton />;
+
+  if (!dashboardData) {
+    return (
+      <div className="flex h-[50vh] flex-col items-center justify-center space-y-4">
+        <div className="rounded-full bg-muted p-4">
+          <FiAlertTriangle className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          Dashboard Unavailable
+        </h1>
+        <p className="text-sm text-muted-foreground max-w-xs text-center">
+          {loadError || "No dashboard data available yet."}
+        </p>
+        <Button onClick={loadDashboard} variant="outline" size="sm">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  const { kpis, charts, recentTickets, generatedAt } = dashboardData;
+  const campaignData = charts.ticketsByCampaign.length
+    ? charts.ticketsByCampaign
+    : [{ name: "No data", count: 0 }];
+  const typeData = charts.ticketsByDisposition.length
+    ? charts.ticketsByDisposition
+    : [{ name: "No data", count: 0 }];
+  const callsData = charts.callsByDay.length
+    ? charts.callsByDay
+    : [
+        { day: "Mon", calls: 0 },
+        { day: "Tue", calls: 0 },
+        { day: "Wed", calls: 0 },
+        { day: "Thu", calls: 0 },
+        { day: "Fri", calls: 0 },
+        { day: "Sat", calls: 0 },
+        { day: "Sun", calls: 0 },
+      ];
+
+  const statusClass = (status: string) => {
+    if (status === "Open")
+      return "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400 border-blue-200 dark:border-blue-500/20";
+    if (status === "In Progress")
+      return "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400 border-amber-200 dark:border-amber-500/20";
+    if (status === "Resolved")
+      return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20";
+    if (status === "Closed")
+      return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700";
+    return "bg-muted text-muted-foreground border-border";
+  };
+
+  const agentStatusClass = (isActive?: boolean) =>
+    isActive
+      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20"
+      : "bg-muted text-muted-foreground border-border";
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 p-1 animate-in fade-in duration-500">
       {/* --- HEADER --- */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b pb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Real-time insights and performance metrics.
+          <h1 className="text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-foreground to-muted-foreground/70">
+            Dashboard
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            Live metrics from the ticketing.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50 text-xs font-medium text-muted-foreground border border-border/50">
-            <Calendar className="h-3.5 w-3.5" />
-            {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+          <div className="hidden md:flex flex-col items-end mr-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              Last updated
+            </span>
+            <span className="text-xs font-mono text-foreground">
+              {new Date(generatedAt).toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
           </div>
 
           <Button
             variant="outline"
             size="sm"
-            onClick={() => toast.info("Refreshing data...")}
-            className="h-9 hidden md:flex"
+            onClick={loadDashboard}
+            className="h-9 shadow-sm"
           >
-            <RotateCcw className="mr-2 h-3.5 w-3.5" />
+            <RotateCcw
+              className={`mr-2 h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>
@@ -80,60 +218,68 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard
           title="Total Calls"
-          value={stats.totalCalls}
-          secondaryValue="98.2% Answer rate"
-          icon={Phone}
-          iconBg="bg-blue-500"
-          trend="+12.5%"
-          trendUp={true}
+          value={kpis.totalCalls}
+          secondaryValue={`Total tickets: ${kpis.totalTickets}`}
+          icon={FiPhoneCall}
+          iconBg="bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400"
         />
         <KPICard
           title="Active Tickets"
-          value={stats.ticketsCreated}
-          secondaryValue="14 critical priority"
+          value={kpis.activeTickets}
+          secondaryValue={`Open: ${kpis.openTickets} · In progress: ${kpis.inProgressTickets}`}
           icon={TicketIcon}
-          iconBg="bg-violet-500"
-          trend="+8.2%"
-          trendUp={true}
+          iconBg="bg-violet-500/10 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400"
         />
         <KPICard
           title="Success Rate"
-          value={`${stats.ticketsCreated > 0 ? Math.round((stats.closedTickets / stats.ticketsCreated) * 100) : 0}%`}
-          secondaryValue="Target: 85%"
-          icon={CheckCircle2}
-          iconBg="bg-emerald-500"
-          trend="+5.4%"
-          trendUp={true}
+          value={`${kpis.resolutionRate}%`}
+          secondaryValue={`Closed: ${kpis.closedTickets}`}
+          icon={FiCheckCircle}
+          iconBg="bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400"
         />
         <KPICard
           title="Pending Actions"
-          value="7"
-          secondaryValue="Waiting for supervisor"
-          icon={CircleDollarSign}
-          iconBg="bg-amber-500"
-          trend="-15.3%"
-          trendUp={false}
+          value={kpis.pendingActions}
+          secondaryValue="High priority open"
+          icon={FiAlertTriangle}
+          iconBg="bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400"
         />
       </div>
 
       {/* --- ANALYTICS --- */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         <Tabs defaultValue="overview" className="space-y-4">
           <div className="flex items-center justify-between">
-            <TabsList className="bg-secondary/30 p-1">
-              <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
-              <TabsTrigger value="campaigns" className="text-xs">Campaigns</TabsTrigger>
-              <TabsTrigger value="agents" className="text-xs">Agents</TabsTrigger>
+            <TabsList className="bg-muted/50 p-1 border">
+              <TabsTrigger value="overview" className="text-xs px-4">
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="campaigns" className="text-xs px-4">
+                Campaigns
+              </TabsTrigger>
+              <TabsTrigger value="agents" className="text-xs px-4">
+                Agents
+              </TabsTrigger>
             </TabsList>
+            <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 px-3 py-1 rounded-full">
+              <Calendar className="h-3 w-3" />
+              <span>Last 7 Days</span>
+            </div>
           </div>
 
-          <TabsContent value="overview" className="space-y-4">
+          <TabsContent
+            value="overview"
+            className="space-y-4 focus-visible:outline-none focus-visible:ring-0"
+          >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7">
+              {/* Gráfico 1: Activity Icon */}
               <div className="col-span-4">
                 <ChartCard title="Call Volume Trends">
                   <LineChart data={callsData} />
                 </ChartCard>
               </div>
+
+              {/* Gráfico 2: PieChart Icon */}
               <div className="col-span-3">
                 <ChartCard title="Workflow Distribution">
                   <BarChart data={typeData} color="oklch(0.65 0.18 160)" />
@@ -141,72 +287,214 @@ export default function DashboardPage() {
               </div>
             </div>
           </TabsContent>
-          <TabsContent value="campaigns">
+
+          <TabsContent
+            value="campaigns"
+            className="focus-visible:outline-none focus-visible:ring-0"
+          >
             <div className="grid grid-cols-1">
+              {/* Gráfico 3: Target Icon */}
               <ChartCard title="Campaign Performance">
                 <BarChart data={campaignData} color="var(--color-primary)" />
               </ChartCard>
             </div>
           </TabsContent>
+
+          <TabsContent
+            value="agents"
+            className="space-y-4 focus-visible:outline-none focus-visible:ring-0"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">
+                  Agents Overview
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {agentsError ? agentsError : `Total agents: ${agents.length}`}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs hover:bg-transparent text-primary hover:text-primary/80 group"
+                asChild
+              >
+                <a href="/reports/agents" className="flex items-center">
+                  View agent report
+                  <span className="ml-1 transition-transform group-hover:translate-x-1">
+                    &rarr;
+                  </span>
+                </a>
+              </Button>
+            </div>
+
+            <div className="rounded-xl border bg-card/50 text-card-foreground shadow-sm overflow-hidden">
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow className="hover:bg-transparent border-b border-border/60">
+                    <TableHead className="font-semibold text-xs text-muted-foreground">
+                      AGENT
+                    </TableHead>
+                    <TableHead className="font-semibold text-xs text-muted-foreground">
+                      EMAIL
+                    </TableHead>
+                    <TableHead className="text-right font-semibold text-xs text-muted-foreground">
+                      STATUS
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {agents.length ? (
+                    agents.map((agent) => (
+                      <TableRow
+                        key={agent.id}
+                        className="border-b border-border/40 hover:bg-muted/30 transition-colors"
+                      >
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm text-foreground">
+                              {agent.name}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">
+                              ID {agent.id}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {agent.email || "No email"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge
+                            variant="outline"
+                            className={`
+                        text-[10px] font-semibold px-2.5 py-0.5 border rounded-full shadow-none
+                        ${agentStatusClass(agent.isActive)}
+                      `}
+                          >
+                            {agent.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={3}
+                        className="h-24 text-center text-sm text-muted-foreground"
+                      >
+                        No agents available.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
 
-      {/* --- RECENT TICKETS (Replaces Operation Center) --- */}
-      <div className="space-y-4">
+      {/* --- RECENT TICKETS --- */}
+      <div className="space-y-4 pt-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight">Recent Activity</h2>
-          <Button variant="ghost" className="text-xs text-primary hover:text-primary/80" asChild>
-            <a href="/tickets">View all tickets &rarr;</a>
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-primary/10 rounded-md">
+              <TrendingUp className="h-4 w-4 text-primary" />
+            </div>
+            <h2 className="text-lg font-semibold tracking-tight">
+              Recent Activity
+            </h2>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs hover:bg-transparent text-primary hover:text-primary/80 group"
+            asChild
+          >
+            <a href="/tickets" className="flex items-center">
+              View all tickets
+              <span className="ml-1 transition-transform group-hover:translate-x-1">
+                &rarr;
+              </span>
+            </a>
           </Button>
         </div>
 
-        <div className="table-modern-wrapper">
+        <div className="rounded-xl border bg-card/50 text-card-foreground shadow-sm overflow-hidden">
           <Table>
-            <TableHeader className="bg-muted/30 backdrop-blur-sm">
-              <TableRow className="hover:bg-transparent border-b border-white/5">
-                <TableHead className="w-[100px] font-bold text-xs uppercase tracking-wider">ID</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">Client</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">Type</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
-                <TableHead className="text-right font-bold text-xs uppercase tracking-wider">Actions</TableHead>
+            <TableHeader className="bg-muted/50">
+              <TableRow className="hover:bg-transparent border-b border-border/60">
+                <TableHead className="w-[80px] font-semibold text-xs text-muted-foreground">
+                  ID
+                </TableHead>
+                <TableHead className="font-semibold text-xs text-muted-foreground">
+                  CLIENT
+                </TableHead>
+                <TableHead className="font-semibold text-xs text-muted-foreground">
+                  TYPE
+                </TableHead>
+                <TableHead className="font-semibold text-xs text-muted-foreground">
+                  STATUS
+                </TableHead>
+                <TableHead className="text-right font-semibold text-xs text-muted-foreground">
+                  ACTIONS
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentTickets.map((ticket) => (
-                <TableRow key={ticket.id} className="table-modern-row border-b border-white/5 last:border-0 group">
-                  <TableCell className="font-mono text-xs font-semibold text-muted-foreground group-hover:text-primary transition-colors">
-                    #{ticket.id}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-sm text-foreground/90">{ticket.clientName}</span>
-                      <span className="text-[10px] text-muted-foreground font-medium">{new Date(ticket.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-background/50 backdrop-blur-md border-border/40">
-                      {ticket.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className={`
-                                    text-[10px] font-bold px-2 py-0.5 shadow-sm
-                                    ${ticket.status === 'Open' ? 'bg-blue-500 text-white shadow-blue-500/20' :
-                        ticket.status === 'In Progress' ? 'bg-amber-500 text-white shadow-amber-500/20' :
-                          'bg-emerald-500 text-white shadow-emerald-500/20'}
-                                `}>
-                      {ticket.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <TicketActions ticketId={ticket.id} />
+              {recentTickets.length ? (
+                recentTickets.map((ticket) => (
+                  <TableRow
+                    key={ticket.id}
+                    className="border-b border-border/40 hover:bg-muted/30 transition-colors"
+                  >
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      #{ticket.id}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-sm text-foreground">
+                          {ticket.clientName}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(ticket.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-secondary text-secondary-foreground border border-border/50">
+                        {ticket.type}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={`
+                        text-[10px] font-semibold px-2.5 py-0.5 border rounded-full shadow-none
+                        ${statusClass(ticket.status)}
+                      `}
+                      >
+                        {ticket.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <TicketActions ticketId={String(ticket.id)} />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="h-24 text-center text-sm text-muted-foreground"
+                  >
+                    No recent ticket activity found.
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </div>
       </div>
     </div>
-  )
+  );
 }

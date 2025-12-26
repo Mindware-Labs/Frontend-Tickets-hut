@@ -7,7 +7,7 @@ interface LineChartProps {
 }
 
 export default function LineChart({ data }: LineChartProps) {
-  const maxValue = Math.max(...data.map((d) => d.calls))
+  const maxValue = Math.max(1, ...data.map((d) => d.calls))
   const height = 180
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null)
 

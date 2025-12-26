@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { PaginationFooter } from "@/components/common/pagination-footer";
 
 interface KnowledgeGuide {
   id: number;
@@ -57,6 +58,8 @@ export default function GuidesPage() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<KnowledgeGuide | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(9);
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -240,6 +243,16 @@ export default function GuidesPage() {
     });
   }, [guides]);
 
+  const totalPages = Math.ceil(sortedGuides.length / itemsPerPage);
+  const paginatedGuides = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sortedGuides.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedGuides, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [guides]);
+
   return (
     <div className="p-6 space-y-6 bg-background min-h-screen text-foreground">
       <div className="flex items-center justify-between gap-4">
@@ -270,68 +283,83 @@ export default function GuidesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedGuides.map((guide) => {
-            const downloadUrl = getDownloadUrl(guide);
-            return (
-              <Card
-                key={guide.id}
-                className="bg-card border-border hover:border-primary/50 transition-all group"
-              >
-                <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-2">
-                  <div className="p-2 rounded-lg bg-muted text-primary group-hover:bg-primary/20 group-hover:text-primary transition-colors">
-                    <FileBox className="h-6 w-6" />
-                  </div>
-                  <div className="flex-1">
-                    <CardTitle className="text-base text-foreground leading-tight">
-                      {guide.name}
-                    </CardTitle>
-                    <CardDescription className="text-xs text-muted-foreground mt-1">
-                      {guide.fileUrl ? getFileName(guide.fileUrl) : "No attachment"}
-                    </CardDescription>
-                  </div>
-                </CardHeader>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedGuides.map((guide) => {
+              const downloadUrl = getDownloadUrl(guide);
+              return (
+                <Card
+                  key={guide.id}
+                  className="bg-card border-border hover:border-primary/50 transition-all group"
+                >
+                  <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-2">
+                    <div className="p-2 rounded-lg bg-muted text-primary group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+                      <FileBox className="h-6 w-6" />
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-base text-foreground leading-tight">
+                        {guide.name}
+                      </CardTitle>
+                      <CardDescription className="text-xs text-muted-foreground mt-1">
+                        {guide.fileUrl ? getFileName(guide.fileUrl) : "No attachment"}
+                      </CardDescription>
+                    </div>
+                  </CardHeader>
 
-                <CardContent>
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {guide.description}
-                  </p>
-                </CardContent>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground line-clamp-3">
+                      {guide.description}
+                    </p>
+                  </CardContent>
 
-                <CardFooter className="flex flex-wrap gap-2 pt-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 border-border bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
-                    onClick={() => openEdit(guide)}
-                  >
-                    <Edit2 className="h-4 w-4 mr-2" /> Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
-                    onClick={() => {
-                      if (downloadUrl) {
-                        window.open(downloadUrl, "_blank");
-                      }
-                    }}
-                    disabled={!downloadUrl}
-                  >
-                    <Download className="h-4 w-4 mr-2" /> Download
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
-                    onClick={() => openDeleteDialog(guide)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </div>
+                  <CardFooter className="flex flex-wrap gap-2 pt-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 border-border bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
+                      onClick={() => openEdit(guide)}
+                    >
+                      <Edit2 className="h-4 w-4 mr-2" /> Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                      onClick={() => {
+                        if (downloadUrl) {
+                          window.open(downloadUrl, "_blank");
+                        }
+                      }}
+                      disabled={!downloadUrl}
+                    >
+                      <Download className="h-4 w-4 mr-2" /> Download
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
+                      onClick={() => openDeleteDialog(guide)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
+
+          <PaginationFooter
+            totalCount={sortedGuides.length}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            itemsPerPage={itemsPerPage}
+            onItemsPerPageChange={(value) => {
+              setItemsPerPage(value);
+              setCurrentPage(1);
+            }}
+            onPageChange={setCurrentPage}
+            itemLabel="guides"
+          />
+        </>
       )}
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
