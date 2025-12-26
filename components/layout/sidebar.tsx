@@ -54,6 +54,7 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   Collapsible,
@@ -179,6 +180,7 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { role, setRole, isAdmin } = useRole();
+  const { state } = useSidebar();
 
   // Filter navigation based on role
   const filteredNavMain = data.navMain.filter((item) => {
@@ -234,17 +236,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </div>
                 </div>
 
-                <div className="grid flex-1 text-left text-sm leading-tight relative z-10">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate font-bold text-foreground">
-                      Center Quest
-                    </span>
-                    <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                {state === "collapsed" ? (
+                  <div className="flex flex-1 items-center justify-start relative z-10">
+                    <Image
+                      src="/images/LOGO CQ-10.png"
+                      alt="Center Quest"
+                      width={110}
+                      height={28}
+                      className="object-contain"
+                    />
                   </div>
-                  <span className="truncate text-xs text-muted-foreground mt-0.5">
-                    Tickets System
-                  </span>
-                </div>
+                ) : (
+                  <div className="grid flex-1 text-left text-sm leading-tight relative z-10">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate font-bold text-foreground">
+                        Center Quest
+                      </span>
+                      <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                    </div>
+                    <span className="truncate text-xs text-muted-foreground mt-0.5">
+                      Tickets System
+                    </span>
+                  </div>
+                )}
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

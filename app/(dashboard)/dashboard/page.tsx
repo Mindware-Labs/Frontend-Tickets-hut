@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import KPICard from "@/components/dashboard/kpi-card";
 import ChartCard from "@/components/dashboard/chart-card";
 import BarChart from "@/components/dashboard/bar-chart";
-import LineChart from "@/components/dashboard/line-chart";
 import { TicketActions } from "@/components/dashboard/ticket-actions";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 import {
@@ -15,6 +14,20 @@ import {
 } from "lucide-react";
 import { FiPhoneCall, FiCheckCircle, FiAlertTriangle } from "react-icons/fi";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
@@ -26,6 +39,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  RadialBar,
+  RadialBarChart,
+  XAxis,
+} from "recharts";
 
 type DashboardTicket = {
   id: number;
@@ -62,6 +83,14 @@ type Agent = {
   email?: string | null;
   isActive?: boolean;
 };
+
+const RADIAL_PALETTE = [
+  "oklch(0.65 0.18 160)",
+  "oklch(0.75 0.18 85)",
+  "var(--color-primary)",
+  "oklch(0.65 0.22 25)",
+  "oklch(0.72 0.16 250)",
+];
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -113,6 +142,77 @@ export default function DashboardPage() {
     loadDashboard();
   }, [loadDashboard]);
 
+  const callsData = useMemo(
+    () =>
+      dashboardData?.charts.callsByDay?.length
+        ? dashboardData.charts.callsByDay
+        : [
+            { day: "Mon", calls: 0 },
+            { day: "Tue", calls: 0 },
+            { day: "Wed", calls: 0 },
+            { day: "Thu", calls: 0 },
+            { day: "Fri", calls: 0 },
+            { day: "Sat", calls: 0 },
+            { day: "Sun", calls: 0 },
+          ],
+    [dashboardData]
+  );
+
+  const typeData = useMemo(
+    () =>
+      dashboardData?.charts.ticketsByDisposition?.length
+        ? dashboardData.charts.ticketsByDisposition
+        : [{ name: "No data", count: 0 }],
+    [dashboardData]
+  );
+
+  const campaignData = useMemo(
+    () =>
+      dashboardData?.charts.ticketsByCampaign?.length
+        ? dashboardData.charts.ticketsByCampaign
+        : [{ name: "No data", count: 0 }],
+    [dashboardData]
+  );
+
+  const lineChartConfig = useMemo<ChartConfig>(
+    () => ({
+      calls: {
+        label: "Calls",
+        color: "oklch(0.75 0.18 85)",
+      },
+    }),
+    []
+  );
+
+  const radialData = useMemo(
+    () =>
+      typeData.map((item, index) => {
+        const segmentKey = `segment-${index}`;
+        return {
+          name: item.name,
+          count: item.count,
+          segmentKey,
+          fill: `var(--color-${segmentKey})`,
+        };
+      }),
+    [typeData]
+  );
+
+  const radialChartConfig = useMemo<ChartConfig>(() => {
+    return radialData.reduce((acc, item, index) => {
+      acc[item.segmentKey] = {
+        label: item.name,
+        color: RADIAL_PALETTE[index % RADIAL_PALETTE.length],
+      };
+      return acc;
+    }, {} as ChartConfig);
+  }, [radialData]);
+
+  const totalCallsLast7Days = useMemo(
+    () => callsData.reduce((sum, item) => sum + item.calls, 0),
+    [callsData]
+  );
+
   if (isLoading && !dashboardData) return <DashboardSkeleton />;
 
   if (!dashboardData) {
@@ -135,23 +235,6 @@ export default function DashboardPage() {
   }
 
   const { kpis, charts, recentTickets, generatedAt } = dashboardData;
-  const campaignData = charts.ticketsByCampaign.length
-    ? charts.ticketsByCampaign
-    : [{ name: "No data", count: 0 }];
-  const typeData = charts.ticketsByDisposition.length
-    ? charts.ticketsByDisposition
-    : [{ name: "No data", count: 0 }];
-  const callsData = charts.callsByDay.length
-    ? charts.callsByDay
-    : [
-        { day: "Mon", calls: 0 },
-        { day: "Tue", calls: 0 },
-        { day: "Wed", calls: 0 },
-        { day: "Thu", calls: 0 },
-        { day: "Fri", calls: 0 },
-        { day: "Sat", calls: 0 },
-        { day: "Sun", calls: 0 },
-      ];
 
   const statusClass = (status: string) => {
     if (status === "Open")
@@ -274,16 +357,82 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7">
               {/* Gráfico 1: Activity Icon */}
               <div className="col-span-4">
-                <ChartCard title="Call Volume Trends">
-                  <LineChart data={callsData} />
-                </ChartCard>
+                <Card className="h-full">
+                  <CardHeader className="space-y-1">
+                    <CardTitle className="text-base">Call Volume Trends</CardTitle>
+                    <CardDescription>Last 7 days of inbound activity</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-[260px]">
+                    <ChartContainer config={lineChartConfig} className="h-full w-full">
+                      <LineChart
+                        accessibilityLayer
+                        data={callsData}
+                        margin={{ left: 8, right: 8 }}
+                      >
+                        <CartesianGrid vertical={false} />
+                        <XAxis
+                          dataKey="day"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={10}
+                        />
+                        <ChartTooltip
+                          cursor={false}
+                          content={<ChartTooltipContent hideLabel />}
+                        />
+                        <Line
+                          dataKey="calls"
+                          type="monotone"
+                          stroke="var(--color-calls)"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ChartContainer>
+                  </CardContent>
+                  <CardFooter className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Total calls: {totalCallsLast7Days}</span>
+                    <span className="flex items-center gap-1">
+                      Live refresh
+                      <TrendingUp className="h-3 w-3 text-primary" />
+                    </span>
+                  </CardFooter>
+                </Card>
               </div>
 
               {/* Gráfico 2: PieChart Icon */}
               <div className="col-span-3">
-                <ChartCard title="Workflow Distribution">
-                  <BarChart data={typeData} color="oklch(0.65 0.18 160)" />
-                </ChartCard>
+                <Card className="h-full">
+                  <CardHeader className="space-y-1">
+                    <CardTitle className="text-base">Workflow Distribution</CardTitle>
+                    <CardDescription>Share by ticket disposition</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex h-[260px] items-center justify-center">
+                    <ChartContainer
+                      config={radialChartConfig}
+                      className="mx-auto aspect-square max-h-[220px] w-full"
+                    >
+                      <RadialBarChart
+                        data={radialData}
+                        innerRadius={40}
+                        outerRadius={110}
+                        startAngle={90}
+                        endAngle={-270}
+                      >
+                        <ChartTooltip
+                          cursor={false}
+                          content={
+                            <ChartTooltipContent hideLabel nameKey="segmentKey" />
+                          }
+                        />
+                        <RadialBar dataKey="count" background cornerRadius={8} />
+                      </RadialBarChart>
+                    </ChartContainer>
+                  </CardContent>
+                  <CardFooter className="text-xs text-muted-foreground">
+                    {radialData.length} workflow categories tracked
+                  </CardFooter>
+                </Card>
               </div>
             </div>
           </TabsContent>
