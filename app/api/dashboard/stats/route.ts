@@ -45,9 +45,21 @@ function toTitleCase(value: string) {
     .join(" ")
 }
 
-function normalizeLabel(value: string | null | undefined, labels: Record<string, string>) {
-  if (!value) return "Unspecified"
-  return labels[value] || toTitleCase(value)
+function normalizeLabel(value: unknown, labels: Record<string, string>) {
+  if (value === null || value === undefined) return "Unspecified"
+
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (!trimmed) return "Unspecified"
+    return labels[trimmed] || toTitleCase(trimmed)
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    const key = String(value)
+    return labels[key] || key
+  }
+
+  return "Unspecified"
 }
 
 function formatDateKey(date: Date) {

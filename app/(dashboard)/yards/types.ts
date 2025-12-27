@@ -8,6 +8,8 @@ export interface Yard {
   notes?: string;
   yardType: "SAAS" | "FULL_SERVICE";
   isActive: boolean;
+  landlord?: { id: number; name: string };
+  landlordId?: number | null;
 }
 
 export interface YardFormData {

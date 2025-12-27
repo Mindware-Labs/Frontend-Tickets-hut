@@ -10,44 +10,39 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Building,
-  CheckCircle2,
-  Edit2,
-  MapPin,
-  Phone,
-  Trash2,
-  XCircle,
-} from "lucide-react";
-import { Yard } from "../types";
+import { Building, Edit2, Mail, Phone, Trash2, User } from "lucide-react";
+import { Landlord, YardOption } from "../types";
 
-interface YardsTableProps {
+interface LandlordsTableProps {
   loading: boolean;
-  yards: Yard[];
+  landlords: Landlord[];
   totalFiltered: number;
-  onDetails: (yard: Yard) => void;
-  onEdit: (yard: Yard) => void;
-  onDelete: (yard: Yard) => void;
+  yards: YardOption[];
+  onDetails: (landlord: Landlord) => void;
+  onEdit: (landlord: Landlord) => void;
+  onDelete: (landlord: Landlord) => void;
 }
 
-const getTypeBadge = (type: Yard["yardType"]) => {
-  return type === "SAAS" ? (
-    <Badge variant="default" className="bg-blue-500">
-      SaaS
-    </Badge>
-  ) : (
-    <Badge variant="secondary">Full Service</Badge>
-  );
+const getYardLabels = (landlord: Landlord, yards: YardOption[]) => {
+  const fromRelation =
+    landlord.yards?.map((yard) => yard.commonName || yard.name) || [];
+  if (fromRelation.length > 0) return fromRelation;
+
+  const fallback = yards
+    .filter((yard) => yard.landlord?.id === landlord.id)
+    .map((yard) => yard.commonName || yard.name);
+  return fallback;
 };
 
-export function YardsTable({
+export function LandlordsTable({
   loading,
-  yards,
+  landlords,
   totalFiltered,
+  yards,
   onDetails,
   onEdit,
   onDelete,
-}: YardsTableProps) {
+}: LandlordsTableProps) {
   return (
     <div className="flex-1 rounded-lg border overflow-hidden bg-background">
       <Table>
@@ -55,67 +50,58 @@ export function YardsTable({
           <TableRow>
             <TableHead>ID</TableHead>
             <TableHead>Name</TableHead>
-            <TableHead>Common Name</TableHead>
-            <TableHead>Address</TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Phone</TableHead>
+            <TableHead>Yard</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={8} className="text-center py-10">
+              <TableCell colSpan={6} className="text-center py-10">
                 Loading...
               </TableCell>
             </TableRow>
           ) : totalFiltered === 0 ? (
             <TableRow>
-              <TableCell colSpan={8} className="text-center py-10">
-                No yards found
+              <TableCell colSpan={6} className="text-center py-10">
+                No landlords found
               </TableCell>
             </TableRow>
           ) : (
-            yards.map((yard) => (
-              <TableRow
-                key={yard.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => onDetails(yard)}
-              >
-                <TableCell className="font-medium">#{yard.id}</TableCell>
+            landlords.map((landlord) => {
+              const yardCount = getYardLabels(landlord, yards).length;
+              return (
+                <TableRow
+                  key={landlord.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => onDetails(landlord)}
+                >
+                <TableCell className="font-medium">#{landlord.id}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Building className="h-4 w-4 text-muted-foreground" />
-                    {yard.name}
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    {landlord.name}
                   </div>
                 </TableCell>
-                <TableCell>{yard.commonName}</TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2 max-w-xs truncate">
-                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="truncate">{yard.propertyAddress}</span>
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    {landlord.email}
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    {yard.contactInfo}
+                    {landlord.phone}
                   </div>
                 </TableCell>
-                <TableCell>{getTypeBadge(yard.yardType)}</TableCell>
                 <TableCell>
-                  {yard.isActive ? (
-                    <Badge variant="default" className="bg-green-500">
-                      <CheckCircle2 className="mr-1 h-3 w-3" />
-                      Active
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">
-                      <XCircle className="mr-1 h-3 w-3" />
-                      Inactive
-                    </Badge>
-                  )}
+                  <Badge variant="outline" className="gap-1">
+                    <Building className="h-3 w-3" />
+                    {yardCount} yard{yardCount === 1 ? "" : "s"}
+                  </Badge>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
@@ -124,7 +110,7 @@ export function YardsTable({
                       size="sm"
                       onClick={(event) => {
                         event.stopPropagation();
-                        onEdit(yard);
+                        onEdit(landlord);
                       }}
                     >
                       <Edit2 className="h-4 w-4" />
@@ -134,15 +120,16 @@ export function YardsTable({
                       size="sm"
                       onClick={(event) => {
                         event.stopPropagation();
-                        onDelete(yard);
+                        onDelete(landlord);
                       }}
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </div>
                 </TableCell>
-              </TableRow>
-            ))
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
       </Table>

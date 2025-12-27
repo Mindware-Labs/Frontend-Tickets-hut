@@ -104,19 +104,16 @@ const data = {
       items: [],
     },
     {
+      title: "Landlords",
+      url: "/landlords",
+      icon: User,
+      items: [],
+    },
+    {
       title: "Campaigns",
       url: "/campaigns",
       icon: Megaphone,
-      items: [
-        {
-          title: "Active Campaigns",
-          url: "/campaigns",
-        },
-        {
-          title: "Archived",
-          url: "/campaigns/archived",
-        },
-      ],
+      items: [],
     },
     {
       title: "Knowledge",

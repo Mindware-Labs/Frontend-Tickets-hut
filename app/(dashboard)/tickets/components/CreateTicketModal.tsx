@@ -26,6 +26,7 @@ import { Search, X } from "lucide-react";
 import {
   AgentOption,
   CallDirection,
+  CampaignOption,
   CreateTicketFormData,
   CustomerOption,
   ManagementType,
@@ -42,6 +43,7 @@ interface CreateTicketModalProps {
   customers: CustomerOption[];
   yards: YardOption[];
   agents: AgentOption[];
+  campaigns: CampaignOption[];
   createFormData: CreateTicketFormData;
   setCreateFormData: (next: CreateTicketFormData) => void;
   createValidationErrors: Record<string, string>;
@@ -52,6 +54,8 @@ interface CreateTicketModalProps {
   setYardSearchCreate: (value: string) => void;
   agentSearchCreate: string;
   setAgentSearchCreate: (value: string) => void;
+  campaignSearchCreate: string;
+  setCampaignSearchCreate: (value: string) => void;
   newAttachment: string;
   setNewAttachment: (value: string) => void;
   attachmentFiles: File[];
@@ -66,6 +70,7 @@ export function CreateTicketModal({
   customers,
   yards,
   agents,
+  campaigns,
   createFormData,
   setCreateFormData,
   createValidationErrors,
@@ -76,6 +81,8 @@ export function CreateTicketModal({
   setYardSearchCreate,
   agentSearchCreate,
   setAgentSearchCreate,
+  campaignSearchCreate,
+  setCampaignSearchCreate,
   newAttachment,
   setNewAttachment,
   attachmentFiles,
@@ -84,6 +91,9 @@ export function CreateTicketModal({
   onSubmit,
 }: CreateTicketModalProps) {
   const formatEnumLabel = (value: string) => {
+    if (value === OnboardingOption.PAID_WITH_LL) {
+      return "Paid with LL";
+    }
     return value
       .toString()
       .replace(/_/g, " ")
@@ -116,6 +126,20 @@ export function CreateTicketModal({
         (agent.email || "").toLowerCase().includes(term)
     );
   }, [agents, agentSearchCreate]);
+
+  const filteredCampaignsCreate = useMemo(() => {
+    const term = campaignSearchCreate.toLowerCase();
+    return campaigns.filter((campaign) =>
+      campaign.nombre.toLowerCase().includes(term)
+    );
+  }, [campaigns, campaignSearchCreate]);
+
+  const selectedCampaign = useMemo(() => {
+    if (!createFormData.campaignId) return null;
+    return campaigns.find(
+      (campaign) => campaign.id.toString() === createFormData.campaignId
+    );
+  }, [campaigns, createFormData.campaignId]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -301,32 +325,64 @@ export function CreateTicketModal({
             <div className="space-y-2">
               <Label>Campaign</Label>
               <Select
-                value={createFormData.campaign}
-                onValueChange={(value) =>
+                value={createFormData.campaignId}
+                onValueChange={(value) => {
+                  const selected =
+                    value === "none"
+                      ? null
+                      : campaigns.find(
+                          (campaign) => campaign.id.toString() === value
+                        );
                   setCreateFormData({
                     ...createFormData,
-                    campaign: value === "none" ? "" : value,
+                    campaignId: value === "none" ? "" : value,
                     onboardingOption:
-                      value === ManagementType.ONBOARDING
+                      selected?.tipo === ManagementType.ONBOARDING
                         ? createFormData.onboardingOption
                         : "",
-                  })
-                }
+                  });
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select campaign" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No campaign</SelectItem>
-                  {Object.values(ManagementType).map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {formatEnumLabel(value)}
-                    </SelectItem>
-                  ))}
+                  <div className="p-2">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search campaigns..."
+                        className="pl-8"
+                        value={campaignSearchCreate}
+                        onChange={(e) =>
+                          setCampaignSearchCreate(e.target.value)
+                        }
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  </div>
+                  <ScrollArea className="h-64">
+                    <SelectItem value="none">No campaign</SelectItem>
+                    {filteredCampaignsCreate.length === 0 ? (
+                      <div className="p-3 text-sm text-muted-foreground">
+                        No campaigns found
+                      </div>
+                    ) : (
+                      filteredCampaignsCreate.map((campaign) => (
+                        <SelectItem
+                          key={campaign.id}
+                          value={campaign.id.toString()}
+                        >
+                          {campaign.nombre}
+                        </SelectItem>
+                      ))
+                    )}
+                  </ScrollArea>
                 </SelectContent>
               </Select>
 
-              {createFormData.campaign === ManagementType.ONBOARDING && (
+              {selectedCampaign?.tipo === ManagementType.ONBOARDING && (
                 <div className="space-y-2 mt-6">
                   <Label>Onboarding Option</Label>
                   <Select

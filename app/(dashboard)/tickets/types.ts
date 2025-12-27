@@ -51,6 +51,13 @@ export interface AgentOption {
   isActive?: boolean;
 }
 
+export interface CampaignOption {
+  id: number;
+  nombre: string;
+  tipo: ManagementType;
+  isActive: boolean;
+}
+
 export interface YardOption {
   id: number;
   name: string;
@@ -67,7 +74,7 @@ export interface CreateTicketFormData {
   customerId: string;
   customerPhone: string;
   yardId: string;
-  campaign: string;
+  campaignId: string;
   onboardingOption: string;
   agentId: string;
   status: TicketStatus;

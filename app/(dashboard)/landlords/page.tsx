@@ -1,0 +1,493 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { fetchFromBackend } from "@/lib/api-client";
+import { toast } from "@/hooks/use-toast";
+import { CheckCircle2 } from "lucide-react";
+import { Landlord, LandlordFormData, YardOption } from "./types";
+import { LandlordsToolbar } from "./components/LandlordsToolbar";
+import { LandlordsTable } from "./components/LandlordsTable";
+import { LandlordsPagination } from "./components/LandlordsPagination";
+import { LandlordFormModal } from "./components/LandlordFormModal";
+import { DeleteLandlordModal } from "./components/DeleteLandlordModal";
+import { LandlordDetailsModal } from "./components/LandlordDetailsModal";
+
+const DEFAULT_FORM: LandlordFormData = {
+  name: "",
+  phone: "",
+  email: "",
+  yardIds: [],
+};
+
+export default function LandlordsPage() {
+  const [landlords, setLandlords] = useState<Landlord[]>([]);
+  const [yards, setYards] = useState<YardOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedLandlord, setSelectedLandlord] = useState<Landlord | null>(
+    null
+  );
+  const [reportStartDate, setReportStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 7);
+    return date.toISOString().slice(0, 10);
+  });
+  const [reportEndDate, setReportEndDate] = useState(() =>
+    new Date().toISOString().slice(0, 10)
+  );
+  const [reportYardId, setReportYardId] = useState("all");
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportSending, setReportSending] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [reportData, setReportData] = useState<{
+    totals: { total: number; inbound: number; outbound: number };
+    averagePerYard: number;
+    topYards: Array<{ id: number; name: string; total: number }>;
+    callsByDay: Array<{
+      date: string;
+      total: number;
+      inbound: number;
+      outbound: number;
+    }>;
+    yards: Array<{
+      id: number;
+      name: string;
+      total: number;
+      inbound: number;
+      outbound: number;
+    }>;
+    statusBreakdown: Record<string, number>;
+  } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string>
+  >({});
+  const [formData, setFormData] = useState<LandlordFormData>(DEFAULT_FORM);
+
+  const fetchLandlords = async () => {
+    try {
+      setLoading(true);
+      const data = await fetchFromBackend("/landlords?page=1&limit=500");
+      const items = Array.isArray(data) ? data : data?.data || [];
+      setLandlords(items);
+    } catch (error) {
+      console.error("Error fetching landlords:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load landlords",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchYards = async () => {
+    try {
+      const data = await fetchFromBackend("/yards");
+      const items = Array.isArray(data) ? data : data?.data || [];
+      setYards(items);
+    } catch (error) {
+      console.error("Error fetching yards:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchLandlords();
+    fetchYards();
+  }, []);
+
+  const handleGenerateReport = async () => {
+    if (!selectedLandlord) return;
+    setReportLoading(true);
+    setReportError(null);
+    try {
+      const query = new URLSearchParams({
+        startDate: reportStartDate,
+        endDate: reportEndDate,
+      });
+      if (reportYardId !== "all") {
+        query.set("yardId", reportYardId);
+      }
+      const response = await fetch(
+        `/api/landlords/${selectedLandlord.id}/report?${query.toString()}`
+      );
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.message || result?.error || "Failed to load report");
+      }
+      setReportData(result);
+    } catch (error: any) {
+      setReportError(error.message || "Failed to generate report");
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const handleSendReport = async () => {
+    if (!selectedLandlord) return;
+    setReportSending(true);
+    setReportError(null);
+    try {
+      const payload: any = {
+        startDate: reportStartDate,
+        endDate: reportEndDate,
+      };
+      if (reportYardId !== "all") {
+        payload.yardId = Number(reportYardId);
+      }
+      const response = await fetch(
+        `/api/landlords/${selectedLandlord.id}/report`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.message || result?.error || "Failed to send report");
+      }
+      toast({
+        title: "Report sent",
+        description: `Report emailed to ${selectedLandlord.email}`,
+      });
+    } catch (error: any) {
+      setReportError(error.message || "Failed to send report");
+    } finally {
+      setReportSending(false);
+    }
+  };
+
+  const filteredLandlords = useMemo(() => {
+    const term = search.toLowerCase();
+    return landlords.filter((landlord) => {
+      const name = landlord.name.toLowerCase();
+      const email = landlord.email.toLowerCase();
+      const phone = landlord.phone.toLowerCase();
+      const yardNames =
+        landlord.yards?.map((yard) => yard.commonName || yard.name) || [];
+      const fallbackYards = yards
+        .filter((yard) => yard.landlord?.id === landlord.id)
+        .map((yard) => yard.commonName || yard.name);
+      const yardMatch = [...yardNames, ...fallbackYards]
+        .join(" ")
+        .toLowerCase();
+      return (
+        name.includes(term) ||
+        email.includes(term) ||
+        phone.includes(term) ||
+        yardMatch.includes(term)
+      );
+    });
+  }, [landlords, search, yards]);
+
+  const totalPages = Math.ceil(filteredLandlords.length / itemsPerPage);
+  const paginatedLandlords = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredLandlords.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredLandlords, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  const resetForm = () => setFormData(DEFAULT_FORM);
+  const clearValidationErrors = () => setValidationErrors({});
+
+  const handleCreate = () => {
+    resetForm();
+    clearValidationErrors();
+    setShowCreateModal(true);
+  };
+
+  const handleEdit = (landlord: Landlord) => {
+    setSelectedLandlord(landlord);
+    setFormData({
+      name: landlord.name,
+      phone: landlord.phone,
+      email: landlord.email,
+      yardIds:
+        landlord.yards?.map((yard) => yard.id.toString()) ||
+        yards
+          .filter((yard) => yard.landlord?.id === landlord.id)
+          .map((yard) => yard.id.toString()),
+    });
+    clearValidationErrors();
+    setShowEditModal(true);
+  };
+
+  const handleDelete = (landlord: Landlord) => {
+    setSelectedLandlord(landlord);
+    clearValidationErrors();
+    setShowDeleteModal(true);
+  };
+
+  const handleDetails = (landlord: Landlord) => {
+    setSelectedLandlord(landlord);
+    setShowDetailsModal(true);
+    setReportError(null);
+    setReportData(null);
+    setReportYardId("all");
+  };
+
+  const buildPayload = (data: LandlordFormData) => ({
+    name: data.name.trim(),
+    phone: data.phone.trim(),
+    email: data.email.trim(),
+    yardIds: data.yardIds.map((id) => Number(id)),
+  });
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.name.trim()) errors.name = "Name is required";
+    if (!formData.phone.trim()) errors.phone = "Phone is required";
+    if (!formData.email.trim()) errors.email = "Email is required";
+    if (formData.yardIds.length === 0) errors.yardIds = "Select at least one yard";
+    return errors;
+  };
+
+  const handleSubmitCreate = async () => {
+    setValidationErrors({});
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await fetchFromBackend("/landlords", {
+        method: "POST",
+        body: JSON.stringify(buildPayload(formData)),
+      });
+
+      toast({
+        title: "Success",
+        description: (
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <span>Landlord created successfully</span>
+          </div>
+        ),
+      });
+
+      setShowCreateModal(false);
+      fetchLandlords();
+      resetForm();
+    } catch (error: any) {
+      console.error("Error creating landlord:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create landlord",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmitEdit = async () => {
+    if (!selectedLandlord) return;
+    setValidationErrors({});
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await fetchFromBackend(`/landlords/${selectedLandlord.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(buildPayload(formData)),
+      });
+
+      toast({
+        title: "Success",
+        description: (
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <span>Landlord updated successfully</span>
+          </div>
+        ),
+      });
+
+      setShowEditModal(false);
+      fetchLandlords();
+      resetForm();
+      setSelectedLandlord(null);
+    } catch (error: any) {
+      console.error("Error updating landlord:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update landlord",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmitDelete = async () => {
+    if (!selectedLandlord) return;
+
+    try {
+      setIsSubmitting(true);
+      await fetchFromBackend(`/landlords/${selectedLandlord.id}`, {
+        method: "DELETE",
+      });
+
+      toast({
+        title: "Success",
+        description: (
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <span>Landlord deleted successfully</span>
+          </div>
+        ),
+      });
+
+      setShowDeleteModal(false);
+      fetchLandlords();
+      setSelectedLandlord(null);
+    } catch (error: any) {
+      console.error("Error deleting landlord:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete landlord",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+
+  return (
+    <>
+      <div className="flex flex-col gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">Landlords</h1>
+          <p className="text-muted-foreground">
+            Manage landlords linked to yards
+          </p>
+        </div>
+
+        <LandlordsToolbar
+          search={search}
+          onSearchChange={setSearch}
+          onRefresh={fetchLandlords}
+          onCreate={handleCreate}
+          totalCount={filteredLandlords.length}
+        />
+
+        <LandlordsTable
+          loading={loading}
+          landlords={paginatedLandlords}
+          totalFiltered={filteredLandlords.length}
+          yards={yards}
+          onDetails={handleDetails}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+
+        <LandlordsPagination
+          totalCount={filteredLandlords.length}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={(value) => {
+            setItemsPerPage(value);
+            setCurrentPage(1);
+          }}
+          onPageChange={setCurrentPage}
+        />
+      </div>
+
+      <LandlordFormModal
+        open={showCreateModal}
+        onOpenChange={(open) => {
+          setShowCreateModal(open);
+          if (!open) clearValidationErrors();
+        }}
+        title="Create New Landlord"
+        description="Fill in the details to create a landlord"
+        submitLabel="Create Landlord"
+        isSubmitting={isSubmitting}
+        formData={formData}
+        onFormChange={setFormData}
+        validationErrors={validationErrors}
+        onValidationErrorChange={setValidationErrors}
+        onSubmit={handleSubmitCreate}
+        yards={yards}
+        idPrefix="create"
+      />
+
+      <LandlordFormModal
+        open={showEditModal}
+        onOpenChange={(open) => {
+          setShowEditModal(open);
+          if (!open) clearValidationErrors();
+        }}
+        title="Edit Landlord"
+        description="Update landlord details"
+        submitLabel="Save Changes"
+        isSubmitting={isSubmitting}
+        formData={formData}
+        onFormChange={setFormData}
+        validationErrors={validationErrors}
+        onValidationErrorChange={setValidationErrors}
+        onSubmit={handleSubmitEdit}
+        yards={yards}
+        idPrefix="edit"
+      />
+
+      <DeleteLandlordModal
+        open={showDeleteModal}
+        onOpenChange={(open) => {
+          setShowDeleteModal(open);
+          if (!open) clearValidationErrors();
+        }}
+        landlordName={selectedLandlord?.name}
+        isSubmitting={isSubmitting}
+        onConfirm={handleSubmitDelete}
+      />
+
+      <LandlordDetailsModal
+        open={showDetailsModal}
+        onOpenChange={(open) => setShowDetailsModal(open)}
+        landlord={selectedLandlord}
+        yards={yards}
+        reportStartDate={reportStartDate}
+        reportEndDate={reportEndDate}
+        reportYardId={reportYardId}
+        onReportStartDateChange={setReportStartDate}
+        onReportEndDateChange={setReportEndDate}
+        onReportYardIdChange={setReportYardId}
+        reportLoading={reportLoading}
+        reportSending={reportSending}
+        reportError={reportError}
+        reportData={reportData}
+        onGenerateReport={handleGenerateReport}
+        onSendReport={handleSendReport}
+      />
+    </>
+  );
+}

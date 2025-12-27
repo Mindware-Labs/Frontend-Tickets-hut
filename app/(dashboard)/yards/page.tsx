@@ -9,8 +9,18 @@ import { YardsTable } from "./components/YardsTable";
 import { YardsPagination } from "./components/YardsPagination";
 import { YardFormModal } from "./components/YardFormModal";
 import { DeleteYardModal } from "./components/DeleteYardModal";
+import { YardDetailsModal } from "./components/YardDetailsModal";
 import { Yard, YardFormData } from "./types";
 import { CheckCircle2 } from "lucide-react";
+
+type YardTicket = {
+  id: number;
+  status?: string | null;
+  createdAt?: string;
+  customer?: { name?: string | null };
+  customerPhone?: string | null;
+  yardId?: number | null;
+};
 
 export default function YardsPage() {
   const [yards, setYards] = useState<Yard[]>([]);
@@ -21,7 +31,13 @@ export default function YardsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedYard, setSelectedYard] = useState<Yard | null>(null);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [yardTickets, setYardTickets] = useState<YardTicket[]>([]);
+  const [showTicketsPanel, setShowTicketsPanel] = useState(false);
+  const [showLandlordPanel, setShowLandlordPanel] = useState(false);
+  const [ticketSearch, setTicketSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -69,7 +85,8 @@ export default function YardsPage() {
         yard.name.toLowerCase().includes(search.toLowerCase()) ||
         yard.commonName.toLowerCase().includes(search.toLowerCase()) ||
         yard.propertyAddress.toLowerCase().includes(search.toLowerCase()) ||
-        yard.contactInfo.toLowerCase().includes(search.toLowerCase());
+        yard.contactInfo.toLowerCase().includes(search.toLowerCase()) ||
+        (yard.landlord?.name || "").toLowerCase().includes(search.toLowerCase());
 
       const matchesType = typeFilter === "all" || yard.yardType === typeFilter;
       const matchesStatus =
@@ -134,6 +151,44 @@ export default function YardsPage() {
     clearValidationErrors();
     setShowDeleteModal(true);
   };
+
+  const handleDetails = (yard: Yard) => {
+    setSelectedYard(yard);
+    setShowDetailsModal(true);
+    setShowTicketsPanel(false);
+    setShowLandlordPanel(false);
+    setTicketSearch("");
+    setYardTickets([]);
+  };
+
+  const fetchTicketsForYard = async (yardId: number) => {
+    try {
+      setTicketsLoading(true);
+      const response = await fetchFromBackend("/tickets?page=1&limit=500");
+      const items: YardTicket[] = response?.data || response || [];
+      const filtered = items.filter((ticket) => ticket.yardId === yardId);
+      setYardTickets(filtered);
+    } catch (error) {
+      console.error("Error fetching tickets:", error);
+      setYardTickets([]);
+    } finally {
+      setTicketsLoading(false);
+    }
+  };
+
+  const filteredTickets = useMemo(() => {
+    const term = ticketSearch.toLowerCase();
+    return yardTickets.filter((ticket) => {
+      const name = ticket.customer?.name?.toLowerCase() || "";
+      const phone = (ticket.customerPhone || "").toLowerCase();
+      const id = `#${ticket.id}`;
+      return (
+        name.includes(term) ||
+        phone.includes(term) ||
+        id.toLowerCase().includes(term)
+      );
+    });
+  }, [yardTickets, ticketSearch]);
 
   const handleSubmitCreate = async () => {
     setValidationErrors({});
@@ -337,6 +392,7 @@ export default function YardsPage() {
             loading={loading}
             yards={paginatedYards}
             totalFiltered={filteredYards.length}
+            onDetails={handleDetails}
             onEdit={handleEdit}
             onDelete={handleDelete}
           />
@@ -401,6 +457,39 @@ export default function YardsPage() {
         yardName={selectedYard?.name}
         isSubmitting={isSubmitting}
         onConfirm={handleSubmitDelete}
+      />
+
+      <YardDetailsModal
+        open={showDetailsModal}
+        onOpenChange={(open) => {
+          setShowDetailsModal(open);
+          if (!open) {
+            setShowTicketsPanel(false);
+            setShowLandlordPanel(false);
+            setTicketSearch("");
+            setYardTickets([]);
+          }
+        }}
+        yard={selectedYard}
+        showTicketsPanel={showTicketsPanel}
+        showLandlordPanel={showLandlordPanel}
+        ticketsLoading={ticketsLoading}
+        tickets={filteredTickets}
+        ticketSearch={ticketSearch}
+        setTicketSearch={setTicketSearch}
+        onViewTickets={async () => {
+          if (!selectedYard) return;
+          if (!showTicketsPanel) {
+            await fetchTicketsForYard(selectedYard.id);
+          }
+          setShowLandlordPanel(false);
+          setShowTicketsPanel(true);
+        }}
+        onViewLandlord={() => {
+          if (!selectedYard) return;
+          setShowTicketsPanel(false);
+          setShowLandlordPanel(true);
+        }}
       />
     </>
   );

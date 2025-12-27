@@ -76,6 +76,7 @@ import { Ticket } from "@/lib/mock-data";
 import {
   AgentOption,
   CallDirection,
+  CampaignOption,
   CreateTicketFormData,
   CustomerOption,
   ManagementType,
@@ -91,6 +92,7 @@ declare module "@/lib/mock-data" {
     issueDetail?: string;
     yardId?: string;
     yardType?: string;
+    campaignId?: number;
     customer?: { name: string; phone?: string };
     customerPhone?: string;
     disposition?: string;
@@ -102,7 +104,7 @@ declare module "@/lib/mock-data" {
 export enum OnboardingOption {
   NOT_REGISTER = "NOT_REGISTERED",
   REGISTER = "REGISTERED",
-  PAID_WITH_LL = "PAID_WITH_LL", 
+  PAID_WITH_LL = "PAID_WITH_LL",
 }
 
 export enum TicketStatus {
@@ -116,13 +118,6 @@ export enum TicketPriority {
   MEDIUM = "MEDIUM",
   HIGH = "HIGH",
   EMERGENCY = "EMERGENCY",
-}
-
-// Campaign enum (ONBOARDING, AR, OTHER)
-export enum Cam {
-  ONBOARDING = "ONBOARDING",
-  AR = "AR",
-  OTHER = "OTHER",
 }
 
 export default function TicketsPage() {
@@ -145,6 +140,7 @@ export default function TicketsPage() {
   const [yards, setYards] = useState<YardOption[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [agents, setAgents] = useState<AgentOption[]>([]);
+  const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -161,11 +157,13 @@ export default function TicketsPage() {
   const [customerSearchCreate, setCustomerSearchCreate] = useState("");
   const [yardSearchCreate, setYardSearchCreate] = useState("");
   const [agentSearchCreate, setAgentSearchCreate] = useState("");
+  const [campaignSearchCreate, setCampaignSearchCreate] = useState("");
+  const [campaignSearchEdit, setCampaignSearchEdit] = useState("");
   const [createFormData, setCreateFormData] = useState<CreateTicketFormData>({
     customerId: "",
     customerPhone: "",
     yardId: "",
-    campaign: "",
+    campaignId: "",
     onboardingOption: "",
     agentId: "",
     status: TicketStatus.IN_PROGRESS,
@@ -180,7 +178,7 @@ export default function TicketsPage() {
   // State for updating ticket
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Add 'campaign' to the edit state
+  // Add campaign to the edit state
   const [editData, setEditData] = useState<{
     disposition?: string;
     issueDetail?: string;
@@ -188,7 +186,7 @@ export default function TicketsPage() {
     status?: string;
     priority?: string;
     attachments?: string[];
-    campaign?: string;
+    campaignId?: string;
   }>({});
 
   // Helper functions
@@ -266,7 +264,7 @@ export default function TicketsPage() {
     return d === "outbound" ? "Outbound" : "Inbound";
   };
 
- const formatEnumLabel = (value?: string) => {
+  const formatEnumLabel = (value?: string) => {
     if (!value) return "-";
 
     if (value === OnboardingOption.PAID_WITH_LL || value === "PAID_WITH_LL") {
@@ -285,7 +283,18 @@ export default function TicketsPage() {
   };
 
   const getCampaign = (ticket: Ticket) => {
-    return ticket.campaign || null;
+    if (
+      ticket.campaign &&
+      typeof ticket.campaign === "object" &&
+      "nombre" in ticket.campaign
+    ) {
+      return (ticket.campaign as { nombre?: string }).nombre;
+    }
+    if (ticket.campaignId) {
+      const campaign = campaigns.find((c) => c.id === ticket.campaignId);
+      return campaign?.nombre || null;
+    }
+    return null;
   };
 
   const getYardTypeColor = (type?: string) => {
@@ -421,11 +430,23 @@ export default function TicketsPage() {
     }
   };
 
+  const fetchCampaigns = async () => {
+    try {
+      const data = await fetchFromBackend("/campaign?page=1&limit=200");
+      const list = Array.isArray(data) ? data : data?.data || [];
+      setCampaigns(list.filter((campaign: any) => campaign.isActive === true));
+    } catch (err) {
+      console.error("Failed to load campaigns", err);
+      setCampaigns([]);
+    }
+  };
+
   useEffect(() => {
     fetchTickets();
     fetchYards();
     fetchCustomers();
     fetchAgents();
+    fetchCampaigns();
   }, []);
 
   const selectedYard = useMemo(() => {
@@ -453,6 +474,13 @@ export default function TicketsPage() {
       return matchesSearch && matchesCategory;
     });
   }, [yardSearch, yardCategory, yards]);
+
+  const filteredCampaignsEdit = useMemo(() => {
+    const term = campaignSearchEdit.toLowerCase();
+    return campaigns.filter((campaign) =>
+      campaign.nombre.toLowerCase().includes(term)
+    );
+  }, [campaigns, campaignSearchEdit]);
 
   const filteredTickets = useMemo(() => {
     return tickets.filter((ticket) => {
@@ -546,12 +574,17 @@ export default function TicketsPage() {
       priority: ticket.priority?.toString().toUpperCase() || "",
       attachments: ticket.attachments || [],
       // Load campaign, or leave empty if none
-      campaign: ticket.campaign || "",
+      campaignId: ticket.campaignId
+        ? ticket.campaignId.toString()
+        : (ticket.campaign && typeof ticket.campaign === "object" && "id" in ticket.campaign)
+        ? (ticket.campaign as { id: string | number }).id.toString()
+        : "",
     });
 
     setShowDetails(true);
     setYardSearch("");
     setYardCategory("all");
+    setCampaignSearchEdit("");
   };
 
   const handleUpdateTicket = async () => {
@@ -560,8 +593,7 @@ export default function TicketsPage() {
     try {
       setIsUpdating(true);
 
-      // Correction: backend now accepts "OTHER", so send the value directly
-      // No need to convert "OTHER" to null anymore.
+
       const updatePayload: any = {
         ...editData,
         yardId: selectedYardId ? parseInt(selectedYardId) : null,
@@ -570,7 +602,7 @@ export default function TicketsPage() {
         disposition: editData.disposition || null,
         onboardingOption: editData.onboardingOption || null,
         issueDetail: editData.issueDetail || null,
-        campaign: editData.campaign || null, // Se envía directo
+        campaignId: editData.campaignId ? parseInt(editData.campaignId) : null,
       };
 
       const response = await fetch(`/api/tickets/${selectedTicket.id}`, {
@@ -718,7 +750,7 @@ export default function TicketsPage() {
       customerId: "",
       customerPhone: "",
       yardId: "",
-      campaign: "",
+      campaignId: "",
       onboardingOption: "",
       agentId: "",
       status: TicketStatus.IN_PROGRESS,
@@ -765,7 +797,9 @@ export default function TicketsPage() {
           ? Number(createFormData.yardId)
           : undefined,
         customerPhone: createFormData.customerPhone || undefined,
-        campaign: createFormData.campaign || undefined,
+        campaignId: createFormData.campaignId
+          ? Number(createFormData.campaignId)
+          : undefined,
         onboardingOption: createFormData.onboardingOption || undefined,
         agentId: createFormData.agentId
           ? Number(createFormData.agentId)
@@ -819,8 +853,7 @@ export default function TicketsPage() {
             console.error("Upload attachments error:", uploadError);
             toast({
               title: "Warning",
-              description:
-                "Ticket created, but attachments failed to upload",
+              description: "Ticket created, but attachments failed to upload",
               variant: "destructive",
             });
           }
@@ -864,10 +897,32 @@ export default function TicketsPage() {
   const hasSavedAttachments = savedAttachments.length > 0;
   const hasPendingAttachments = pendingAttachments.length > 0;
   const hasYardAssigned = Boolean(selectedYardId || selectedTicket?.yardId);
+  const selectedCampaignForEdit = (() => {
+    if (editData.campaignId) {
+      return campaigns.find(
+        (campaign) => campaign.id.toString() === editData.campaignId
+      );
+    }
+    if (editData.campaignId) {
+      return campaigns.find(
+        (campaign) => campaign.id.toString() === editData.campaignId
+      );
+    }
+    if (
+      selectedTicket?.campaign &&
+      typeof selectedTicket.campaign === "object"
+    ) {
+      return selectedTicket.campaign;
+    }
+    if (selectedTicket?.campaignId) {
+      return campaigns.find(
+        (campaign) => campaign.id === selectedTicket.campaignId
+      );
+    }
+    return null;
+  })();
   const showOnboardingOption =
-    (editData.campaign || selectedTicket?.campaign || "")
-      .toString()
-      .toUpperCase() === "ONBOARDING";
+    selectedCampaignForEdit?.tipo?.toString().toUpperCase() === "ONBOARDING";
 
   const metadataFields = [
     {
@@ -924,25 +979,60 @@ export default function TicketsPage() {
     },
     {
       key: "campaign",
-      filled: Boolean(editData.campaign),
+      filled: Boolean(editData.campaignId),
       node: (
         <div className="space-y-1">
           <p className="text-sm font-medium text-muted-foreground">Campaign</p>
           <Select
-            value={editData.campaign}
-            onValueChange={(v) =>
-              setEditData((prev) => ({ ...prev, campaign: v }))
-            }
+            value={editData.campaignId || "none"}
+            onValueChange={(value) => {
+              const selected =
+                value === "none"
+                  ? null
+                  : campaigns.find(
+                      (campaign) => campaign.id.toString() === value
+                    );
+              setEditData((prev) => ({
+                ...prev,
+                campaignId: value === "none" ? "" : value,
+                onboardingOption:
+                  selected?.tipo?.toString().toUpperCase() === "ONBOARDING"
+                    ? prev.onboardingOption
+                    : "",
+              }));
+            }}
           >
             <SelectTrigger className="h-8">
               <SelectValue placeholder="Select campaign" />
             </SelectTrigger>
             <SelectContent>
-              {Object.values(Cam).map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
+              <div className="p-2">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search campaigns..."
+                    className="pl-8"
+                    value={campaignSearchEdit}
+                    onChange={(e) => setCampaignSearchEdit(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  />
+                </div>
+              </div>
+              <ScrollArea className="h-64">
+                <SelectItem value="none">No campaign</SelectItem>
+                {filteredCampaignsEdit.length === 0 ? (
+                  <div className="p-3 text-sm text-muted-foreground">
+                    No campaigns found
+                  </div>
+                ) : (
+                  filteredCampaignsEdit.map((campaign) => (
+                    <SelectItem key={campaign.id} value={campaign.id.toString()}>
+                      {campaign.nombre}
+                    </SelectItem>
+                  ))
+                )}
+              </ScrollArea>
             </SelectContent>
           </Select>
         </div>
@@ -1272,9 +1362,7 @@ export default function TicketsPage() {
           type="file"
           multiple
           className="hidden"
-          onChange={(e) =>
-            setAttachmentFiles(Array.from(e.target.files || []))
-          }
+          onChange={(e) => setAttachmentFiles(Array.from(e.target.files || []))}
         />
         <Button
           variant="outline"
@@ -1793,6 +1881,7 @@ export default function TicketsPage() {
         customers={customers}
         yards={yards}
         agents={agents}
+        campaigns={campaigns}
         createFormData={createFormData}
         setCreateFormData={setCreateFormData}
         createValidationErrors={createValidationErrors}
@@ -1803,6 +1892,8 @@ export default function TicketsPage() {
         setYardSearchCreate={setYardSearchCreate}
         agentSearchCreate={agentSearchCreate}
         setAgentSearchCreate={setAgentSearchCreate}
+        campaignSearchCreate={campaignSearchCreate}
+        setCampaignSearchCreate={setCampaignSearchCreate}
         newAttachment={newAttachment}
         setNewAttachment={setNewAttachment}
         attachmentFiles={createAttachmentFiles}
@@ -1847,9 +1938,7 @@ export default function TicketsPage() {
 
               <DialogFooter className="mt-8 pt-6 border-t">
                 <div className="flex items-center justify-between w-full">
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-           
-                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1"></p>
                   <div className="flex gap-3">
                     <Button
                       variant="outline"

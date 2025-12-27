@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { CampaignDetailsModal } from "./components/CampaignDetailsModal";
 import {
   Select,
   SelectContent,
@@ -47,6 +48,16 @@ import {
 } from "lucide-react";
 import { useRole } from "@/components/providers/role-provider";
 import { ShieldAlert } from "lucide-react";
+
+type CampaignTicket = {
+  id: number;
+  status?: string | null;
+  createdAt?: string;
+  customer?: { name?: string | null };
+  customerPhone?: string | null;
+  campaignId?: number | null;
+  campaign?: { id?: number | null };
+};
 
 const DEFAULT_FORM: CampaignFormData = {
   nombre: "",
@@ -79,7 +90,12 @@ export default function CampaignsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [campaignTickets, setCampaignTickets] = useState<CampaignTicket[]>([]);
+  const [showTicketsPanel, setShowTicketsPanel] = useState(false);
+  const [ticketSearch, setTicketSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
@@ -208,6 +224,47 @@ export default function CampaignsPage() {
     setSelectedCampaign(campaign);
     setShowDeleteModal(true);
   };
+
+  const handleDetails = (campaign: Campaign) => {
+    setSelectedCampaign(campaign);
+    setShowDetailsModal(true);
+    setShowTicketsPanel(false);
+    setTicketSearch("");
+    setCampaignTickets([]);
+  };
+
+  const fetchTicketsForCampaign = async (campaignId: number) => {
+    try {
+      setTicketsLoading(true);
+      const response = await fetchFromBackend("/tickets?page=1&limit=500");
+      const items: CampaignTicket[] = response?.data || response || [];
+      const filtered = items.filter(
+        (ticket) =>
+          ticket.campaignId === campaignId ||
+          ticket.campaign?.id === campaignId,
+      );
+      setCampaignTickets(filtered);
+    } catch (error) {
+      console.error("Error fetching tickets:", error);
+      setCampaignTickets([]);
+    } finally {
+      setTicketsLoading(false);
+    }
+  };
+
+  const filteredTickets = useMemo(() => {
+    const term = ticketSearch.toLowerCase();
+    return campaignTickets.filter((ticket) => {
+      const name = ticket.customer?.name?.toLowerCase() || "";
+      const phone = (ticket.customerPhone || "").toLowerCase();
+      const id = `#${ticket.id}`;
+      return (
+        name.includes(term) ||
+        phone.includes(term) ||
+        id.toLowerCase().includes(term)
+      );
+    });
+  }, [campaignTickets, ticketSearch]);
 
   const buildPayload = (data: CampaignFormData) => ({
     ...data,
@@ -581,12 +638,14 @@ export default function CampaignsPage() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                      <Link href={`/campaigns/${campaign.id}`}>
-                        <Button size="sm" variant="outline">
-                          Details
-                          <ArrowUpRight className="ml-2 h-3 w-3" />
-                        </Button>
-                      </Link>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDetails(campaign)}
+                      >
+                        Details
+                        <ArrowUpRight className="ml-2 h-3 w-3" />
+                      </Button>
                     </div>
                   </CardFooter>
                 </Card>
@@ -671,6 +730,34 @@ export default function CampaignsPage() {
         campaignName={selectedCampaign?.nombre}
         isSubmitting={isSubmitting}
         onConfirm={handleSubmitDelete}
+      />
+
+      <CampaignDetailsModal
+        open={showDetailsModal}
+        onOpenChange={(open) => {
+          setShowDetailsModal(open);
+          if (!open) {
+            setShowTicketsPanel(false);
+            setTicketSearch("");
+            setCampaignTickets([]);
+          }
+        }}
+        campaign={selectedCampaign}
+        campaignTypeLabels={campaignTypeLabels}
+        getStatusColor={getStatusColor}
+        getYardLabel={getYardLabel}
+        showTicketsPanel={showTicketsPanel}
+        ticketsLoading={ticketsLoading}
+        tickets={filteredTickets}
+        ticketSearch={ticketSearch}
+        setTicketSearch={setTicketSearch}
+        onViewTickets={async () => {
+          if (!selectedCampaign) return;
+          if (!showTicketsPanel) {
+            await fetchTicketsForCampaign(selectedCampaign.id);
+          }
+          setShowTicketsPanel(true);
+        }}
       />
     </>
   );
