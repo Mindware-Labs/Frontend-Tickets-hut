@@ -100,7 +100,7 @@ export default function CampaignDetailPage() {
           <CardContent className="space-y-6 p-6">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-lg border bg-background p-4">
-                <p className="text-xs text-muted-foreground">Tipo</p>
+                <p className="text-xs text-muted-foreground">Type</p>
                 <div className="mt-2 flex items-center gap-2">
                   <Badge variant="outline">
                     {campaignTypeLabels[campaign.tipo]}
@@ -122,7 +122,7 @@ export default function CampaignDetailPage() {
             </div>
 
             <div className="rounded-lg border bg-background p-4">
-              <p className="text-xs text-muted-foreground">Duracion</p>
+              <p className="text-xs text-muted-foreground">Duration</p>
               <div className="mt-2 flex items-center gap-2">
                 <Timer className="h-4 w-4 text-muted-foreground" />
                 <p className="font-medium">{campaign.duracion || "N/A"}</p>

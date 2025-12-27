@@ -110,7 +110,7 @@ export default function Topbar() {
 
           <Separator orientation="vertical" className="h-4" />
 
-          {/* Dropdown de usuario */}
+          {/* User dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-3 p-1 hover:bg-accent/50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
@@ -129,7 +129,7 @@ export default function Topbar() {
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end" className="w-56">
-              {/* Header del dropdown con info del usuario */}
+              {/* Dropdown header with user info */}
               <div className="flex items-center gap-3 p-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 ring-2 ring-border/50">
                   <span className="text-sm font-bold text-primary">
@@ -175,7 +175,7 @@ export default function Topbar() {
         </div>
       </header>
 
-      {/* Dialogo de confirmación de logout */}
+      {/* Logout confirmation dialog */}
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>

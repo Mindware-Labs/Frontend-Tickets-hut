@@ -85,7 +85,7 @@ import {
 import { CreateTicketModal } from "./components/CreateTicketModal";
 import { TicketDetailsFields } from "./components/TicketDetailsFields";
 
-// Extender el tipo Ticket
+// Extend the Ticket type
 declare module "@/lib/mock-data" {
   interface Ticket {
     issueDetail?: string;
@@ -118,7 +118,7 @@ export enum TicketPriority {
   EMERGENCY = "EMERGENCY",
 }
 
-// Enum para Campaign (ONBOARDING, AR, OTHER)
+// Campaign enum (ONBOARDING, AR, OTHER)
 export enum Cam {
   ONBOARDING = "ONBOARDING",
   AR = "AR",
@@ -180,7 +180,7 @@ export default function TicketsPage() {
   // State for updating ticket
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Agregamos 'campaign' al estado de edición
+  // Add 'campaign' to the edit state
   const [editData, setEditData] = useState<{
     disposition?: string;
     issueDetail?: string;
@@ -545,7 +545,7 @@ export default function TicketsPage() {
       status: ticket.status?.toString().toUpperCase().replace(" ", "_") || "",
       priority: ticket.priority?.toString().toUpperCase() || "",
       attachments: ticket.attachments || [],
-      // Cargar campaña, o dejar vacío si no tiene
+      // Load campaign, or leave empty if none
       campaign: ticket.campaign || "",
     });
 
@@ -560,8 +560,8 @@ export default function TicketsPage() {
     try {
       setIsUpdating(true);
 
-      // CORRECCIÓN: Como el backend ya acepta "OTHER", enviamos el valor directamente
-      // Ya no necesitamos convertir "OTHER" a null.
+      // Correction: backend now accepts "OTHER", so send the value directly
+      // No need to convert "OTHER" to null anymore.
       const updatePayload: any = {
         ...editData,
         yardId: selectedYardId ? parseInt(selectedYardId) : null,
@@ -1520,7 +1520,7 @@ export default function TicketsPage() {
         </div>
       </div>
 
-      {/* Área principal */}
+      {/* Main area */}
       <div className="flex-1 flex flex-col gap-4">
         {/* ... Main content search/table unchanged ... */}
         <div className="flex items-center gap-3">
@@ -1710,7 +1710,7 @@ export default function TicketsPage() {
           </ScrollArea>
         </div>
 
-        {/* Paginación */}
+        {/* Pagination */}
         {filteredTickets.length > 0 && (
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
@@ -1811,7 +1811,7 @@ export default function TicketsPage() {
         onSubmit={handleCreateTicket}
       />
 
-      {/* Dialog central para detalles del ticket */}
+      {/* Central dialog for ticket details */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
           {selectedTicket && (

@@ -67,10 +67,10 @@ function LoginForm() {
   return (
     <div className="bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl overflow-hidden backdrop-blur-sm">
 
-      {/* Header del Card */}
+      {/* Card header */}
       <div className="text-center border-b border-slate-800/50 bg-slate-900/50">
 
-        {/* --- CAMBIO: Reemplazamos el div del icono por el logo --- */}
+        {/* --- CHANGE: Replaced the icon div with the logo --- */}
         <div className="mx-auto w-50 h-26 relative ">
            <Image 
              src="/images/LOGO CQ-13.png"   
@@ -85,7 +85,7 @@ function LoginForm() {
         <h1 className="text-2xl font-bold text-white tracking-tight "></h1>
       </div>
 
-      {/* Body del Card */}
+      {/* Card body */}
       <div className="p-8 pt-6">
         <form onSubmit={handleSubmit} className="space-y-5">
 

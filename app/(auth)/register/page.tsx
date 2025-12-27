@@ -171,13 +171,13 @@ export default function RegisterPage() {
       
       <div className="text-center border-b border-slate-800/50 bg-slate-900/50">
               
-              {/* --- CAMBIO: Reemplazamos el div del icono por el logo --- */}
+              {/* --- CHANGE: Replaced the icon div with the logo --- */}
               <div className="mx-auto w-50 h-26 relative ">
                  <Image 
                    src="/images/LOGO CQ-13.png"   
                    alt="cq Logo"
                    fill
-                   className="object-contain" // Esto evita que el logo se estire o deforme
+                   className="object-contain" // Prevents the logo from stretching or warping
                    priority
                  />
               </div>

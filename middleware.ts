@@ -5,7 +5,7 @@ import type { NextRequest } from 'next/server'
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // 1. PERMITIR SIEMPRE recursos estáticos y API routes
+  // 1. ALWAYS ALLOW static assets and API routes
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/') ||
@@ -23,23 +23,23 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // 2. Rutas públicas que siempre son accesibles
+  // 2. Public routes that are always accessible
   const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email']
 
-  // 3. Verificar autenticación
+  // 3. Check authentication
   const authToken = request.cookies.get('auth-token')?.value
 
-  // 4. Si NO está autenticado y NO está en una ruta pública, redirigir a login
+  // 4. If NOT authenticated and NOT on a public route, redirect to login
   if (!authToken && !publicRoutes.includes(pathname)) {
     const loginUrl = new URL('/login', request.url)
-    // Agregar el pathname original como query param para redirigir después del login
+    // Add the original pathname as a query param for redirect after login
     if (pathname !== '/') {
       loginUrl.searchParams.set('redirect', pathname)
     }
     return NextResponse.redirect(loginUrl)
   }
 
-  // 5. Si ESTÁ autenticado y está intentando acceder a login/register, redirigir al dashboard
+  // 5. If authenticated and trying to access login/register, redirect to dashboard
   if (authToken && publicRoutes.includes(pathname)) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }

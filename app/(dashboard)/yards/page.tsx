@@ -81,7 +81,7 @@ export default function YardsPage() {
     });
   }, [yards, search, typeFilter, statusFilter]);
 
-  // Paginación
+  // Pagination
   const totalPages = Math.ceil(filteredYards.length / itemsPerPage);
   const paginatedYards = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -324,7 +324,7 @@ export default function YardsPage() {
           onCreate={handleCreate}
         />
 
-        {/* Área principal */}
+        {/* Main area */}
         <div className="flex-1 flex flex-col gap-4">
           <YardsToolbar
             search={search}

@@ -67,7 +67,7 @@ export function CampaignFormModal({
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor={`${idPrefix}-nombre`}>Nombre *</Label>
+            <Label htmlFor={`${idPrefix}-nombre`}>Name *</Label>
             <Input
               id={`${idPrefix}-nombre`}
               value={formData.nombre}
@@ -87,7 +87,7 @@ export function CampaignFormModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor={`${idPrefix}-tipo`}>Tipo *</Label>
+              <Label htmlFor={`${idPrefix}-tipo`}>Type *</Label>
               <Select
                 value={formData.tipo}
                 onValueChange={(value: CampaignType) =>
@@ -162,14 +162,14 @@ export function CampaignFormModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`${idPrefix}-duracion`}>Duracion</Label>
+              <Label htmlFor={`${idPrefix}-duracion`}>Duration</Label>
               <Input
                 id={`${idPrefix}-duracion`}
                 value={formData.duracion}
                 onChange={(e) =>
                   onFormChange({ ...formData, duracion: e.target.value })
                 }
-                placeholder="30 dias"
+                placeholder="30 days"
               />
             </div>
           </div>

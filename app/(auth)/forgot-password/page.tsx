@@ -43,7 +43,12 @@ export default function ForgotPasswordPage() {
       await auth.requestPasswordReset(email.trim().toLowerCase());
       setStep('code');
     } catch (err: any) {
-      setError(err.message || 'Failed to request reset code.');
+      const message = err?.message || 'Failed to request reset code.';
+      if (message.toLowerCase().includes('email not found')) {
+        setError('Email not registered. Please check and try again.');
+      } else {
+        setError(message);
+      }
     } finally {
       setIsLoading(false);
     }

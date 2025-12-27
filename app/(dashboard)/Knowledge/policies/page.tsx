@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Download,
   Edit2,
@@ -11,10 +11,17 @@ import {
   ShieldAlert,
   Trash2,
   X,
-} from 'lucide-react';
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -57,7 +64,9 @@ export default function PoliciesPage() {
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [activePolicy, setActivePolicy] = useState<PolicyItem | null>(null);
   const [formState, setFormState] = useState<PolicyFormState>(initialForm);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string>
+  >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<PolicyItem | null>(null);
@@ -126,9 +135,7 @@ export default function PoliciesPage() {
   const filteredPolicies = useMemo(() => {
     const term = search.trim().toLowerCase();
     const list = term
-      ? policies.filter((policy) =>
-          policy.name.toLowerCase().includes(term)
-        )
+      ? policies.filter((policy) => policy.name.toLowerCase().includes(term))
       : policies;
     return [...list].sort((a, b) => {
       const dateA = a.date ? new Date(a.date).getTime() : 0;
@@ -262,7 +269,7 @@ export default function PoliciesPage() {
             Rig Hut Policies
           </h1>
           <p className="text-muted-foreground text-sm">
-            Documentación legal y normativas oficiales.
+            Legal documentation and official regulations.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
@@ -312,7 +319,9 @@ export default function PoliciesPage() {
                         {policy.name}
                       </CardTitle>
                       <CardDescription className="text-xs text-muted-foreground mt-1">
-                        {policy.fileUrl ? getFileName(policy.fileUrl) : "No attachment"}
+                        {policy.fileUrl
+                          ? getFileName(policy.fileUrl)
+                          : "No attachment"}
                       </CardDescription>
                     </div>
                   </CardHeader>
@@ -376,7 +385,9 @@ export default function PoliciesPage() {
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{formMode === "create" ? "Add Policy" : "Edit Policy"}</DialogTitle>
+            <DialogTitle>
+              {formMode === "create" ? "Add Policy" : "Edit Policy"}
+            </DialogTitle>
             <DialogDescription>
               {formMode === "create"
                 ? "Create a new policy document with optional attachment."
@@ -407,7 +418,10 @@ export default function PoliciesPage() {
                 id="policy-description"
                 value={formState.description}
                 onChange={(event) => {
-                  setFormState({ ...formState, description: event.target.value });
+                  setFormState({
+                    ...formState,
+                    description: event.target.value,
+                  });
                 }}
                 rows={5}
               />
@@ -465,11 +479,13 @@ export default function PoliciesPage() {
                   </p>
                 )}
               </div>
-              {formMode === "edit" && activePolicy?.fileUrl && !formState.file && (
-                <p className="text-xs text-muted-foreground">
-                  Current file: {getFileName(activePolicy.fileUrl)}
-                </p>
-              )}
+              {formMode === "edit" &&
+                activePolicy?.fileUrl &&
+                !formState.file && (
+                  <p className="text-xs text-muted-foreground">
+                    Current file: {getFileName(activePolicy.fileUrl)}
+                  </p>
+                )}
             </div>
           </div>
 

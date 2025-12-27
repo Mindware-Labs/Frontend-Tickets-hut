@@ -218,10 +218,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <a href="/dashboard" className="relative overflow-hidden">
-                {/* Efecto de fondo sutil */}
+                {/* Subtle background effect */}
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                {/* Logo con imagen - Reemplazado el icono Command */}
+                {/* Image logo - replaced the Command icon */}
                 <div className="flex aspect-square size-12 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20 backdrop-blur-sm overflow-hidden">
                   <div className="relative w-full h-full">
                     <Image 
@@ -333,7 +333,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuItem>
                 );
               }
-              // Resto igual (colapsable)
+              // Everything else (collapsible)
               const active = isGroupActive(item);
               return (
                 <Collapsible
@@ -428,7 +428,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {data.navSecondary.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   {item.title === "Support" ? (
-                    // Botón que abre Gmail web específicamente
+                    // Button that opens Gmail web specifically
                     <SidebarMenuButton
                       size="sm"
                       onClick={() => {
@@ -436,10 +436,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         const subject = "Support"
                         const body = "Hello, I need assistance with..."
 
-                        // URL de Gmail web (NO mailto:)
+                        // Gmail web URL (NOT mailto:)
                         const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(gmailEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 
-                        // Abrir Gmail en nueva pestaña
+                        // Open Gmail in a new tab
                         window.open(gmailUrl, "_blank", "noopener,noreferrer")
                       }}
                       className="cursor-pointer hover:bg-accent"
@@ -449,7 +449,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
  
                     </SidebarMenuButton>
                   ) : (
-                    // Otros enlaces normales
+                    // Other regular links
                     <SidebarMenuButton asChild size="sm">
                       <a href={item.url}>
                         <item.icon />
@@ -460,7 +460,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenuItem>
               ))}
               
-              {/* Footer del copyright */}
+              {/* Copyright footer */}
               <div className="px-2 py-3 mt-1 border-t border-border/50">
                 <footer className="text-xs text-muted-foreground text-center">
                   © {new Date().getFullYear()} Mindware Labs. All rights reserved.
