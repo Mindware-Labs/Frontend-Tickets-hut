@@ -5,6 +5,7 @@ type Ticket = {
   id: number
   status?: string
   campaign?: string | null
+  campaignId?: number | null
   disposition?: string | null
   createdAt?: string
   priority?: string | null
@@ -60,6 +61,19 @@ function normalizeLabel(value: unknown, labels: Record<string, string>) {
   }
 
   return "Unspecified"
+}
+
+function getCampaignLabel(ticket: Ticket, campaignsById: Record<number, string>) {
+  if (ticket.campaign && typeof ticket.campaign === "object") {
+    const maybeCampaign = ticket.campaign as { nombre?: string }
+    if (maybeCampaign.nombre) return maybeCampaign.nombre
+  }
+
+  if (ticket.campaignId && campaignsById[ticket.campaignId]) {
+    return campaignsById[ticket.campaignId]
+  }
+
+  return normalizeLabel(ticket.campaign || "Unspecified", CAMPAIGN_LABELS)
 }
 
 function formatDateKey(date: Date) {
@@ -181,10 +195,15 @@ export async function GET() {
       count,
     }))
 
+    const campaignsById = campaigns.reduce<Record<number, string>>((acc, campaign) => {
+      acc[campaign.id] = campaign.nombre
+      return acc
+    }, {})
+
     const recentTickets = tickets.slice(0, 5).map((ticket) => ({
       id: ticket.id,
       clientName: ticket.customer?.name || "Unassigned",
-      type: normalizeLabel(ticket.campaign || "Unspecified", CAMPAIGN_LABELS),
+      campaign: getCampaignLabel(ticket, campaignsById),
       status: normalizeLabel(ticket.status || "Unspecified", STATUS_LABELS),
       createdAt: ticket.createdAt || new Date().toISOString(),
     }))

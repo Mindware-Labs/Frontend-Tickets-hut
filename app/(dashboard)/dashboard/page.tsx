@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import KPICard from "@/components/dashboard/kpi-card";
-import ChartCard from "@/components/dashboard/chart-card";
-import BarChart from "@/components/dashboard/bar-chart";
 import { TicketActions } from "@/components/dashboard/ticket-actions";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 import {
@@ -40,18 +38,22 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
+  Bar,
+  BarChart,
   CartesianGrid,
+  LabelList,
   Line,
   LineChart,
   RadialBar,
   RadialBarChart,
   XAxis,
+  YAxis,
 } from "recharts";
 
 type DashboardTicket = {
   id: number;
   clientName: string;
-  type: string;
+  campaign: string;
   status: string;
   createdAt: string;
 };
@@ -184,6 +186,19 @@ export default function DashboardPage() {
     []
   );
 
+  const campaignChartConfig = useMemo<ChartConfig>(
+    () => ({
+      tickets: {
+        label: "Tickets",
+        color: "#22d3ee",
+      },
+      label: {
+        color: "var(--background)",
+      },
+    }),
+    []
+  );
+
   const radialData = useMemo(
     () =>
       typeData.map((item, index) => {
@@ -211,6 +226,15 @@ export default function DashboardPage() {
   const totalCallsLast7Days = useMemo(
     () => callsData.reduce((sum, item) => sum + item.calls, 0),
     [callsData]
+  );
+
+  const campaignChartData = useMemo(
+    () =>
+      campaignData.map((campaign) => ({
+        name: campaign.name,
+        tickets: campaign.count,
+      })),
+    [campaignData]
   );
 
   if (isLoading && !dashboardData) return <DashboardSkeleton />;
@@ -359,11 +383,18 @@ export default function DashboardPage() {
               <div className="col-span-4">
                 <Card className="h-full">
                   <CardHeader className="space-y-1">
-                    <CardTitle className="text-base">Call Volume Trends</CardTitle>
-                    <CardDescription>Last 7 days of inbound activity</CardDescription>
+                    <CardTitle className="text-base">
+                      Call Volume Trends
+                    </CardTitle>
+                    <CardDescription>
+                      Last 7 days of inbound activity
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="h-[260px]">
-                    <ChartContainer config={lineChartConfig} className="h-full w-full">
+                    <ChartContainer
+                      config={lineChartConfig}
+                      className="h-full w-full"
+                    >
                       <LineChart
                         accessibilityLayer
                         data={callsData}
@@ -404,8 +435,12 @@ export default function DashboardPage() {
               <div className="col-span-3">
                 <Card className="h-full">
                   <CardHeader className="space-y-1">
-                    <CardTitle className="text-base">Workflow Distribution</CardTitle>
-                    <CardDescription>Share by ticket disposition</CardDescription>
+                    <CardTitle className="text-base">
+                      Workflow Distribution
+                    </CardTitle>
+                    <CardDescription>
+                      Share by ticket disposition
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="flex h-[260px] items-center justify-center">
                     <ChartContainer
@@ -422,10 +457,17 @@ export default function DashboardPage() {
                         <ChartTooltip
                           cursor={false}
                           content={
-                            <ChartTooltipContent hideLabel nameKey="segmentKey" />
+                            <ChartTooltipContent
+                              hideLabel
+                              nameKey="segmentKey"
+                            />
                           }
                         />
-                        <RadialBar dataKey="count" background cornerRadius={8} />
+                        <RadialBar
+                          dataKey="count"
+                          background
+                          cornerRadius={8}
+                        />
                       </RadialBarChart>
                     </ChartContainer>
                   </CardContent>
@@ -442,10 +484,75 @@ export default function DashboardPage() {
             className="focus-visible:outline-none focus-visible:ring-0"
           >
             <div className="grid grid-cols-1">
-              {/* Gráfico 3: Target Icon */}
-              <ChartCard title="Campaign Performance">
-                <BarChart data={campaignData} color="var(--color-primary)" />
-              </ChartCard>
+              <Card className="w-full">
+                <CardHeader>
+                  <CardTitle>Campaign Performance</CardTitle>
+                  <CardDescription>Campaign ticket volume</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-2 pb-4">
+                  <ChartContainer
+                    config={campaignChartConfig}
+                    className="h-[220px] w-full aspect-auto"
+                  >
+                    <BarChart
+                      accessibilityLayer
+                      data={campaignChartData}
+                      layout="vertical"
+                      barCategoryGap={18}
+                      margin={{
+                        right: 16,
+                      }}
+                    >
+                      <CartesianGrid horizontal={false} />
+                      <YAxis
+                        dataKey="name"
+                        type="category"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                        tickFormatter={(value) => value.slice(0, 10)}
+                        hide
+                      />
+                      <XAxis dataKey="tickets" type="number" hide />
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent indicator="line" />}
+                      />
+                      <Bar
+                        dataKey="tickets"
+                        layout="vertical"
+                        fill="var(--color-tickets)"
+                        radius={4}
+                        maxBarSize={22}
+                      >
+                        <LabelList
+                          dataKey="name"
+                          position="insideLeft"
+                          offset={8}
+                          className="fill-black"
+                          fontSize={12}
+                        />
+                        <LabelList
+                          dataKey="tickets"
+                          position="right"
+                          offset={8}
+                          className="fill-foreground"
+                          fontSize={12}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+                <CardFooter className="flex-col items-start gap-2 text-sm">
+                  <div className="flex gap-2 leading-none font-medium">
+                    Trending up by 5.2% this month{" "}
+                    <TrendingUp className="h-4 w-4" />
+                  </div>
+                  <div className="text-muted-foreground leading-none">
+                    Showing total tickets for the selected campaigns
+                  </div>
+                </CardFooter>
+              </Card>
             </div>
           </TabsContent>
 
@@ -550,7 +657,7 @@ export default function DashboardPage() {
               <TrendingUp className="h-4 w-4 text-primary" />
             </div>
             <h2 className="text-lg font-semibold tracking-tight">
-              Recent Activity
+              Recent Tickets Activity
             </h2>
           </div>
           <Button
@@ -579,7 +686,7 @@ export default function DashboardPage() {
                   CLIENT
                 </TableHead>
                 <TableHead className="font-semibold text-xs text-muted-foreground">
-                  TYPE
+                  CAMPAIGN
                 </TableHead>
                 <TableHead className="font-semibold text-xs text-muted-foreground">
                   STATUS
@@ -611,7 +718,7 @@ export default function DashboardPage() {
                     </TableCell>
                     <TableCell>
                       <div className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-secondary text-secondary-foreground border border-border/50">
-                        {ticket.type}
+                        {ticket.campaign}
                       </div>
                     </TableCell>
                     <TableCell>

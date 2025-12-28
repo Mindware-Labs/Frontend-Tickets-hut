@@ -135,6 +135,8 @@ export default function TicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [selectedYardId, setSelectedYardId] = useState<string>("");
   const [isAssigningYard, setIsAssigningYard] = useState(false);
+  const [isIssueDetailEditing, setIsIssueDetailEditing] = useState(false);
+  const [wasIssueDetailFilled, setWasIssueDetailFilled] = useState(false);
   const [yardSearch, setYardSearch] = useState("");
   const [yardCategory, setYardCategory] = useState<string>("all");
   const [yards, setYards] = useState<YardOption[]>([]);
@@ -565,6 +567,8 @@ export default function TicketsPage() {
     setSelectedTicket(ticket);
     setSelectedYardId(ticket.yardId || "");
     setAttachmentFiles([]);
+    setWasIssueDetailFilled(Boolean(ticket.issueDetail?.trim()));
+    setIsIssueDetailEditing(false);
 
     setEditData({
       disposition: ticket.disposition || "",
@@ -890,6 +894,8 @@ export default function TicketsPage() {
   };
 
   const hasIssueDetail = Boolean(editData.issueDetail?.trim());
+  const isIssueDetailFilledForDisplay =
+    hasIssueDetail && (wasIssueDetailFilled || !isIssueDetailEditing);
   const savedAttachments = selectedTicket?.attachments || [];
   const pendingAttachments = (editData.attachments || []).filter(
     (att) => !savedAttachments.includes(att)
@@ -1315,7 +1321,7 @@ export default function TicketsPage() {
     },
     {
       key: "issueDetail",
-      filled: hasIssueDetail,
+      filled: isIssueDetailFilledForDisplay,
       node: (
         <div className="space-y-2">
           <p className="text-sm font-medium text-muted-foreground">
@@ -1330,6 +1336,13 @@ export default function TicketsPage() {
                 issueDetail: e.target.value,
               }))
             }
+            onFocus={() => setIsIssueDetailEditing(true)}
+            onBlur={() => setIsIssueDetailEditing(false)}
+            onKeyDown={(event) => {
+              if (event.key === "Tab") {
+                event.preventDefault();
+              }
+            }}
             className="min-h-[100px] bg-muted/20"
           />
         </div>
@@ -1355,41 +1368,60 @@ export default function TicketsPage() {
       .map((field) => ({ key: field.key, node: field.node }));
 
   const attachmentControlsNode = (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+    <div className="space-y-2">
+      <Label>Upload files</Label>
+      <div className="flex flex-wrap items-center gap-3">
         <Input
           id="ticket-attachments-upload"
           type="file"
           multiple
-          className="hidden"
-          onChange={(e) => setAttachmentFiles(Array.from(e.target.files || []))}
-        />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            const input = document.getElementById(
-              "ticket-attachments-upload"
-            ) as HTMLInputElement | null;
-            input?.click();
+          className="sr-only"
+          onChange={(e) => {
+            const files = Array.from(e.target.files || []);
+            if (files.length === 0) return;
+            setAttachmentFiles((prev) => [...prev, ...files]);
+            e.currentTarget.value = "";
           }}
-        >
-          Attachment
+        />
+        <Button asChild variant="outline" size="sm">
+          <Label htmlFor="ticket-attachments-upload" className="cursor-pointer">
+            Choose files
+          </Label>
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleUploadAttachments}
-          disabled={isUploadingAttachments || attachmentFiles.length === 0}
-        >
-          {isUploadingAttachments ? "Uploading..." : "Upload"}
-        </Button>
+        <span className="text-xs text-muted-foreground">
+          {attachmentFiles.length > 0
+            ? `${attachmentFiles.length} file${
+                attachmentFiles.length > 1 ? "s" : ""
+              } selected`
+            : ""}
+        </span>
       </div>
-      {attachmentFiles.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          Selected files: {attachmentFiles.map((file) => file.name).join(", ")}
-        </p>
-      )}
+      <div className="flex flex-wrap gap-2">
+        {attachmentFiles.map((file, idx) => (
+          <Badge
+            key={`${file.name}-${idx}`}
+            variant="secondary"
+            className="pl-3 pr-1 py-1 gap-2 group"
+          >
+            <span className="truncate max-w-[200px]">{file.name}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-4 w-4 hover:bg-transparent"
+              onClick={() =>
+                setAttachmentFiles((prev) => prev.filter((_, i) => i !== idx))
+              }
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </Badge>
+        ))}
+        {attachmentFiles.length === 0 && (
+          <p className="text-xs text-muted-foreground italic">
+            No files selected
+          </p>
+        )}
+      </div>
 
       {hasPendingAttachments && (
         <div className="flex flex-wrap gap-2 mt-2">
