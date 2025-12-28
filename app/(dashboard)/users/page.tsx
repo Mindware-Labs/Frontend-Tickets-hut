@@ -38,11 +38,16 @@ import {
   Phone
 } from "lucide-react"
 
+interface CampaignSummary {
+  id: number;
+  nombre: string;
+}
+
 export interface Customer {
   id: number;
   name?: string;
   phone?: string;
-  isOnBoarding: boolean;
+  campaigns?: CampaignSummary[];
   createdAt: string;
 }
 
@@ -113,8 +118,10 @@ export default function UsersPage() {
         </div>
         <div className="glass-card p-4 rounded-xl flex items-center justify-between border border-border/50">
           <div>
-            <div className="text-2xl font-bold text-emerald-600">{customers.filter(u => u.isOnBoarding).length}</div>
-            <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Onboarding</div>
+            <div className="text-2xl font-bold text-emerald-600">
+              {customers.filter(u => (u.campaigns?.length || 0) > 0).length}
+            </div>
+            <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">In Campaigns</div>
           </div>
           <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600">
             <Shield className="h-5 w-5" />
@@ -140,7 +147,7 @@ export default function UsersPage() {
               <TableRow className="hover:bg-transparent border-b border-white/5">
                 <TableHead className="w-[300px] font-bold text-xs uppercase tracking-wider pl-6">Customer</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Phone</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Campaigns</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Created</TableHead>
                 <TableHead className="text-right font-bold text-xs uppercase tracking-wider pr-6">Actions</TableHead>
               </TableRow>
@@ -183,9 +190,19 @@ export default function UsersPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.isOnBoarding ? "default" : "secondary"} className="shadow-none">
-                      {user.isOnBoarding ? 'Onboarding' : 'Regular'}
-                    </Badge>
+                    {user.campaigns && user.campaigns.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {user.campaigns.map((campaign) => (
+                          <Badge key={campaign.id} variant="default" className="shadow-none">
+                            {campaign.nombre}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <Badge variant="secondary" className="shadow-none">
+                        No campaigns
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     <span className="text-xs text-muted-foreground">

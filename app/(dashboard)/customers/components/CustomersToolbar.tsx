@@ -1,0 +1,45 @@
+"use client";
+
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Plus, RefreshCw, Search } from "lucide-react";
+
+interface CustomersToolbarProps {
+  search: string;
+  onSearchChange: (value: string) => void;
+  onRefresh: () => void;
+  onCreate: () => void;
+  totalCount: number;
+}
+
+export function CustomersToolbar({
+  search,
+  onSearchChange,
+  onRefresh,
+  onCreate,
+  totalCount,
+}: CustomersToolbarProps) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search customers..."
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+      <Button variant="outline" size="icon" onClick={onRefresh}>
+        <RefreshCw className="h-4 w-4" />
+      </Button>
+      <Button onClick={onCreate}>
+        <Plus className="mr-2 h-4 w-4" />
+        New Customer
+      </Button>
+      <div className="text-sm text-muted-foreground whitespace-nowrap">
+        {totalCount} customer{totalCount !== 1 ? "s" : ""}
+      </div>
+    </div>
+  );
+}

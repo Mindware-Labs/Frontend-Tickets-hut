@@ -157,12 +157,16 @@ export function CampaignFormModal({
                 </SelectContent>
               </Select>
               {validationErrors.yardaId && (
-                <p className="text-xs text-red-500">{validationErrors.yardaId}</p>
+                <p className="text-xs text-red-500">
+                  {validationErrors.yardaId}
+                </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`${idPrefix}-duracion`}>Duration</Label>
+              <Label htmlFor={`${idPrefix}-duracion`}>
+                Duration (Optional)
+              </Label>
               <Input
                 id={`${idPrefix}-duracion`}
                 value={formData.duracion}

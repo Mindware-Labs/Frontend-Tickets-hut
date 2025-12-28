@@ -13,25 +13,25 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { LandlordFormData, YardOption } from "../types";
+import { CampaignOption, CustomerFormData } from "../types";
 
-interface LandlordFormModalProps {
+interface CustomerFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   description: string;
   submitLabel: string;
   isSubmitting: boolean;
-  formData: LandlordFormData;
-  onFormChange: (next: LandlordFormData) => void;
+  formData: CustomerFormData;
+  onFormChange: (next: CustomerFormData) => void;
   validationErrors: Record<string, string>;
   onValidationErrorChange: (next: Record<string, string>) => void;
   onSubmit: () => void;
-  yards: YardOption[];
+  campaigns: CampaignOption[];
   idPrefix: string;
 }
 
-export function LandlordFormModal({
+export function CustomerFormModal({
   open,
   onOpenChange,
   title,
@@ -43,19 +43,18 @@ export function LandlordFormModal({
   validationErrors,
   onValidationErrorChange,
   onSubmit,
-  yards,
+  campaigns,
   idPrefix,
-}: LandlordFormModalProps) {
-  const [yardSearch, setYardSearch] = useState("");
+}: CustomerFormModalProps) {
+  const [campaignSearch, setCampaignSearch] = useState("");
 
-  const filteredYards = useMemo(() => {
-    const term = yardSearch.trim().toLowerCase();
-    if (!term) return yards;
-    return yards.filter((yard) => {
-      const label = yard.commonName || yard.name || "";
-      return label.toLowerCase().includes(term);
-    });
-  }, [yards, yardSearch]);
+  const filteredCampaigns = useMemo(() => {
+    const term = campaignSearch.trim().toLowerCase();
+    if (!term) return campaigns;
+    return campaigns.filter((campaign) =>
+      campaign.nombre.toLowerCase().includes(term),
+    );
+  }, [campaigns, campaignSearch]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -101,62 +100,50 @@ export function LandlordFormModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={`${idPrefix}-email`}>Email *</Label>
+            <Label>Campaigns (Optional)</Label>
             <Input
-              id={`${idPrefix}-email`}
-              value={formData.email}
-              onChange={(e) => {
-                onFormChange({ ...formData, email: e.target.value });
-                onValidationErrorChange({ ...validationErrors, email: "" });
-              }}
-              className={validationErrors.email ? "border-red-500" : ""}
-            />
-            {validationErrors.email && (
-              <p className="text-xs text-red-500">{validationErrors.email}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label>Yards *</Label>
-            <Input
-              placeholder="Search yards..."
-              value={yardSearch}
-              onChange={(e) => setYardSearch(e.target.value)}
+              placeholder="Search campaigns..."
+              value={campaignSearch}
+              onChange={(e) => setCampaignSearch(e.target.value)}
             />
             <div className="rounded-md border p-3 space-y-2 max-h-48 overflow-y-auto">
-              {filteredYards.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No yards available</p>
+              {filteredCampaigns.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No campaigns available
+                </p>
               ) : (
-                filteredYards.map((yard) => {
-                  const value = yard.id.toString();
-                  const checked = formData.yardIds.includes(value);
+                filteredCampaigns.map((campaign) => {
+                  const value = campaign.id.toString();
+                  const checked = formData.campaignIds.includes(value);
                   return (
                     <label
-                      key={yard.id}
+                      key={campaign.id}
                       className="flex items-center gap-2 text-sm"
                     >
                       <Checkbox
                         checked={checked}
                         onCheckedChange={(next) => {
                           const isChecked = Boolean(next);
-                          const yardIds = isChecked
-                            ? [...formData.yardIds, value]
-                            : formData.yardIds.filter((id) => id !== value);
-                          onFormChange({ ...formData, yardIds });
+                          const campaignIds = isChecked
+                            ? [...formData.campaignIds, value]
+                            : formData.campaignIds.filter((id) => id !== value);
+                          onFormChange({ ...formData, campaignIds });
                           onValidationErrorChange({
                             ...validationErrors,
-                            yardIds: "",
+                            campaignIds: "",
                           });
                         }}
                       />
-                      <span>{yard.commonName || yard.name}</span>
+                      <span>{campaign.nombre}</span>
                     </label>
                   );
                 })
               )}
             </div>
-            {validationErrors.yardIds && (
-              <p className="text-xs text-red-500">{validationErrors.yardIds}</p>
+            {validationErrors.campaignIds && (
+              <p className="text-xs text-red-500">
+                {validationErrors.campaignIds}
+              </p>
             )}
           </div>
         </div>

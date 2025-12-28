@@ -150,7 +150,7 @@ const data = {
   navSecondary: [
     {
       title: "Support",
-      url: "#",
+      url: "/support",
       icon: LifeBuoy,
     },
 
@@ -385,6 +385,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
+                  tooltip="Customers"
+                  isActive={pathname.startsWith("/customers")}
+                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
+                >
+                  <a href="/customers">
+                    {pathname.startsWith("/customers") && (
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
+                    )}
+                    <Users />
+                    <span>Customer Management</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
                   tooltip="Users"
                   isActive={pathname.startsWith("/users")}
                   className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
@@ -424,36 +440,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenu>
               {data.navSecondary.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  {item.title === "Support" ? (
-                    // Button that opens Gmail web specifically
-                    <SidebarMenuButton
-                      size="sm"
-                      onClick={() => {
-                        const gmailEmail = "labsmindware@gmail.com"
-                        const subject = "Support"
-                        const body = "Hello, I need assistance with..."
-
-                        // Gmail web URL (NOT mailto:)
-                        const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(gmailEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-
-                        // Open Gmail in a new tab
-                        window.open(gmailUrl, "_blank", "noopener,noreferrer")
-                      }}
-                      className="cursor-pointer hover:bg-accent"
-                    >
+                  <SidebarMenuButton asChild size="sm">
+                    <a href={item.url}>
                       <item.icon />
                       <span>{item.title}</span>
- 
-                    </SidebarMenuButton>
-                  ) : (
-                    // Other regular links
-                    <SidebarMenuButton asChild size="sm">
-                      <a href={item.url}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
+                    </a>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
               

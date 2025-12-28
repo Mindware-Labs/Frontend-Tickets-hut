@@ -49,8 +49,9 @@ export function YardsTable({
   onDelete,
 }: YardsTableProps) {
   return (
-    <div className="flex-1 rounded-lg border overflow-hidden bg-background">
-      <Table>
+    <div className="rounded-lg border bg-background overflow-hidden">
+      <div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
+        <Table>
         <TableHeader>
           <TableRow>
             <TableHead>ID</TableHead>
@@ -145,7 +146,8 @@ export function YardsTable({
             ))
           )}
         </TableBody>
-      </Table>
+        </Table>
+      </div>
     </div>
   );
 }

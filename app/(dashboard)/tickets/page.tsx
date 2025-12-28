@@ -1628,8 +1628,8 @@ export default function TicketsPage() {
           </Button>
         </div>
 
-        <div className="flex-1 rounded-lg border overflow-hidden">
-          <ScrollArea className="h-[calc(100vh-12rem)]">
+        <div className="rounded-lg border overflow-hidden">
+          <div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -1795,7 +1795,7 @@ export default function TicketsPage() {
                 )}
               </TableBody>
             </Table>
-          </ScrollArea>
+          </div>
         </div>
 
         {/* Pagination */}
