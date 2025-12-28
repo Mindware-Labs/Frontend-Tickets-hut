@@ -1,13 +1,23 @@
+import { getCookie } from './cookie-utils';
+
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 /**
- * Get JWT token from localStorage
+ * Get JWT token from cookies or localStorage (cookies take priority)
  */
 function getAuthToken(): string | null {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('auth_token');
+  if (typeof window === 'undefined') {
+    return null;
   }
-  return null;
+  
+  // Try to get token from cookies first
+  const cookieToken = getCookie('auth-token');
+  if (cookieToken) {
+    return cookieToken;
+  }
+  
+  // Fallback to localStorage
+  return localStorage.getItem('auth_token');
 }
 
 /**
@@ -33,25 +43,36 @@ export async function fetchFromBackend(
   // Add Authorization header if token exists
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  } else {
+    // Log warning if no token is found (with debugging info)
+    if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+      const cookieToken = getCookie('auth-token');
+      const localStorageToken = localStorage.getItem('auth_token');
+      console.warn('[api-client] No auth token found for request to:', endpoint);
+      console.warn('[api-client] Cookie auth-token:', cookieToken ? 'Found' : 'Not found');
+      console.warn('[api-client] localStorage auth_token:', localStorageToken ? 'Found' : 'Not found');
+      console.warn('[api-client] document.cookie:', document.cookie.substring(0, 200));
+    }
   }
 
   const response = await fetch(url, {
     ...options,
     headers,
+    // Note: We don't use credentials: 'include' because we're sending the token
+    // manually in the Authorization header. This avoids CORS issues when the
+    // backend uses origin: '*' in CORS configuration.
   });
 
   // Handle 401 Unauthorized - token expired or invalid
   if (response.status === 401) {
-    // Clear auth data
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user_data');
-      document.cookie = 'auth-token=; path=/; max-age=0';
-
-      // Redirect to login
-      window.location.href = '/login';
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[api-client] 401 Unauthorized for:', endpoint, 'Token present:', !!token);
     }
-    throw new Error('Session expired. Please login again.');
+    // Don't redirect immediately - let the calling code handle it
+    // This prevents unwanted redirects during page load
+    const error = new Error('Session expired. Please login again.') as Error & { status?: number };
+    error.status = 401;
+    throw error;
   }
 
   const rawText = await response.text();

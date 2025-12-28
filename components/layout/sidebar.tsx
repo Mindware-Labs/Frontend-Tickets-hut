@@ -9,7 +9,6 @@ import {
   LifeBuoy,
   Map,
   PieChart,
-  Settings2,
   SquareTerminal,
   Send,
   LayoutDashboard,
@@ -18,9 +17,10 @@ import {
   Users,
   BarChart3,
   PhoneCall,
-  Settings,
   ChevronRight,
   User,
+  Settings2,
+  UserCircle,
   CreditCard,
   LogOut,
   Sparkles,
@@ -427,6 +427,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     )}
                     <Settings2 />
                     <span>System Settings</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Profile"
+                  isActive={pathname.startsWith("/profile")}
+                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
+                >
+                  <a href="/profile">
+                    {pathname.startsWith("/profile") && (
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
+                    )}
+                    <UserCircle />
+                    <span>Profile</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>

@@ -86,7 +86,8 @@ export const auth = {
                 localStorage.setItem('user_data', JSON.stringify(data.user));
 
                 // Also set cookie for middleware compatibility
-                document.cookie = `auth-token=${data.accessToken}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict`;
+                // Use Lax instead of Strict to ensure cookie is sent with navigation requests
+                document.cookie = `auth-token=${data.accessToken}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
             }
 
             return data as LoginResponse;
@@ -325,7 +326,7 @@ export const auth = {
             localStorage.removeItem('user_data');
 
             // Clear cookie
-            document.cookie = 'auth-token=; path=/; max-age=0';
+            document.cookie = 'auth-token=; path=/; max-age=0; SameSite=Lax';
         }
     },
 

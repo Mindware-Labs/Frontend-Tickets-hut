@@ -32,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { User, Settings, ChevronDown } from "lucide-react"
+import { User, ChevronDown } from "lucide-react"
 
 import Link from "next/link"
 
@@ -143,21 +143,6 @@ export default function Topbar() {
                   </p>
                 </div>
               </div>
-
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer">
-                <Link href="/settings" className="flex items-center w-full">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>My Profile</span>
-                </Link>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem className="cursor-pointer">
-                <Link href="/settings" className="flex items-center w-full">
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Account Settings</span>
-                </Link>
-              </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 

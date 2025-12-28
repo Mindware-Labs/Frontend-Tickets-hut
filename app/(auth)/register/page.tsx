@@ -185,7 +185,7 @@ export default function RegisterPage() {
         </div>
       {/* Form Body */}
       <div className="p-8 pt-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
           
           {/* First Name */}
           <div className="space-y-2">
@@ -200,6 +200,7 @@ export default function RegisterPage() {
                 placeholder="John"
                 className="pl-10 bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-600 focus:border-blue-500 focus:ring-blue-500/20 transition-all h-11"
                 required
+                autoComplete="off"
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
               />
@@ -219,6 +220,7 @@ export default function RegisterPage() {
                 placeholder="Doe"
                 className="pl-10 bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-600 focus:border-blue-500 focus:ring-blue-500/20 transition-all h-11"
                 required
+                autoComplete="off"
                 value={formData.lastName}
                 onChange={(e) => setFormData({...formData, lastName: e.target.value})}
               />
@@ -238,6 +240,7 @@ export default function RegisterPage() {
                 placeholder="Email address"
                 className="pl-10 bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-600 focus:border-blue-500 focus:ring-blue-500/20 transition-all h-11"
                 required
+                autoComplete="off"
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
               />
@@ -257,6 +260,7 @@ export default function RegisterPage() {
                 placeholder="••••••"
                 className="pl-10 pr-10 bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-600 focus:border-blue-500 focus:ring-blue-500/20 transition-all h-11"
                 required
+                autoComplete="new-password"
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
               />
@@ -283,6 +287,7 @@ export default function RegisterPage() {
                 placeholder="••••••"
                 className="pl-10 pr-10 bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-600 focus:border-blue-500 focus:ring-blue-500/20 transition-all h-11"
                 required
+                autoComplete="new-password"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
               />
