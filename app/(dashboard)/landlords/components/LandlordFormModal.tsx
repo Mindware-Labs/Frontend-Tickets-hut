@@ -52,7 +52,7 @@ export function LandlordFormModal({
     const term = yardSearch.trim().toLowerCase();
     if (!term) return yards;
     return yards.filter((yard) => {
-      const label = yard.commonName || yard.name || "";
+      const label = yard.name || "";
       return label.toLowerCase().includes(term);
     });
   }, [yards, yardSearch]);
@@ -149,7 +149,7 @@ export function LandlordFormModal({
                           });
                         }}
                       />
-                      <span>{yard.commonName || yard.name}</span>
+                      <span>{yard.name}</span>
                     </label>
                   );
                 })

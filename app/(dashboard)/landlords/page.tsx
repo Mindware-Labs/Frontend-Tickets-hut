@@ -172,10 +172,10 @@ export default function LandlordsPage() {
       const email = landlord.email.toLowerCase();
       const phone = landlord.phone.toLowerCase();
       const yardNames =
-        landlord.yards?.map((yard) => yard.commonName || yard.name) || [];
+        landlord.yards?.map((yard) => yard.name) || [];
       const fallbackYards = yards
         .filter((yard) => yard.landlord?.id === landlord.id)
-        .map((yard) => yard.commonName || yard.name);
+        .map((yard) => yard.name);
       const yardMatch = [...yardNames, ...fallbackYards]
         .join(" ")
         .toLowerCase();

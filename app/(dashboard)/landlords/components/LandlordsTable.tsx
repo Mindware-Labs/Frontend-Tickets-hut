@@ -25,12 +25,12 @@ interface LandlordsTableProps {
 
 const getYardLabels = (landlord: Landlord, yards: YardOption[]) => {
   const fromRelation =
-    landlord.yards?.map((yard) => yard.commonName || yard.name) || [];
+    landlord.yards?.map((yard) =>  yard.name) || [];
   if (fromRelation.length > 0) return fromRelation;
 
   const fallback = yards
     .filter((yard) => yard.landlord?.id === landlord.id)
-    .map((yard) => yard.commonName || yard.name);
+    .map((yard) => yard.name);
   return fallback;
 };
 

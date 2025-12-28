@@ -50,11 +50,11 @@ interface LandlordDetailsModalProps {
 const getYardLabels = (landlord: Landlord | null, yards: YardOption[]) => {
   if (!landlord) return [];
   const fromRelation =
-    landlord.yards?.map((yard) => yard.commonName || yard.name) || [];
+    landlord.yards?.map((yard) => yard.name) || [];
   if (fromRelation.length > 0) return fromRelation;
   return yards
     .filter((yard) => yard.landlord?.id === landlord.id)
-    .map((yard) => yard.commonName || yard.name);
+    .map((yard) => yard.name);
 };
 
 export function LandlordDetailsModal({
@@ -79,13 +79,13 @@ export function LandlordDetailsModal({
   const yardOptions =
     landlord?.yards?.map((yard) => ({
       id: yard.id,
-      label: yard.commonName || yard.name,
+      label:  yard.name,
     })) ||
     yards
       .filter((yard) => yard.landlord?.id === landlord?.id)
       .map((yard) => ({
         id: yard.id,
-        label: yard.commonName || yard.name,
+        label: yard.name,
       }));
 
   return (
