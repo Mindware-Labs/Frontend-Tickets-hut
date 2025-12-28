@@ -6,25 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CalendarDateRangePicker } from "@/components/dashboard/date-range-picker"
 import { Download, BarChart, PieChart, LineChart, FileText, ShieldAlert } from "lucide-react"
 import KPICard from "@/components/dashboard/kpi-card"
-import { useRole } from "@/components/providers/role-provider"
 
 export default function ReportsPage() {
-  const { isAdmin } = useRole()
-
-  if (!isAdmin) {
-    return (
-      <div className="h-[50vh] flex flex-col items-center justify-center gap-4 text-center">
-        <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
-          <ShieldAlert className="h-8 w-8" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">Restricted Area</h1>
-          <p className="text-muted-foreground">Analytics reports are available to Administrators only.</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}

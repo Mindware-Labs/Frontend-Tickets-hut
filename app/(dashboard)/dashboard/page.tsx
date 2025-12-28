@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { FiPhoneCall, FiCheckCircle, FiAlertTriangle } from "react-icons/fi";
 import { Button } from "@/components/ui/button";
+import { useRole } from "@/components/providers/role-provider";
 import {
   Card,
   CardContent,
@@ -95,6 +96,7 @@ const RADIAL_PALETTE = [
 ];
 
 export default function DashboardPage() {
+  // Eliminado el uso de isAgent para mostrar el dashboard a todos
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null
@@ -108,8 +110,13 @@ export default function DashboardPage() {
     setLoadError(null);
     setAgentsError(null);
     try {
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("auth_token")
+          : null;
       const response = await fetch("/api/dashboard/stats", {
         cache: "no-store",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
       const payload = await response.json();
       if (!payload?.success) {

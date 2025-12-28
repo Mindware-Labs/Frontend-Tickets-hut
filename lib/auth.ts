@@ -11,6 +11,8 @@ interface LoginResponse {
         name: string;
         lastName: string;
         email: string;
+        role: string;
+        isActive: boolean;
     };
 }
 
@@ -88,6 +90,7 @@ export const auth = {
                 // Also set cookie for middleware compatibility
                 // Use Lax instead of Strict to ensure cookie is sent with navigation requests
                 document.cookie = `auth-token=${data.accessToken}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+                window.dispatchEvent(new Event('user-role-updated'));
             }
 
             return data as LoginResponse;
@@ -327,6 +330,7 @@ export const auth = {
 
             // Clear cookie
             document.cookie = 'auth-token=; path=/; max-age=0; SameSite=Lax';
+            window.dispatchEvent(new Event('user-role-updated'));
         }
     },
 

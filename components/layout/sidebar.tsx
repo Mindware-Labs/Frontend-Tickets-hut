@@ -71,9 +71,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { HelpCircle, Mail } from "lucide-react"
-import Image from 'next/image';
-
+import { HelpCircle, Mail } from "lucide-react";
+import Image from "next/image";
 
 // User Mock Data
 const user = {
@@ -107,13 +106,31 @@ const data = {
       title: "Landlords",
       url: "/landlords",
       icon: User,
-      items: [],
+      items: [
+        {
+          title: "All Landlords",
+          url: "/landlords",
+        },
+        {
+          title: "Reports",
+          url: "/reports/landlords",
+        },
+      ],
     },
     {
       title: "Campaigns",
       url: "/campaigns",
       icon: Megaphone,
-      items: [],
+      items: [
+        {
+          title: "All Campaigns",
+          url: "/campaigns",
+        },
+        {
+          title: "Reports",
+          url: "/reports/campaigns",
+        },
+      ],
     },
     {
       title: "Knowledge",
@@ -143,7 +160,6 @@ const data = {
           title: "Agent Stats",
           url: "/reports/agents",
         },
-
       ],
     },
   ],
@@ -153,7 +169,6 @@ const data = {
       url: "/support",
       icon: LifeBuoy,
     },
-
   ],
   projects: [
     {
@@ -176,23 +191,11 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
-  const { role, setRole, isAdmin } = useRole();
+  const { role, setRole } = useRole();
   const { state } = useSidebar();
 
-  // Filter navigation based on role
-  const filteredNavMain = data.navMain.filter((item) => {
-    if (role === "Agent") {
-      // Agents can see Platform, Tickets, Yards, Communication, Knowledge
-      return [
-        "Dashboard",
-        "Tickets",
-        "Yards",
-        "Communication",
-        "Knowledge Base",
-      ].includes(item.title);
-    }
-    return true;
-  });
+  // Mostrar todas las opciones de navegación sin filtrar por rol
+  const filteredNavMain = data.navMain;
 
   // Helper to check if a group is active
   const isGroupActive = (item: any) => {
@@ -221,12 +224,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 {/* Image logo - replaced the Command icon */}
                 <div className="flex aspect-square size-12 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20 backdrop-blur-sm overflow-hidden">
                   <div className="relative w-full h-full">
-                    <Image 
-                      src="/images/LOGO CQ-10.png"   
+                    <Image
+                      src="/images/LOGO CQ-10.png"
                       alt="Center Quest Logo"
                       fill
-                           className="object-contain scale-210" /* Zoom 125% */
-
+                      className="object-contain scale-210" /* Zoom 125% */
                       sizes="40px"
                       priority
                     />
@@ -377,78 +379,60 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
         </SidebarGroup>
 
-        {/* Core Sections (Management) - Admin Only */}
-        {isAdmin && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Management</SidebarGroupLabel>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  tooltip="Customers"
-                  isActive={pathname.startsWith("/customers")}
-                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
-                >
-                  <a href="/customers">
-                    {pathname.startsWith("/customers") && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
-                    )}
-                    <Users />
-                    <span>Customer Management</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  tooltip="Users"
-                  isActive={pathname.startsWith("/users")}
-                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
-                >
-                  <a href="/users">
-                    {pathname.startsWith("/users") && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
-                    )}
-                    <Users />
-                    <span>User Management</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  tooltip="Settings"
-                  isActive={pathname.startsWith("/settings")}
-                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
-                >
-                  <a href="/settings">
-                    {pathname.startsWith("/settings") && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
-                    )}
-                    <Settings2 />
-                    <span>System Settings</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  tooltip="Profile"
-                  isActive={pathname.startsWith("/profile")}
-                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
-                >
-                  <a href="/profile">
-                    {pathname.startsWith("/profile") && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
-                    )}
-                    <UserCircle />
-                    <span>Profile</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroup>
-        )}
+        {/* Core Sections (Management) - SIEMPRE visible */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Management</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                tooltip="Customers"
+                isActive={pathname.startsWith("/customers")}
+                className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
+              >
+                <a href="/customers">
+                  {pathname.startsWith("/customers") && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
+                  )}
+                  <Users />
+                  <span>Customer Management</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                tooltip="Users"
+                isActive={pathname.startsWith("/users")}
+                className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
+              >
+                <a href="/users">
+                  {pathname.startsWith("/users") && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
+                  )}
+                  <Users />
+                  <span>User Management</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                tooltip="Profile"
+                isActive={pathname.startsWith("/profile")}
+                className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
+              >
+                <a href="/profile">
+                  {pathname.startsWith("/profile") && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
+                  )}
+                  <UserCircle />
+                  <span>Profile</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
 
         {/* Secondary (Support) */}
         <SidebarGroup className="mt-auto">
@@ -464,11 +448,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              
+
               {/* Copyright footer */}
               <div className="px-2 py-3 mt-1 border-t border-border/50">
                 <footer className="text-xs text-muted-foreground text-center">
-                  © {new Date().getFullYear()} Mindware Labs. All rights reserved.
+                  © {new Date().getFullYear()} Mindware Labs. All rights
+                  reserved.
                 </footer>
               </div>
             </SidebarMenu>

@@ -1,6 +1,6 @@
 "use client"
 
-import { Search, Bell } from "lucide-react"
+import { Search, Bell, Sun, Moon } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
@@ -37,6 +37,7 @@ import { User, ChevronDown } from "lucide-react"
 import Link from "next/link"
 
 import { auth } from "@/lib/auth"
+import { useTheme } from "next-themes"
 
 export default function Topbar() {
   const { isMobile } = useSidebar()
@@ -48,6 +49,9 @@ export default function Topbar() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [currentUser, setCurrentUser] = useState({ name: "User", email: "" })
+  const { theme, setTheme, resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
 
   useEffect(() => {
     const storedUser = auth.getUser()
@@ -60,6 +64,10 @@ export default function Topbar() {
         email: storedUser.email || "",
       })
     }
+  }, [])
+
+  useEffect(() => {
+    setMounted(true)
   }, [])
 
   const handleLogout = async () => {
@@ -86,6 +94,7 @@ export default function Topbar() {
   }
 
   const userInitials = getUserInitials(currentUser.name)
+  const currentTheme = resolvedTheme || theme
 
   return (
     <>
@@ -109,6 +118,21 @@ export default function Topbar() {
         <div className="flex items-center gap-4">
 
           <Separator orientation="vertical" className="h-4" />
+
+          <button
+            type="button"
+            onClick={() =>
+              setTheme(currentTheme === "dark" ? "light" : "dark")
+            }
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/60 text-foreground/80 shadow-sm transition-colors hover:bg-accent/60"
+            aria-label="Toggle light and dark mode"
+          >
+            {mounted && currentTheme === "dark" ? (
+              <Sun className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <Moon className="h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
 
           {/* User dropdown */}
           <DropdownMenu>

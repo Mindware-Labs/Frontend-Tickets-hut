@@ -254,6 +254,9 @@ export default function TicketsPage() {
 
   const getDirectionIcon = (direction: string) => {
     const d = direction?.toString().toLowerCase();
+    if (d === "missed") {
+      return <AlertTriangle className="h-3 w-3 text-rose-500" />;
+    }
     if (d === "outbound") {
       return <PhoneOutgoing className="h-3 w-3 text-blue-500" />;
     } else {
@@ -263,8 +266,12 @@ export default function TicketsPage() {
 
   const getDirectionText = (direction: string) => {
     const d = direction?.toString().toLowerCase();
+    if (d === "missed") return "Missed";
     return d === "outbound" ? "Outbound" : "Inbound";
   };
+
+  const isMissedCall = (ticket: Ticket) =>
+    ticket.direction?.toString().toLowerCase() === "missed";
 
   const formatEnumLabel = (value?: string) => {
     if (!value) return "-";
@@ -518,9 +525,12 @@ export default function TicketsPage() {
         ticket.direction === directionFilter ||
         ticket.direction?.toString().toLowerCase() ===
           directionFilter.toLowerCase();
+      const isMissed = isMissedCall(ticket);
 
       let matchesView = true;
-      if (activeView === "assigned_me") {
+      if (activeView === "missed") {
+        matchesView = isMissed;
+      } else if (activeView === "assigned_me") {
         matchesView = assigneeName === "Agent Smith";
       } else if (activeView === "unassigned") {
         matchesView = !ticket.assignedTo;
@@ -534,6 +544,10 @@ export default function TicketsPage() {
         matchesView = !!ticket.assignedTo;
       } else if (activeView === "high_priority") {
         matchesView = priority === "HIGH" || ticket.priority === "High";
+      }
+
+      if (activeView !== "missed") {
+        matchesView = matchesView && !isMissed;
       }
 
       return (
@@ -1527,7 +1541,9 @@ export default function TicketsPage() {
               className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
             />
             All Tickets
-            <span className="ml-auto text-xs">{tickets.length}</span>
+            <span className="ml-auto text-xs">
+              {tickets.filter((t) => !isMissedCall(t)).length}
+            </span>
           </Button>
           <Button
             variant={activeView === "active" ? "secondary" : "ghost"}
@@ -1539,7 +1555,9 @@ export default function TicketsPage() {
             <span className="ml-auto text-xs">
               {
                 tickets.filter(
-                  (t) => t.status === "Open" || t.status === "In Progress"
+                  (t) =>
+                    !isMissedCall(t) &&
+                    (t.status === "Open" || t.status === "In Progress")
                 ).length
               }
             </span>
@@ -1552,7 +1570,7 @@ export default function TicketsPage() {
             <User className="mr-2 h-4 w-4" />
             Assigned
             <span className="ml-auto text-xs">
-              {tickets.filter((t) => !!t.assignedTo).length}
+              {tickets.filter((t) => !isMissedCall(t) && !!t.assignedTo).length}
             </span>
           </Button>
           <Button
@@ -1563,7 +1581,11 @@ export default function TicketsPage() {
             <User className="mr-2 h-4 w-4" />
             My Tickets
             <span className="ml-auto text-xs">
-              {tickets.filter((t) => t.assignedTo === "Agent Smith").length}
+              {
+                tickets.filter(
+                  (t) => !isMissedCall(t) && t.assignedTo === "Agent Smith"
+                ).length
+              }
             </span>
           </Button>
           <Button
@@ -1574,7 +1596,18 @@ export default function TicketsPage() {
             <Hash className="mr-2 h-4 w-4" />
             Unassigned
             <span className="ml-auto text-xs">
-              {tickets.filter((t) => !t.assignedTo).length}
+              {tickets.filter((t) => !isMissedCall(t) && !t.assignedTo).length}
+            </span>
+          </Button>
+          <Button
+            variant={activeView === "missed" ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => setActiveView("missed")}
+          >
+            <AlertTriangle className="mr-2 h-4 w-4" />
+            Missed Calls
+            <span className="ml-auto text-xs">
+              {tickets.filter((t) => isMissedCall(t)).length}
             </span>
           </Button>
           <Button
@@ -1585,7 +1618,7 @@ export default function TicketsPage() {
             <Star className="mr-2 h-4 w-4" />
             High Priority
             <span className="ml-auto text-xs">
-              {tickets.filter((t) => t.priority === "High").length}
+              {tickets.filter((t) => !isMissedCall(t) && t.priority === "High").length}
             </span>
           </Button>
         </div>

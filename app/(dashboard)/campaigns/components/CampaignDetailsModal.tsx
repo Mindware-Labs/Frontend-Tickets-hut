@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import Link from "next/link";
 import { Search } from "lucide-react";
 import type { Campaign } from "../types";
 
@@ -106,9 +107,18 @@ export function CampaignDetailsModal({
               </div>
             </div>
 
-            <Button onClick={onViewTickets} disabled={!campaign}>
-              View Tickets
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={onViewTickets} disabled={!campaign}>
+                View Tickets
+              </Button>
+              {campaign?.id && (
+                <Button asChild variant="secondary">
+                  <Link href={`/reports/campaigns?campaignId=${campaign.id}`}>
+                    Open Report
+                  </Link>
+                </Button>
+              )}
+            </div>
           </div>
 
           {showTicketsPanel && (

@@ -105,3 +105,49 @@ export async function fetchFromBackend(
 
   return parsedBody;
 }
+
+/**
+ * Fetch binary content (e.g., PDF) from backend API with JWT auth.
+ */
+export async function fetchBlobFromBackend(
+  endpoint: string,
+  options: RequestInit = {}
+) {
+  const url = `${BACKEND_API_URL}${
+    endpoint.startsWith("/") ? endpoint : `/${endpoint}`
+  }`;
+
+  const token = getAuthToken();
+  const headers: any = {
+    Accept: "application/pdf",
+    ...options.headers,
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  if (response.status === 401) {
+    const error = new Error("Session expired. Please login again.") as Error & {
+      status?: number;
+    };
+    error.status = 401;
+    throw error;
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    const err = new Error(
+      errorText || `API Error: ${response.status}`
+    ) as Error & { status?: number };
+    err.status = response.status;
+    throw err;
+  }
+
+  return response.blob();
+}

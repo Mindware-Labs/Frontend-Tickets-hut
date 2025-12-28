@@ -47,7 +47,6 @@ import {
   Tag,
   Ticket,
 } from "lucide-react";
-import { useRole } from "@/components/providers/role-provider";
 
 type CampaignTicket = {
   id: number;
@@ -74,8 +73,6 @@ const campaignTypeLabels: Record<CampaignType, string> = {
 };
 
 export default function CampaignsPage() {
-  const { isAdmin } = useRole();
-
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [yards, setYards] = useState<YardSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -390,22 +387,6 @@ export default function CampaignsPage() {
       setIsSubmitting(false);
     }
   };
-
-  if (!isAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 p-8 text-center">
-        <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
-          <ShieldAlert className="h-8 w-8 text-destructive" />
-        </div>
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold">Access Denied</h1>
-          <p className="text-muted-foreground">
-            You do not have permission to view marketing campaigns.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <>

@@ -31,37 +31,6 @@ export default function LandlordsPage() {
   const [selectedLandlord, setSelectedLandlord] = useState<Landlord | null>(
     null
   );
-  const [reportStartDate, setReportStartDate] = useState(() => {
-    const date = new Date();
-    date.setDate(date.getDate() - 7);
-    return date.toISOString().slice(0, 10);
-  });
-  const [reportEndDate, setReportEndDate] = useState(() =>
-    new Date().toISOString().slice(0, 10)
-  );
-  const [reportYardId, setReportYardId] = useState("all");
-  const [reportLoading, setReportLoading] = useState(false);
-  const [reportSending, setReportSending] = useState(false);
-  const [reportError, setReportError] = useState<string | null>(null);
-  const [reportData, setReportData] = useState<{
-    totals: { total: number; inbound: number; outbound: number };
-    averagePerYard: number;
-    topYards: Array<{ id: number; name: string; total: number }>;
-    callsByDay: Array<{
-      date: string;
-      total: number;
-      inbound: number;
-      outbound: number;
-    }>;
-    yards: Array<{
-      id: number;
-      name: string;
-      total: number;
-      inbound: number;
-      outbound: number;
-    }>;
-    statusBreakdown: Record<string, number>;
-  } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -102,68 +71,6 @@ export default function LandlordsPage() {
     fetchLandlords();
     fetchYards();
   }, []);
-
-  const handleGenerateReport = async () => {
-    if (!selectedLandlord) return;
-    setReportLoading(true);
-    setReportError(null);
-    try {
-      const query = new URLSearchParams({
-        startDate: reportStartDate,
-        endDate: reportEndDate,
-      });
-      if (reportYardId !== "all") {
-        query.set("yardId", reportYardId);
-      }
-      const response = await fetch(
-        `/api/landlords/${selectedLandlord.id}/report?${query.toString()}`
-      );
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result?.message || result?.error || "Failed to load report");
-      }
-      setReportData(result);
-    } catch (error: any) {
-      setReportError(error.message || "Failed to generate report");
-    } finally {
-      setReportLoading(false);
-    }
-  };
-
-  const handleSendReport = async () => {
-    if (!selectedLandlord) return;
-    setReportSending(true);
-    setReportError(null);
-    try {
-      const payload: any = {
-        startDate: reportStartDate,
-        endDate: reportEndDate,
-      };
-      if (reportYardId !== "all") {
-        payload.yardId = Number(reportYardId);
-      }
-      const response = await fetch(
-        `/api/landlords/${selectedLandlord.id}/report`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result?.message || result?.error || "Failed to send report");
-      }
-      toast({
-        title: "Report sent",
-        description: `Report emailed to ${selectedLandlord.email}`,
-      });
-    } catch (error: any) {
-      setReportError(error.message || "Failed to send report");
-    } finally {
-      setReportSending(false);
-    }
-  };
 
   const filteredLandlords = useMemo(() => {
     const term = search.toLowerCase();
@@ -232,9 +139,6 @@ export default function LandlordsPage() {
   const handleDetails = (landlord: Landlord) => {
     setSelectedLandlord(landlord);
     setShowDetailsModal(true);
-    setReportError(null);
-    setReportData(null);
-    setReportYardId("all");
   };
 
   const buildPayload = (data: LandlordFormData) => ({
@@ -475,18 +379,6 @@ export default function LandlordsPage() {
         onOpenChange={(open) => setShowDetailsModal(open)}
         landlord={selectedLandlord}
         yards={yards}
-        reportStartDate={reportStartDate}
-        reportEndDate={reportEndDate}
-        reportYardId={reportYardId}
-        onReportStartDateChange={setReportStartDate}
-        onReportEndDateChange={setReportEndDate}
-        onReportYardIdChange={setReportYardId}
-        reportLoading={reportLoading}
-        reportSending={reportSending}
-        reportError={reportError}
-        reportData={reportData}
-        onGenerateReport={handleGenerateReport}
-        onSendReport={handleSendReport}
       />
     </>
   );

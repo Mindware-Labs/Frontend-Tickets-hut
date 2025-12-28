@@ -1,204 +1,246 @@
-import { NextResponse } from "next/server"
-import { fetchFromBackend } from "@/lib/api-client"
+import { NextRequest, NextResponse } from "next/server";
+import { fetchFromBackendServer } from "@/lib/api-server";
 
 type Ticket = {
-  id: number
-  status?: string
-  campaign?: string | null
-  campaignId?: number | null
-  disposition?: string | null
-  createdAt?: string
-  priority?: string | null
-  customer?: { name?: string | null }
-}
+  id: number;
+  status?: string;
+  campaign?: string | null;
+  campaignId?: number | null;
+  disposition?: string | null;
+  createdAt?: string;
+  priority?: string | null;
+  customer?: { name?: string | null };
+};
 
 type Campaign = {
-  id: number
-  nombre: string
-  tipo?: string | null
-  isActive?: boolean
-}
+  id: number;
+  nombre: string;
+  tipo?: string | null;
+  isActive?: boolean;
+};
 
-const STATUS_ACTIVE = new Set(["OPEN", "IN_PROGRESS"])
-const STATUS_CLOSED = new Set(["CLOSED", "RESOLVED"])
-const PRIORITY_ALERT = new Set(["HIGH", "EMERGENCY"])
+const STATUS_ACTIVE = new Set(["OPEN", "IN_PROGRESS"]);
+const STATUS_CLOSED = new Set(["CLOSED", "RESOLVED"]);
+const PRIORITY_ALERT = new Set(["HIGH", "EMERGENCY"]);
 
 const CAMPAIGN_LABELS: Record<string, string> = {
   ONBOARDING: "Onboarding",
   AR: "AR",
   OTHER: "Other",
-}
+};
 
 const STATUS_LABELS: Record<string, string> = {
   OPEN: "Open",
   IN_PROGRESS: "In Progress",
   RESOLVED: "Resolved",
   CLOSED: "Closed",
-}
+};
 
-const FALLBACK_CHART_ITEM = [{ name: "No data", count: 0 }]
+const FALLBACK_CHART_ITEM = [{ name: "No data", count: 0 }];
 
 function toTitleCase(value: string) {
   return value
     .toLowerCase()
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ")
+    .join(" ");
 }
 
 function normalizeLabel(value: unknown, labels: Record<string, string>) {
-  if (value === null || value === undefined) return "Unspecified"
+  if (value === null || value === undefined) return "Unspecified";
 
   if (typeof value === "string") {
-    const trimmed = value.trim()
-    if (!trimmed) return "Unspecified"
-    return labels[trimmed] || toTitleCase(trimmed)
+    const trimmed = value.trim();
+    if (!trimmed) return "Unspecified";
+    return labels[trimmed] || toTitleCase(trimmed);
   }
 
   if (typeof value === "number" || typeof value === "boolean") {
-    const key = String(value)
-    return labels[key] || key
+    const key = String(value);
+    return labels[key] || key;
   }
 
-  return "Unspecified"
+  return "Unspecified";
 }
 
-function getCampaignLabel(ticket: Ticket, campaignsById: Record<number, string>) {
+function getCampaignLabel(
+  ticket: Ticket,
+  campaignsById: Record<number, string>
+) {
   if (ticket.campaign && typeof ticket.campaign === "object") {
-    const maybeCampaign = ticket.campaign as { nombre?: string }
-    if (maybeCampaign.nombre) return maybeCampaign.nombre
+    const maybeCampaign = ticket.campaign as { nombre?: string };
+    if (maybeCampaign.nombre) return maybeCampaign.nombre;
   }
 
   if (ticket.campaignId && campaignsById[ticket.campaignId]) {
-    return campaignsById[ticket.campaignId]
+    return campaignsById[ticket.campaignId];
   }
 
-  return normalizeLabel(ticket.campaign || "Unspecified", CAMPAIGN_LABELS)
+  return normalizeLabel(ticket.campaign || "Unspecified", CAMPAIGN_LABELS);
 }
 
 function formatDateKey(date: Date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  return `${year}-${month}-${day}`
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
-async function fetchTicketsWithLimit(limit: number, maxPages: number) {
-  const tickets: Ticket[] = []
-  let total = 0
+async function fetchTicketsWithLimit(
+  request: NextRequest,
+  limit: number,
+  maxPages: number
+) {
+  const tickets: Ticket[] = [];
+  let total = 0;
 
   for (let page = 1; page <= maxPages; page += 1) {
-    const response = await fetchFromBackend(`/tickets?page=${page}&limit=${limit}`)
-    const pageTickets: Ticket[] = response?.data || response || []
+    const response = await fetchFromBackendServer(
+      request,
+      `/tickets?page=${page}&limit=${limit}`
+    );
+    const pageTickets: Ticket[] = response?.data || response || [];
     if (page === 1 && typeof response?.total === "number") {
-      total = response.total
+      total = response.total;
     }
 
-    tickets.push(...pageTickets)
+    tickets.push(...pageTickets);
 
-    if (pageTickets.length < limit) break
-    if (total && tickets.length >= total) break
+    if (pageTickets.length < limit) break;
+    if (total && tickets.length >= total) break;
   }
 
-  return { tickets, total: total || tickets.length }
+  return { tickets, total: total || tickets.length };
 }
 
-async function fetchCampaigns(limit: number) {
-  const response = await fetchFromBackend(`/campaign?page=1&limit=${limit}`)
-  const campaigns: Campaign[] = response?.data || response || []
-  return campaigns
+async function fetchCampaigns(request: NextRequest, limit: number) {
+  const response = await fetchFromBackendServer(
+    request,
+    `/campaign?page=1&limit=${limit}`
+  );
+  const campaigns: Campaign[] = response?.data || response || [];
+  return campaigns;
 }
 
 // GET /api/dashboard/stats - Fetch dashboard statistics
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const { tickets, total } = await fetchTicketsWithLimit(200, 5)
-    let campaigns: Campaign[] = []
+    console.log(
+      "[dashboard/stats] auth header:",
+      request.headers.get("authorization") ? "present" : "missing"
+    );
+    // Eliminado el chequeo de perfil y el bloqueo por Unauthorized
+    const { tickets, total } = await fetchTicketsWithLimit(request, 200, 5);
+    let campaigns: Campaign[] = [];
     try {
-      campaigns = await fetchCampaigns(200)
+      campaigns = await fetchCampaigns(request, 200);
     } catch {
-      campaigns = []
+      campaigns = [];
     }
-    const totalTickets = total
-    const totalCalls = totalTickets
+    const totalTickets = total;
+    const totalCalls = totalTickets;
 
-    const openTickets = tickets.filter((ticket) => ticket.status === "OPEN").length
-    const inProgressTickets = tickets.filter((ticket) => ticket.status === "IN_PROGRESS").length
-    const activeTickets = openTickets + inProgressTickets
-    const closedTickets = tickets.filter((ticket) => STATUS_CLOSED.has(ticket.status || "")).length
+    const openTickets = tickets.filter(
+      (ticket) => ticket.status === "OPEN"
+    ).length;
+    const inProgressTickets = tickets.filter(
+      (ticket) => ticket.status === "IN_PROGRESS"
+    ).length;
+    const activeTickets = openTickets + inProgressTickets;
+    const closedTickets = tickets.filter((ticket) =>
+      STATUS_CLOSED.has(ticket.status || "")
+    ).length;
     const pendingActions = tickets.filter(
       (ticket) =>
         PRIORITY_ALERT.has(ticket.priority || "") &&
-        !STATUS_CLOSED.has(ticket.status || ""),
-    ).length
+        !STATUS_CLOSED.has(ticket.status || "")
+    ).length;
 
-    const resolutionRate = totalTickets > 0 ? Math.round((closedTickets / totalTickets) * 100) : 0
+    const resolutionRate =
+      totalTickets > 0 ? Math.round((closedTickets / totalTickets) * 100) : 0;
 
-    const campaignCounts = tickets.reduce<Record<string, number>>((acc, ticket) => {
-      const label = normalizeLabel(ticket.campaign || "Unspecified", CAMPAIGN_LABELS)
-      acc[label] = (acc[label] || 0) + 1
-      return acc
-    }, {})
+    const campaignCounts = tickets.reduce<Record<string, number>>(
+      (acc, ticket) => {
+        const label = normalizeLabel(
+          ticket.campaign || "Unspecified",
+          CAMPAIGN_LABELS
+        );
+        acc[label] = (acc[label] || 0) + 1;
+        return acc;
+      },
+      {}
+    );
 
-    const dispositionCounts = tickets.reduce<Record<string, number>>((acc, ticket) => {
-      const label = normalizeLabel(ticket.disposition || "Unspecified", {})
-      acc[label] = (acc[label] || 0) + 1
-      return acc
-    }, {})
+    const dispositionCounts = tickets.reduce<Record<string, number>>(
+      (acc, ticket) => {
+        const label = normalizeLabel(ticket.disposition || "Unspecified", {});
+        acc[label] = (acc[label] || 0) + 1;
+        return acc;
+      },
+      {}
+    );
 
-    const now = new Date()
+    const now = new Date();
     const dayBuckets = Array.from({ length: 7 }).map((_, index) => {
-      const date = new Date(now)
-      date.setDate(now.getDate() - (6 - index))
-      date.setHours(0, 0, 0, 0)
+      const date = new Date(now);
+      date.setDate(now.getDate() - (6 - index));
+      date.setHours(0, 0, 0, 0);
       return {
         key: formatDateKey(date),
         label: date.toLocaleDateString("en-US", { weekday: "short" }),
         count: 0,
-      }
-    })
+      };
+    });
 
-    const bucketMap = dayBuckets.reduce<Record<string, number>>((acc, bucket, index) => {
-      acc[bucket.key] = index
-      return acc
-    }, {})
+    const bucketMap = dayBuckets.reduce<Record<string, number>>(
+      (acc, bucket, index) => {
+        acc[bucket.key] = index;
+        return acc;
+      },
+      {}
+    );
 
     tickets.forEach((ticket) => {
-      if (!ticket.createdAt) return
-      const date = new Date(ticket.createdAt)
-      if (Number.isNaN(date.getTime())) return
-      const key = formatDateKey(date)
-      const bucketIndex = bucketMap[key]
-      if (bucketIndex === undefined) return
-      dayBuckets[bucketIndex].count += 1
-    })
+      if (!ticket.createdAt) return;
+      const date = new Date(ticket.createdAt);
+      if (Number.isNaN(date.getTime())) return;
+      const key = formatDateKey(date);
+      const bucketIndex = bucketMap[key];
+      if (bucketIndex === undefined) return;
+      dayBuckets[bucketIndex].count += 1;
+    });
 
     const callsByDay = dayBuckets.map((bucket) => ({
       day: bucket.label,
       calls: bucket.count,
-    }))
+    }));
 
     const campaignsByName = campaigns.map((campaign) => ({
       name: campaign.nombre,
       count: 1,
-    }))
+    }));
 
     const ticketsByCampaign = campaignsByName.length
       ? campaignsByName
       : Object.entries(campaignCounts).map(([name, count]) => ({
           name,
           count,
-        }))
+        }));
 
-    const ticketsByDisposition = Object.entries(dispositionCounts).map(([name, count]) => ({
-      name,
-      count,
-    }))
+    const ticketsByDisposition = Object.entries(dispositionCounts).map(
+      ([name, count]) => ({
+        name,
+        count,
+      })
+    );
 
-    const campaignsById = campaigns.reduce<Record<number, string>>((acc, campaign) => {
-      acc[campaign.id] = campaign.nombre
-      return acc
-    }, {})
+    const campaignsById = campaigns.reduce<Record<number, string>>(
+      (acc, campaign) => {
+        acc[campaign.id] = campaign.nombre;
+        return acc;
+      },
+      {}
+    );
 
     const recentTickets = tickets.slice(0, 5).map((ticket) => ({
       id: ticket.id,
@@ -206,7 +248,7 @@ export async function GET() {
       campaign: getCampaignLabel(ticket, campaignsById),
       status: normalizeLabel(ticket.status || "Unspecified", STATUS_LABELS),
       createdAt: ticket.createdAt || new Date().toISOString(),
-    }))
+    }));
 
     return NextResponse.json({
       success: true,
@@ -225,19 +267,20 @@ export async function GET() {
         },
         charts: {
           callsByDay,
-          ticketsByCampaign: ticketsByCampaign.length ? ticketsByCampaign : FALLBACK_CHART_ITEM,
-          ticketsByDisposition: ticketsByDisposition.length ? ticketsByDisposition : FALLBACK_CHART_ITEM,
+          ticketsByCampaign: ticketsByCampaign.length
+            ? ticketsByCampaign
+            : FALLBACK_CHART_ITEM,
         },
         recentTickets,
       },
-    })
+    });
   } catch (error: any) {
     return NextResponse.json(
       {
         success: false,
         message: error.message || "Failed to fetch dashboard stats",
       },
-      { status: 500 },
-    )
+      { status: 500 }
+    );
   }
 }
