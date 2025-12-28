@@ -11,6 +11,7 @@ export interface Customer {
   phone?: string;
   campaigns?: CampaignOption[];
   createdAt: string;
+  ticketCount?: number;
 }
 
 export interface CustomerFormData {

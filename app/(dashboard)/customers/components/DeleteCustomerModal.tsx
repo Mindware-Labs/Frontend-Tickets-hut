@@ -14,6 +14,7 @@ interface DeleteCustomerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customerName?: string;
+  ticketCount?: number;
   isSubmitting: boolean;
   onConfirm: () => void;
 }
@@ -22,9 +23,11 @@ export function DeleteCustomerModal({
   open,
   onOpenChange,
   customerName,
+  ticketCount,
   isSubmitting,
   onConfirm,
 }: DeleteCustomerModalProps) {
+  const hasTickets = (ticketCount ?? 0) > 0;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -35,6 +38,12 @@ export function DeleteCustomerModal({
             action cannot be undone.
           </DialogDescription>
         </DialogHeader>
+        {hasTickets && (
+          <p className="text-sm text-destructive">
+            This customer has {ticketCount} ticket(s) and cannot be deleted.
+            Please archive the customer instead.
+          </p>
+        )}
 
         <DialogFooter>
           <Button
@@ -47,7 +56,7 @@ export function DeleteCustomerModal({
           <Button
             variant="destructive"
             onClick={onConfirm}
-            disabled={isSubmitting}
+            disabled={isSubmitting || hasTickets}
           >
             {isSubmitting ? "Deleting..." : "Delete"}
           </Button>

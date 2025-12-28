@@ -123,7 +123,7 @@ export function LandlordFormModal({
               value={yardSearch}
               onChange={(e) => setYardSearch(e.target.value)}
             />
-            <div className="rounded-md border p-3 space-y-2 max-h-48 overflow-y-auto">
+            <div className="rounded-md border p-3 space-y-2 max-h-60 overflow-y-auto pr-1">
               {filteredYards.length === 0 ? (
                 <p className="text-xs text-muted-foreground">No yards available</p>
               ) : (

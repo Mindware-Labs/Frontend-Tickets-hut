@@ -39,8 +39,19 @@ interface LandlordDetailsModalProps {
     totals: { total: number; inbound: number; outbound: number };
     averagePerYard: number;
     topYards: Array<{ id: number; name: string; total: number }>;
-    callsByDay: Array<{ date: string; total: number; inbound: number; outbound: number }>;
-    yards: Array<{ id: number; name: string; total: number; inbound: number; outbound: number }>;
+    callsByDay: Array<{
+      date: string;
+      total: number;
+      inbound: number;
+      outbound: number;
+    }>;
+    yards: Array<{
+      id: number;
+      name: string;
+      total: number;
+      inbound: number;
+      outbound: number;
+    }>;
     statusBreakdown: Record<string, number>;
   } | null;
   onGenerateReport: () => void;
@@ -49,8 +60,7 @@ interface LandlordDetailsModalProps {
 
 const getYardLabels = (landlord: Landlord | null, yards: YardOption[]) => {
   if (!landlord) return [];
-  const fromRelation =
-    landlord.yards?.map((yard) => yard.name) || [];
+  const fromRelation = landlord.yards?.map((yard) => yard.name) || [];
   if (fromRelation.length > 0) return fromRelation;
   return yards
     .filter((yard) => yard.landlord?.id === landlord.id)
@@ -79,7 +89,7 @@ export function LandlordDetailsModal({
   const yardOptions =
     landlord?.yards?.map((yard) => ({
       id: yard.id,
-      label:  yard.name,
+      label: yard.name,
     })) ||
     yards
       .filter((yard) => yard.landlord?.id === landlord?.id)
@@ -151,7 +161,9 @@ export function LandlordDetailsModal({
 
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">Start Date</span>
+                <span className="text-xs text-muted-foreground">
+                  Start Date
+                </span>
                 <Input
                   type="date"
                   value={reportStartDate}
@@ -168,7 +180,10 @@ export function LandlordDetailsModal({
               </div>
               <div className="space-y-1">
                 <span className="text-xs text-muted-foreground">Yard</span>
-                <Select value={reportYardId} onValueChange={onReportYardIdChange}>
+                <Select
+                  value={reportYardId}
+                  onValueChange={onReportYardIdChange}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="All yards" />
                   </SelectTrigger>
@@ -198,25 +213,37 @@ export function LandlordDetailsModal({
               <div className="space-y-3">
                 <div className="grid gap-2 sm:grid-cols-4">
                   <div className="rounded-md border p-3">
-                    <p className="text-xs text-muted-foreground">Total Tickets</p>
-                    <p className="text-lg font-semibold">{reportData.totals.total}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Total Tickets
+                    </p>
+                    <p className="text-lg font-semibold">
+                      {reportData.totals.total}
+                    </p>
                   </div>
                   <div className="rounded-md border p-3">
                     <p className="text-xs text-muted-foreground">Inbound</p>
-                    <p className="text-lg font-semibold">{reportData.totals.inbound}</p>
+                    <p className="text-lg font-semibold">
+                      {reportData.totals.inbound}
+                    </p>
                   </div>
                   <div className="rounded-md border p-3">
                     <p className="text-xs text-muted-foreground">Outbound</p>
-                    <p className="text-lg font-semibold">{reportData.totals.outbound}</p>
+                    <p className="text-lg font-semibold">
+                      {reportData.totals.outbound}
+                    </p>
                   </div>
                   <div className="rounded-md border p-3">
                     <p className="text-xs text-muted-foreground">Avg / Yard</p>
-                    <p className="text-lg font-semibold">{reportData.averagePerYard}</p>
+                    <p className="text-lg font-semibold">
+                      {reportData.averagePerYard}
+                    </p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">Yard Breakdown</p>
+                  <p className="text-xs text-muted-foreground">
+                    Yard Breakdown
+                  </p>
                   <div className="space-y-2">
                     {(reportData.yards ?? []).length === 0 ? (
                       <p className="text-sm text-muted-foreground">No data.</p>
@@ -280,10 +307,15 @@ export function LandlordDetailsModal({
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">Status Breakdown</p>
+                  <p className="text-xs text-muted-foreground">
+                    Status Breakdown
+                  </p>
                   <div className="flex flex-wrap gap-2">
-                    {Object.keys(reportData.statusBreakdown ?? {}).length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No status data.</p>
+                    {Object.keys(reportData.statusBreakdown ?? {}).length ===
+                    0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No status data.
+                      </p>
                     ) : (
                       Object.entries(reportData.statusBreakdown ?? {}).map(
                         ([status, count]) => (

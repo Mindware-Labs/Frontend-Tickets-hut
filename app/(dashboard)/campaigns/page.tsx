@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { fetchFromBackend } from "@/lib/api-client";
 import { toast } from "@/hooks/use-toast";
 import { Campaign, CampaignFormData, CampaignType, YardSummary } from "./types";
@@ -19,7 +18,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { CampaignDetailsModal } from "./components/CampaignDetailsModal";
 import {
   Select,
@@ -38,16 +36,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   ArrowUpRight,
-  Calendar,
+  CalendarDays,
   CheckCircle2,
-  Megaphone,
-  MoreHorizontal,
+  Clock,
+  MapPin,
+  MoreVertical,
   Plus,
   Search,
-  Users,
+  ShieldAlert,
+  Tag,
+  Ticket,
 } from "lucide-react";
 import { useRole } from "@/components/providers/role-provider";
-import { ShieldAlert } from "lucide-react";
 
 type CampaignTicket = {
   id: number;
@@ -81,9 +81,9 @@ export default function CampaignsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<CampaignType | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">(
-    "all"
-  );
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "inactive"
+  >("all");
   const [yardFilter, setYardFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(9);
@@ -91,7 +91,9 @@ export default function CampaignsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
+    null
+  );
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [campaignTickets, setCampaignTickets] = useState<CampaignTicket[]>([]);
   const [showTicketsPanel, setShowTicketsPanel] = useState(false);
@@ -174,22 +176,6 @@ export default function CampaignsPage() {
       ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
       : "bg-amber-500/10 text-amber-700 border-amber-500/20";
 
-  const getDurationDays = (duration?: string | null) => {
-    if (!duration) return null;
-    const parsed = parseInt(duration, 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-  };
-
-  const getProgress = (campaign: Campaign) => {
-    const durationDays = getDurationDays(campaign.duracion);
-    if (!durationDays) return null;
-    const createdAt = new Date(campaign.createdAt);
-    if (Number.isNaN(createdAt.getTime())) return null;
-    const elapsedDays =
-      (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
-    return Math.min(100, Math.max(0, Math.round((elapsedDays / durationDays) * 100)));
-  };
-
   const getYardLabel = (campaign: Campaign) => {
     return (
       campaign.yarda?.name ||
@@ -240,8 +226,7 @@ export default function CampaignsPage() {
       const items: CampaignTicket[] = response?.data || response || [];
       const filtered = items.filter(
         (ticket) =>
-          ticket.campaignId === campaignId ||
-          ticket.campaign?.id === campaignId,
+          ticket.campaignId === campaignId || ticket.campaign?.id === campaignId
       );
       setCampaignTickets(filtered);
     } catch (error) {
@@ -277,8 +262,7 @@ export default function CampaignsPage() {
     const errors: Record<string, string> = {};
     if (!formData.nombre.trim())
       errors.nombre = "Please enter the campaign name.";
-    if (!formData.tipo)
-      errors.tipo = "Please select a campaign type.";
+    if (!formData.tipo) errors.tipo = "Please select a campaign type.";
 
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
@@ -328,8 +312,7 @@ export default function CampaignsPage() {
     const errors: Record<string, string> = {};
     if (!formData.nombre.trim())
       errors.nombre = "Please enter the campaign name.";
-    if (!formData.tipo)
-      errors.tipo = "Please select a campaign type.";
+    if (!formData.tipo) errors.tipo = "Please select a campaign type.";
 
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
@@ -427,6 +410,7 @@ export default function CampaignsPage() {
   return (
     <>
       <div className="space-y-6">
+        {/* Header Section */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-3xl font-bold tracking-tight">Campaigns</h1>
@@ -434,12 +418,16 @@ export default function CampaignsPage() {
               Manage campaigns using real backend data
             </p>
           </div>
-          <Button className="bg-primary hover:bg-primary/90" onClick={handleCreate}>
+          <Button
+            className="bg-primary hover:bg-primary/90"
+            onClick={handleCreate}
+          >
             <Plus className="mr-2 h-4 w-4" />
             New Campaign
           </Button>
         </div>
 
+        {/* Filters Section */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -514,152 +502,168 @@ export default function CampaignsPage() {
           </div>
         </div>
 
+        {/* Loading State */}
         {loading ? (
-          <div className="text-sm text-muted-foreground">Loading campaigns...</div>
+          <div className="text-sm text-muted-foreground">
+            Loading campaigns...
+          </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {paginatedCampaigns.map((campaign) => {
-              const progress = getProgress(campaign);
+          /* Main Grid with Improved Cards */
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {paginatedCampaigns.map((campaign) => (
+              <Card
+                key={campaign.id}
+                className="group relative flex flex-col justify-between overflow-hidden border border-border/50 bg-background/60 text-card-foreground shadow-sm backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5"
+              >
+                {/* Active Indicator Strip (Left Side) */}
+                {campaign.isActive && (
+                  <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-emerald-500 to-emerald-600 opacity-80" />
+                )}
 
-              return (
-                <Card
-                  key={campaign.id}
-                  className="overflow-hidden hover:shadow-md transition-shadow"
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                          <Megaphone className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="space-y-1">
-                          <CardTitle className="text-base">{campaign.nombre}</CardTitle>
-                          <CardDescription className="text-xs font-mono">
-                            ID #{campaign.id}
-                          </CardDescription>
-                        </div>
+                <CardHeader className="pb-4 pt-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1.5">
+                      {/* Title & Status Pulse */}
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="line-clamp-1 text-lg font-bold tracking-tight text-foreground/90">
+                          {campaign.nombre}
+                        </CardTitle>
+                        {campaign.isActive ? (
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                          </span>
+                        ) : (
+                          <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+                        )}
                       </div>
-                      <Badge
-                        variant="secondary"
-                        className={`${getStatusColor(campaign.isActive)} border`}
-                      >
-                        {campaign.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                  </CardHeader>
 
-                  <CardContent className="pb-3">
-                    <div className="mb-4 space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Progress</span>
-                        <span className="font-medium">
-                          {progress === null ? "N/A" : `${progress}%`}
+                      {/* ID & Date */}
+                      <CardDescription className="flex items-center gap-1.5 text-xs font-medium">
+                        <span className="font-mono text-primary/70">
+                          #{campaign.id}
                         </span>
-                      </div>
-                      <Progress
-                        value={progress ?? 0}
-                        className={progress === null ? "h-2 opacity-50" : "h-2"}
-                      />
+                        <span className="text-muted-foreground/40">•</span>
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <CalendarDays className="h-3 w-3" />
+                          {new Date(campaign.createdAt).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            }
+                          )}
+                        </span>
+                      </CardDescription>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-lg border p-3">
-                        <div className="flex items-center justify-between">
-                          <div className="space-y-1">
-                            <p className="text-2xl font-bold">
-                              {campaign.ticketCount ?? 0}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Total Tickets
-                            </p>
-                          </div>
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      </div>
+                    {/* Actions Menu */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground transition-colors hover:text-foreground data-[state=open]:bg-muted"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuLabel>Manage Campaign</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => handleDetails(campaign)}
+                        >
+                          <ArrowUpRight className="mr-2 h-4 w-4 text-muted-foreground" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(campaign)}>
+                          <CheckCircle2 className="mr-2 h-4 w-4 text-muted-foreground" />
+                          Edit Configuration
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                          onClick={() => handleDelete(campaign)}
+                        >
+                          <ShieldAlert className="mr-2 h-4 w-4" />
+                          Delete Campaign
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardHeader>
 
-                      <div className="rounded-lg border p-3">
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold">
-                            {campaign.duracion || "N/A"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Duration</p>
-                        </div>
-                      </div>
+                <CardContent className="space-y-6 pb-6">
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-2 gap-4 rounded-xl bg-muted/30 p-4 border border-border/40">
+                    {/* Tickets Column */}
+                    <div className="space-y-1">
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        <Ticket className="h-3.5 w-3.5" />
+                        Tickets
+                      </span>
+                      <p className="text-2xl font-bold tracking-tight text-foreground">
+                        {campaign.ticketCount ?? 0}
+                      </p>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <div className="rounded-lg bg-blue-50 p-2 dark:bg-blue-950/20">
-                        <div className="text-center">
-                          <p className="text-sm font-bold text-blue-600 dark:text-blue-500">
-                            {campaignTypeLabels[campaign.tipo]}
-                          </p>
-                          <p className="text-xs font-medium text-blue-600/80 dark:text-blue-500/80">
-                            Type
-                          </p>
-                        </div>
-                      </div>
+                    {/* Duration Column */}
+                    <div className="space-y-1 border-l border-border/40 pl-4">
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        <Clock className="h-3.5 w-3.5" />
+                        Duration
+                      </span>
+                      <p className="text-xl font-semibold tracking-tight text-foreground truncate">
+                        {campaign.duracion || "—"}
+                      </p>
+                    </div>
+                  </div>
 
-                      <div className="rounded-lg bg-emerald-50 p-2 dark:bg-emerald-950/20">
-                        <div className="text-center">
-                          <p className="text-sm font-bold text-emerald-600 dark:text-emerald-500">
-                            {getYardLabel(campaign)}
-                          </p>
-                          <p className="text-xs font-medium text-emerald-600/80 dark:text-emerald-500/80">
-                            Yard
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
+                  {/* Metadata Badges */}
+                  <div className="flex flex-wrap gap-2">
+                    <Badge
+                      variant="outline"
+                      className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/5 text-blue-700 border-blue-200/40 hover:bg-blue-500/10 dark:text-blue-400 dark:border-blue-900/40 transition-colors"
+                    >
+                      <Tag className="h-3 w-3" />
+                      {campaignTypeLabels[campaign.tipo]}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-500/5 text-orange-700 border-orange-200/40 hover:bg-orange-500/10 dark:text-orange-400 dark:border-orange-900/40 transition-colors"
+                    >
+                      <MapPin className="h-3 w-3" />
+                      {getYardLabel(campaign)}
+                    </Badge>
+                  </div>
+                </CardContent>
 
-                  <CardFooter className="flex items-center justify-between border-t bg-muted/50 px-6 py-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(campaign.createdAt).toLocaleDateString()}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleEdit(campaign)}>
-                            Edit Campaign
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => handleDelete(campaign)}
-                          >
-                            Delete Campaign
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDetails(campaign)}
-                      >
-                        Details
-                        <ArrowUpRight className="ml-2 h-3 w-3" />
-                      </Button>
-                    </div>
-                  </CardFooter>
-                </Card>
-              );
-            })}
+                <CardFooter className="border-t bg-muted/20 px-6 py-3">
+                  <Button
+                    variant="ghost"
+                    className="group/btn w-full justify-between text-xs font-medium text-muted-foreground hover:text-primary"
+                    onClick={() => handleDetails(campaign)}
+                  >
+                    View Full Report
+                    <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1" />
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
           </div>
         )}
 
+        {/* Empty State */}
         {!loading && filteredCampaigns.length === 0 && (
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
             <div className="mt-4 text-center">
               <h3 className="text-lg font-semibold">No campaigns found</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                {searchTerm ? "Try adjusting your search" : "Create a campaign to get started"}
+                {searchTerm
+                  ? "Try adjusting your search"
+                  : "Create a campaign to get started"}
               </p>
               {!searchTerm && (
                 <Button className="mt-4" onClick={handleCreate}>
@@ -671,6 +675,7 @@ export default function CampaignsPage() {
           </div>
         )}
 
+        {/* Pagination */}
         {!loading && filteredCampaigns.length > 0 && (
           <CampaignsPagination
             totalCount={filteredCampaigns.length}
@@ -686,6 +691,7 @@ export default function CampaignsPage() {
         )}
       </div>
 
+      {/* MODALS */}
       <CampaignFormModal
         open={showCreateModal}
         onOpenChange={(open) => {
@@ -728,6 +734,7 @@ export default function CampaignsPage() {
         open={showDeleteModal}
         onOpenChange={setShowDeleteModal}
         campaignName={selectedCampaign?.nombre}
+        ticketCount={selectedCampaign?.ticketCount}
         isSubmitting={isSubmitting}
         onConfirm={handleSubmitDelete}
       />

@@ -14,6 +14,7 @@ interface DeleteCampaignModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   campaignName?: string;
+  ticketCount?: number;
   isSubmitting: boolean;
   onConfirm: () => void;
 }
@@ -22,9 +23,11 @@ export function DeleteCampaignModal({
   open,
   onOpenChange,
   campaignName,
+  ticketCount,
   isSubmitting,
   onConfirm,
 }: DeleteCampaignModalProps) {
+  const hasTickets = (ticketCount ?? 0) > 0;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -35,6 +38,12 @@ export function DeleteCampaignModal({
             action cannot be undone.
           </DialogDescription>
         </DialogHeader>
+        {hasTickets && (
+          <p className="text-sm text-destructive">
+            This campaign has {ticketCount} ticket(s) and cannot be deleted.
+            Please deactivate the campaign instead.
+          </p>
+        )}
 
         <DialogFooter>
           <Button
@@ -47,7 +56,7 @@ export function DeleteCampaignModal({
           <Button
             variant="destructive"
             onClick={onConfirm}
-            disabled={isSubmitting}
+            disabled={isSubmitting || hasTickets}
           >
             {isSubmitting ? "Deleting..." : "Delete"}
           </Button>

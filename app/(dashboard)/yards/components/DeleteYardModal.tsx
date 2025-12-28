@@ -14,6 +14,7 @@ interface DeleteYardModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   yardName?: string;
+  ticketCount?: number;
   isSubmitting: boolean;
   onConfirm: () => void;
 }
@@ -22,9 +23,11 @@ export function DeleteYardModal({
   open,
   onOpenChange,
   yardName,
+  ticketCount,
   isSubmitting,
   onConfirm,
 }: DeleteYardModalProps) {
+  const hasTickets = (ticketCount ?? 0) > 0;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -35,6 +38,12 @@ export function DeleteYardModal({
             cannot be undone.
           </DialogDescription>
         </DialogHeader>
+        {hasTickets && (
+          <p className="text-sm text-destructive">
+            This yard has {ticketCount} ticket(s) and cannot be deleted. Please
+            deactivate the yard instead.
+          </p>
+        )}
 
         <DialogFooter>
           <Button
@@ -47,7 +56,7 @@ export function DeleteYardModal({
           <Button
             variant="destructive"
             onClick={onConfirm}
-            disabled={isSubmitting}
+            disabled={isSubmitting || hasTickets}
           >
             {isSubmitting ? "Deleting..." : "Delete"}
           </Button>

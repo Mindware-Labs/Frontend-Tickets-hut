@@ -341,6 +341,7 @@ export default function CustomersPage() {
           if (!open) clearValidationErrors();
         }}
         customerName={selectedCustomer?.name}
+        ticketCount={selectedCustomer?.ticketCount}
         isSubmitting={isSubmitting}
         onConfirm={handleSubmitDelete}
       />

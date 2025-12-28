@@ -455,6 +455,7 @@ export default function YardsPage() {
           if (!open) clearValidationErrors();
         }}
         yardName={selectedYard?.name}
+        ticketCount={selectedYard?.ticketCount}
         isSubmitting={isSubmitting}
         onConfirm={handleSubmitDelete}
       />

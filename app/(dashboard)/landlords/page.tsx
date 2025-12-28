@@ -436,7 +436,7 @@ export default function LandlordsPage() {
         validationErrors={validationErrors}
         onValidationErrorChange={setValidationErrors}
         onSubmit={handleSubmitCreate}
-        yards={yards}
+        yards={yards.filter((yard) => !yard.landlord?.id)}
         idPrefix="create"
       />
 
