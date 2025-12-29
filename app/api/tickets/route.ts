@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { fetchFromBackend } from "@/lib/api-client";
-import { cookies } from "next/headers";
 
 // GET /api/tickets - Fetch all tickets
 export async function GET(request: Request) {
@@ -9,18 +8,13 @@ export async function GET(request: Request) {
     const page = searchParams.get("page") || "1";
     const limit = searchParams.get("limit") || "50";
 
-    // 👇 CAMBIO: Agregamos 'await' porque en Next.js 15 cookies() es asíncrono
-    const cookieStore = await cookies(); 
-    const token = cookieStore.get("auth-token")?.value;
+    // ✅ CORRECCIÓN: Usamos console.log (permitido en Vercel) en vez de guardar en archivo
+    console.log(`[NextAPI] GET /api/tickets page=${page} limit=${limit}`);
 
-    console.log(`[NextAPI] GET /api/tickets page=${page} limit=${limit} - Token exists: ${!!token}`);
+    // Llamamos al backend usando la configuración que ya arreglamos en api-client
+    const data = await fetchFromBackend(`/tickets?page=${page}&limit=${limit}`);
 
-    const data = await fetchFromBackend(`/tickets?page=${page}&limit=${limit}`, {
-      headers: {
-        Authorization: token ? `Bearer ${token}` : "",
-      },
-    });
-
+    // Solo logueamos el conteo para no saturar la consola
     const count = data?.total || (Array.isArray(data) ? data.length : 0);
     console.log(`[NextAPI] Backend success. Tickets found: ${count}`);
 
@@ -31,14 +25,20 @@ export async function GET(request: Request) {
     });
 
   } catch (error: any) {
+    // ✅ Log del error real en la consola de Vercel
     console.error(`[NextAPI] ERROR in GET /api/tickets:`, error);
-    const status = error.status || 500;
+    
+    // Si el error tiene respuesta del backend, intentamos mostrarla
+    if (error.status) {
+       console.error(`[NextAPI] Status Code: ${error.status}`);
+    }
+
     return NextResponse.json(
       {
         success: false,
         message: error.message || "Failed to fetch tickets",
       },
-      { status: status }
+      { status: 500 }
     );
   }
 }
@@ -48,18 +48,11 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     
-    // 👇 CAMBIO: Agregamos 'await' aquí también
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth-token")?.value;
-
     console.log(`[NextAPI] POST /api/tickets - Creating ticket...`);
 
     const data = await fetchFromBackend("/tickets", {
       method: "POST",
       body: JSON.stringify(body),
-      headers: {
-        Authorization: token ? `Bearer ${token}` : "",
-      },
     });
 
     console.log(`[NextAPI] Ticket created successfully`);
