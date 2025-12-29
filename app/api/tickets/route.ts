@@ -5,26 +5,41 @@ import { fetchFromBackendServer } from "@/lib/api-server";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = searchParams.get("page") || "1";
-    const limit = searchParams.get("limit") || "50";
+    // Ignoramos paginación para traer todos los tickets
+    const pageSize = 200;
+    const maxPages = 50; // seguridad ante loops infinitos
+    let page = 1;
+    const allTickets: any[] = [];
+    let total = 0;
 
     // ✅ CORRECCIÓN: Usamos console.log (permitido en Vercel) en vez de guardar en archivo
-    console.log(`[NextAPI] GET /api/tickets page=${page} limit=${limit}`);
+    console.log(`[NextAPI] GET /api/tickets (todos)`);
 
-    // Llamamos al backend usando la configuración que ya arreglamos en api-client
-    const data = await fetchFromBackendServer(
-      request,
-      `/tickets?page=${page}&limit=${limit}`
-    );
+    while (page <= maxPages) {
+      const data = await fetchFromBackendServer(
+        request,
+        `/tickets?page=${page}&limit=${pageSize}`
+      );
 
-    // Solo logueamos el conteo para no saturar la consola
-    const count = data?.total || (Array.isArray(data) ? data.length : 0);
+      const pageTickets = data?.data || data || [];
+      if (page === 1 && typeof data?.total === "number") {
+        total = data.total;
+      }
+
+      allTickets.push(...pageTickets);
+
+      if (pageTickets.length < pageSize) break;
+      if (total && allTickets.length >= total) break;
+      page += 1;
+    }
+
+    const count = total || allTickets.length;
     console.log(`[NextAPI] Backend success. Tickets found: ${count}`);
 
     return NextResponse.json({
       success: true,
-      data: data?.data || data || [],
-      count: count,
+      data: allTickets,
+      count,
     });
 
   } catch (error: any) {

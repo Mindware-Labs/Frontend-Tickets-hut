@@ -170,19 +170,27 @@ export default function ForgotPasswordPage() {
               We sent a 6-digit code to <span className="text-blue-400 font-semibold">{email}</span>
             </p>
 
-            <div className="space-y-2">
-              <Label htmlFor="code" className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
-                Verification Code
+            <div className="space-y-3">
+              <Label
+                htmlFor="code"
+                className="text-slate-200 text-xs font-semibold uppercase tracking-wider text-center block"
+              >
+                VERIFICATION CODE
               </Label>
               <InputOTP
                 value={code}
                 onChange={setCode}
                 maxLength={6}
+                inputMode="numeric"
                 containerClassName="justify-center"
               >
                 <InputOTPGroup>
                   {Array.from({ length: 6 }).map((_, index) => (
-                    <InputOTPSlot key={index} index={index} />
+                    <InputOTPSlot
+                      key={index}
+                      index={index}
+                      className="bg-slate-950 border-slate-800 text-slate-50 text-lg font-semibold w-12 h-12"
+                    />
                   ))}
                 </InputOTPGroup>
               </InputOTP>
