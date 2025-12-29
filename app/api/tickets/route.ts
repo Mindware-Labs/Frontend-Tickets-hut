@@ -1,14 +1,5 @@
 import { NextResponse } from "next/server";
 import { fetchFromBackend } from "@/lib/api-client";
-import * as fs from "fs";
-import * as path from "path";
-
-const LOG_FILE = path.join(process.cwd(), "debug_api.log");
-
-function log(msg: string) {
-  const timestamp = new Date().toISOString();
-  fs.appendFileSync(LOG_FILE, `[${timestamp}] ${msg}\n`);
-}
 
 // GET /api/tickets - Fetch all tickets
 export async function GET(request: Request) {
@@ -17,19 +8,31 @@ export async function GET(request: Request) {
     const page = searchParams.get("page") || "1";
     const limit = searchParams.get("limit") || "50";
 
-    log(`GET /tickets page=${page} limit=${limit}`);
+    // ✅ CORRECCIÓN: Usamos console.log (permitido en Vercel) en vez de guardar en archivo
+    console.log(`[NextAPI] GET /api/tickets page=${page} limit=${limit}`);
 
+    // Llamamos al backend usando la configuración que ya arreglamos en api-client
     const data = await fetchFromBackend(`/tickets?page=${page}&limit=${limit}`);
 
-    log(`Backend responded: ${JSON.stringify(data).substring(0, 100)}...`);
+    // Solo logueamos el conteo para no saturar la consola
+    const count = data?.total || (Array.isArray(data) ? data.length : 0);
+    console.log(`[NextAPI] Backend success. Tickets found: ${count}`);
 
     return NextResponse.json({
       success: true,
       data: data?.data || data || [],
-      count: data?.total || (Array.isArray(data) ? data.length : 0),
+      count: count,
     });
+
   } catch (error: any) {
-    log(`ERROR in GET /tickets: ${error.message}`);
+    // ✅ Log del error real en la consola de Vercel
+    console.error(`[NextAPI] ERROR in GET /api/tickets:`, error);
+    
+    // Si el error tiene respuesta del backend, intentamos mostrarla
+    if (error.status) {
+       console.error(`[NextAPI] Status Code: ${error.status}`);
+    }
+
     return NextResponse.json(
       {
         success: false,
@@ -44,10 +47,15 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    
+    console.log(`[NextAPI] POST /api/tickets - Creating ticket...`);
+
     const data = await fetchFromBackend("/tickets", {
       method: "POST",
       body: JSON.stringify(body),
     });
+
+    console.log(`[NextAPI] Ticket created successfully`);
 
     return NextResponse.json({
       success: true,
@@ -55,6 +63,7 @@ export async function POST(request: Request) {
       message: "Ticket created successfully",
     });
   } catch (error: any) {
+    console.error(`[NextAPI] ERROR in POST /api/tickets:`, error);
     return NextResponse.json(
       {
         success: false,
