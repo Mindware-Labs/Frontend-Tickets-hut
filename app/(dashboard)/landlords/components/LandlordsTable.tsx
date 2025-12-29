@@ -19,8 +19,9 @@ interface LandlordsTableProps {
   totalFiltered: number;
   yards: YardOption[];
   onDetails: (landlord: Landlord) => void;
-  onEdit: (landlord: Landlord) => void;
-  onDelete: (landlord: Landlord) => void;
+  onEdit?: (landlord: Landlord) => void;
+  onDelete?: (landlord: Landlord) => void;
+  canManage?: boolean;
 }
 
 const getYardLabels = (landlord: Landlord, yards: YardOption[]) => {
@@ -42,6 +43,7 @@ export function LandlordsTable({
   onDetails,
   onEdit,
   onDelete,
+  canManage = true,
 }: LandlordsTableProps) {
   return (
     <div className="flex-1 rounded-lg border overflow-hidden bg-background">
@@ -53,7 +55,7 @@ export function LandlordsTable({
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
             <TableHead>Yard</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            {canManage && <TableHead className="text-right">Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -103,30 +105,36 @@ export function LandlordsTable({
                     {yardCount} yard{yardCount === 1 ? "" : "s"}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onEdit(landlord);
-                      }}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onDelete(landlord);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </div>
-                </TableCell>
+                {canManage && (
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      {onEdit && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onEdit(landlord);
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {onDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onDelete(landlord);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                )}
                 </TableRow>
               );
             })

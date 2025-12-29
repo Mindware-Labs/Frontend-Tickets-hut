@@ -194,8 +194,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { role, setRole } = useRole();
   const { state } = useSidebar();
 
-  // Mostrar todas las opciones de navegación sin filtrar por rol
-  const filteredNavMain = data.navMain;
+  // Filtrar navegación para agentes: esconder Dashboard/Reports y quitar sub-items de Landlords/Campaigns
+  const normalizedRole = role?.toString().toLowerCase();
+  const filteredNavMain =
+    normalizedRole === "agent"
+      ? data.navMain
+          .filter(
+            (item) =>
+              item.title !== "Dashboard" && item.title !== "Reports"
+          )
+          .map((item) =>
+            item.title === "Landlords" || item.title === "Campaigns"
+              ? { ...item, items: [] }
+              : item
+          )
+      : data.navMain;
 
   // Helper to check if a group is active
   const isGroupActive = (item: any) => {
@@ -381,8 +394,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
         {/* Core Sections (Management) - SIEMPRE visible */}
         <SidebarGroup>
-          <SidebarGroupLabel>Management</SidebarGroupLabel>
-          <SidebarMenu>
+        <SidebarGroupLabel>Management</SidebarGroupLabel>
+        <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild

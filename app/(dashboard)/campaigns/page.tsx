@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRole } from "@/components/providers/role-provider";
 import { fetchFromBackend } from "@/lib/api-client";
 import { toast } from "@/hooks/use-toast";
 import { Campaign, CampaignFormData, CampaignType, YardSummary } from "./types";
@@ -73,6 +74,11 @@ const campaignTypeLabels: Record<CampaignType, string> = {
 };
 
 export default function CampaignsPage() {
+  const { role } = useRole();
+  const normalizedRole = role?.toString().toLowerCase();
+  const isAgent = normalizedRole === "agent";
+  const canManage = !isAgent;
+
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [yards, setYards] = useState<YardSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -399,13 +405,15 @@ export default function CampaignsPage() {
               Manage campaigns using real backend data
             </p>
           </div>
-          <Button
-            className="bg-primary hover:bg-primary/90"
-            onClick={handleCreate}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            New Campaign
-          </Button>
+          {canManage && (
+            <Button
+              className="bg-primary hover:bg-primary/90"
+              onClick={handleCreate}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              New Campaign
+            </Button>
+          )}
         </div>
 
         {/* Filters Section */}
@@ -559,18 +567,22 @@ export default function CampaignsPage() {
                           <ArrowUpRight className="mr-2 h-4 w-4 text-muted-foreground" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(campaign)}>
-                          <CheckCircle2 className="mr-2 h-4 w-4 text-muted-foreground" />
-                          Edit Configuration
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                          onClick={() => handleDelete(campaign)}
-                        >
-                          <ShieldAlert className="mr-2 h-4 w-4" />
-                          Delete Campaign
-                        </DropdownMenuItem>
+                        {canManage && (
+                          <>
+                            <DropdownMenuItem onClick={() => handleEdit(campaign)}>
+                              <CheckCircle2 className="mr-2 h-4 w-4 text-muted-foreground" />
+                              Edit Configuration
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                              onClick={() => handleDelete(campaign)}
+                            >
+                              <ShieldAlert className="mr-2 h-4 w-4" />
+                              Delete Campaign
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -643,10 +655,10 @@ export default function CampaignsPage() {
               <h3 className="text-lg font-semibold">No campaigns found</h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 {searchTerm
-                  ? "Try adjusting your search"
-                  : "Create a campaign to get started"}
+                 ? "Try adjusting your search"
+                 : "Create a campaign to get started"}
               </p>
-              {!searchTerm && (
+              {!searchTerm && canManage && (
                 <Button className="mt-4" onClick={handleCreate}>
                   <Plus className="mr-2 h-4 w-4" />
                   Create Campaign
@@ -673,52 +685,56 @@ export default function CampaignsPage() {
       </div>
 
       {/* MODALS */}
-      <CampaignFormModal
-        open={showCreateModal}
-        onOpenChange={(open) => {
-          setShowCreateModal(open);
-          if (!open) clearValidationErrors();
-        }}
-        title="Create New Campaign"
-        description="Fill in the details to create a new campaign"
-        submitLabel="Create Campaign"
-        isSubmitting={isSubmitting}
-        formData={formData}
-        onFormChange={setFormData}
-        validationErrors={validationErrors}
-        onValidationErrorChange={setValidationErrors}
-        onSubmit={handleSubmitCreate}
-        idPrefix="create"
-        yards={yards}
-      />
+      {canManage && (
+        <>
+          <CampaignFormModal
+            open={showCreateModal}
+            onOpenChange={(open) => {
+              setShowCreateModal(open);
+              if (!open) clearValidationErrors();
+            }}
+            title="Create New Campaign"
+            description="Fill in the details to create a new campaign"
+            submitLabel="Create Campaign"
+            isSubmitting={isSubmitting}
+            formData={formData}
+            onFormChange={setFormData}
+            validationErrors={validationErrors}
+            onValidationErrorChange={setValidationErrors}
+            onSubmit={handleSubmitCreate}
+            idPrefix="create"
+            yards={yards}
+          />
 
-      <CampaignFormModal
-        open={showEditModal}
-        onOpenChange={(open) => {
-          setShowEditModal(open);
-          if (!open) clearValidationErrors();
-        }}
-        title="Edit Campaign"
-        description="Update campaign details"
-        submitLabel="Save Changes"
-        isSubmitting={isSubmitting}
-        formData={formData}
-        onFormChange={setFormData}
-        validationErrors={validationErrors}
-        onValidationErrorChange={setValidationErrors}
-        onSubmit={handleSubmitEdit}
-        idPrefix="edit"
-        yards={yards}
-      />
+          <CampaignFormModal
+            open={showEditModal}
+            onOpenChange={(open) => {
+              setShowEditModal(open);
+              if (!open) clearValidationErrors();
+            }}
+            title="Edit Campaign"
+            description="Update campaign details"
+            submitLabel="Save Changes"
+            isSubmitting={isSubmitting}
+            formData={formData}
+            onFormChange={setFormData}
+            validationErrors={validationErrors}
+            onValidationErrorChange={setValidationErrors}
+            onSubmit={handleSubmitEdit}
+            idPrefix="edit"
+            yards={yards}
+          />
 
-      <DeleteCampaignModal
-        open={showDeleteModal}
-        onOpenChange={setShowDeleteModal}
-        campaignName={selectedCampaign?.nombre}
-        ticketCount={selectedCampaign?.ticketCount}
-        isSubmitting={isSubmitting}
-        onConfirm={handleSubmitDelete}
-      />
+          <DeleteCampaignModal
+            open={showDeleteModal}
+            onOpenChange={setShowDeleteModal}
+            campaignName={selectedCampaign?.nombre}
+            ticketCount={selectedCampaign?.ticketCount}
+            isSubmitting={isSubmitting}
+            onConfirm={handleSubmitDelete}
+          />
+        </>
+      )}
 
       <CampaignDetailsModal
         open={showDetailsModal}

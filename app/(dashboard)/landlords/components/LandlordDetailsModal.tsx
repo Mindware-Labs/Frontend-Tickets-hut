@@ -13,6 +13,7 @@ import { Building, Mail, Phone, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import type { Landlord, YardOption } from "../types";
+import { useRole } from "@/components/providers/role-provider";
 
 interface LandlordDetailsModalProps {
   open: boolean;
@@ -36,6 +37,8 @@ export function LandlordDetailsModal({
   landlord,
   yards,
 }: LandlordDetailsModalProps) {
+  const { role } = useRole();
+  const isAgent = role?.toString().toLowerCase() === "agent";
   const yardLabels = getYardLabels(landlord, yards);
 
   return (
@@ -91,7 +94,7 @@ export function LandlordDetailsModal({
             </div>
           </div>
 
-          {landlord?.id && (
+          {landlord?.id && !isAgent && (
             <div className="rounded-lg border p-4 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold">Reports</h3>

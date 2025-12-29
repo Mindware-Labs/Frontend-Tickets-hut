@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useRole } from "@/components/providers/role-provider";
 import {
   BookOpen,
   Download,
@@ -27,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { PaginationFooter } from "@/components/common/pagination-footer";
+import { fetchFromBackend } from "@/lib/api-client";
 
 interface KnowledgeGuide {
   id: number;
@@ -49,6 +51,11 @@ const initialForm: GuideFormState = {
 };
 
 export default function GuidesPage() {
+  const { role } = useRole();
+  const normalizedRole = role?.toString().toLowerCase();
+  const isAgent = normalizedRole === "agent";
+  const canManage = !isAgent;
+
   const [guides, setGuides] = useState<KnowledgeGuide[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -67,13 +74,9 @@ export default function GuidesPage() {
   const fetchGuides = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/knowledge?page=1&limit=200");
-      const result = await response.json();
-      if (result?.success) {
-        setGuides(result.data || []);
-      } else {
-        setGuides([]);
-      }
+      const result = await fetchFromBackend("/knowledge?page=1&limit=200");
+      const items = Array.isArray(result) ? result : result?.data || [];
+      setGuides(items);
     } catch (error) {
       console.error("Failed to load guides", error);
       setGuides([]);
@@ -266,10 +269,12 @@ export default function GuidesPage() {
             Handbooks, tutorials and operating instructions for agents.
           </p>
         </div>
-        <Button onClick={openCreate} className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Guide
-        </Button>
+        {canManage && (
+          <Button onClick={openCreate} className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Guide
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -314,14 +319,16 @@ export default function GuidesPage() {
                   </CardContent>
 
                   <CardFooter className="flex flex-wrap gap-2 pt-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 border-border bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
-                      onClick={() => openEdit(guide)}
-                    >
-                      <Edit2 className="h-4 w-4 mr-2" /> Edit
-                    </Button>
+                    {canManage && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 border-border bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
+                        onClick={() => openEdit(guide)}
+                      >
+                        <Edit2 className="h-4 w-4 mr-2" /> Edit
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
@@ -334,14 +341,16 @@ export default function GuidesPage() {
                     >
                       <Download className="h-4 w-4 mr-2" /> Download
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
-                      onClick={() => openDeleteDialog(guide)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {canManage && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
+                        onClick={() => openDeleteDialog(guide)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </CardFooter>
                 </Card>
               );
@@ -363,153 +372,157 @@ export default function GuidesPage() {
         </>
       )}
 
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{formTitle}</DialogTitle>
-            <DialogDescription>{formDescription}</DialogDescription>
-          </DialogHeader>
+      {canManage && (
+        <>
+          <Dialog open={showForm} onOpenChange={setShowForm}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{formTitle}</DialogTitle>
+                <DialogDescription>{formDescription}</DialogDescription>
+              </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="guide-name">Name *</Label>
-              <Input
-                id="guide-name"
-                value={formState.name}
-                onChange={(event) => {
-                  setFormState({ ...formState, name: event.target.value });
-                  setValidationErrors({ ...validationErrors, name: "" });
-                }}
-                className={validationErrors.name ? "border-red-500" : ""}
-              />
-              {validationErrors.name && (
-                <p className="text-xs text-red-500">{validationErrors.name}</p>
-              )}
-            </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="guide-name">Name *</Label>
+                  <Input
+                    id="guide-name"
+                    value={formState.name}
+                    onChange={(event) => {
+                      setFormState({ ...formState, name: event.target.value });
+                      setValidationErrors({ ...validationErrors, name: "" });
+                    }}
+                    className={validationErrors.name ? "border-red-500" : ""}
+                  />
+                  {validationErrors.name && (
+                    <p className="text-xs text-red-500">{validationErrors.name}</p>
+                  )}
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="guide-description">Description *</Label>
-              <Textarea
-                id="guide-description"
-                value={formState.description}
-                onChange={(event) => {
-                  setFormState({ ...formState, description: event.target.value });
-                  setValidationErrors({ ...validationErrors, description: "" });
-                }}
-                rows={5}
-                className={validationErrors.description ? "border-red-500" : ""}
-              />
-              {validationErrors.description && (
-                <p className="text-xs text-red-500">
-                  {validationErrors.description}
-                </p>
-              )}
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="guide-description">Description *</Label>
+                  <Textarea
+                    id="guide-description"
+                    value={formState.description}
+                    onChange={(event) => {
+                      setFormState({ ...formState, description: event.target.value });
+                      setValidationErrors({ ...validationErrors, description: "" });
+                    }}
+                    rows={5}
+                    className={validationErrors.description ? "border-red-500" : ""}
+                  />
+                  {validationErrors.description && (
+                    <p className="text-xs text-red-500">
+                      {validationErrors.description}
+                    </p>
+                  )}
+                </div>
 
-            <div className="space-y-2">
-              <Label>Upload files</Label>
-              <div className="flex flex-wrap items-center gap-3">
-                <Input
-                  id="guide-file"
-                  type="file"
-                  className="sr-only"
-                  onChange={(event) =>
-                    setFormState({
-                      ...formState,
-                      file: event.target.files?.[0] || null,
-                    })
-                  }
-                />
-                <Button asChild variant="outline" size="sm">
-                  <Label htmlFor="guide-file" className="cursor-pointer">
-                    Choose files
-                  </Label>
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  {formState.file ? "1 file selected" : "No files selected"}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {formState.file ? (
-                  <Badge
-                    variant="secondary"
-                    className="pl-3 pr-1 py-1 gap-2 group"
-                  >
-                    <span className="truncate max-w-[200px]">
-                      {formState.file.name}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-4 w-4 hover:bg-transparent"
-                      onClick={() =>
+                <div className="space-y-2">
+                  <Label>Upload files</Label>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Input
+                      id="guide-file"
+                      type="file"
+                      className="sr-only"
+                      onChange={(event) =>
                         setFormState({
                           ...formState,
-                          file: null,
+                          file: event.target.files?.[0] || null,
                         })
                       }
-                    >
-                      <X className="h-3 w-3" />
+                    />
+                    <Button asChild variant="outline" size="sm">
+                      <Label htmlFor="guide-file" className="cursor-pointer">
+                        Choose files
+                      </Label>
                     </Button>
-                  </Badge>
-                ) : (
-                  <p className="text-xs text-muted-foreground italic">
-                    No files selected
-                  </p>
-                )}
+                    <span className="text-xs text-muted-foreground">
+                      {formState.file ? "1 file selected" : "No files selected"}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {formState.file ? (
+                      <Badge
+                        variant="secondary"
+                        className="pl-3 pr-1 py-1 gap-2 group"
+                      >
+                        <span className="truncate max-w-[200px]">
+                          {formState.file.name}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-4 w-4 hover:bg-transparent"
+                          onClick={() =>
+                            setFormState({
+                              ...formState,
+                              file: null,
+                            })
+                          }
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">
+                        No files selected
+                      </p>
+                    )}
+                  </div>
+                  {formMode === "edit" && activeGuide?.fileUrl && !formState.file && (
+                    <p className="text-xs text-muted-foreground">
+                      Current file: {getFileName(activeGuide.fileUrl)}
+                    </p>
+                  )}
+                </div>
               </div>
-              {formMode === "edit" && activeGuide?.fileUrl && !formState.file && (
-                <p className="text-xs text-muted-foreground">
-                  Current file: {getFileName(activeGuide.fileUrl)}
-                </p>
-              )}
-            </div>
-          </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowForm(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : formMode === "create" ? (
-                "Create Guide"
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowForm(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleSubmit} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : formMode === "create" ? (
+                    "Create Guide"
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete guide</DialogTitle>
-            <DialogDescription>
-              {deleteTarget
-                ? `This will permanently remove "${deleteTarget.name}".`
-                : "This will permanently remove the selected guide."}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDeleteDialog}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Delete guide</DialogTitle>
+                <DialogDescription>
+                  {deleteTarget
+                    ? `This will permanently remove "${deleteTarget.name}".`
+                    : "This will permanently remove the selected guide."}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={closeDeleteDialog}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={confirmDelete}>
+                  Delete
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </div>
   );
 }

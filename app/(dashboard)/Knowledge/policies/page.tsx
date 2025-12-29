@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useRole } from "@/components/providers/role-provider";
 import {
   Download,
   Edit2,
@@ -57,6 +58,11 @@ const initialForm: PolicyFormState = {
 };
 
 export default function PoliciesPage() {
+  const { role } = useRole();
+  const normalizedRole = role?.toString().toLowerCase();
+  const isAgent = normalizedRole === "agent";
+  const canManage = !isAgent;
+
   const [search, setSearch] = useState("");
   const [policies, setPolicies] = useState<PolicyItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -282,10 +288,12 @@ export default function PoliciesPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Button onClick={openCreate} className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Policy
-          </Button>
+          {canManage && (
+            <Button onClick={openCreate} className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Policy
+            </Button>
+          )}
         </div>
       </div>
 
@@ -333,14 +341,16 @@ export default function PoliciesPage() {
                   </CardContent>
 
                   <CardFooter className="flex flex-wrap gap-2 pt-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 border-border bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
-                      onClick={() => openEdit(policy)}
-                    >
-                      <Edit2 className="h-4 w-4 mr-2" /> Edit
-                    </Button>
+                    {canManage && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 border-border bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
+                        onClick={() => openEdit(policy)}
+                      >
+                        <Edit2 className="h-4 w-4 mr-2" /> Edit
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
@@ -353,14 +363,16 @@ export default function PoliciesPage() {
                     >
                       <Download className="h-4 w-4 mr-2" /> Download
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
-                      onClick={() => openDeleteDialog(policy)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {canManage && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
+                        onClick={() => openDeleteDialog(policy)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </CardFooter>
                 </Card>
               );
@@ -382,157 +394,161 @@ export default function PoliciesPage() {
         </>
       )}
 
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {formMode === "create" ? "Add Policy" : "Edit Policy"}
-            </DialogTitle>
-            <DialogDescription>
-              {formMode === "create"
-                ? "Create a new policy document with optional attachment."
-                : "Update the selected policy details and file."}
-            </DialogDescription>
-          </DialogHeader>
+      {canManage && (
+        <>
+          <Dialog open={showForm} onOpenChange={setShowForm}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>
+                  {formMode === "create" ? "Add Policy" : "Edit Policy"}
+                </DialogTitle>
+                <DialogDescription>
+                  {formMode === "create"
+                    ? "Create a new policy document with optional attachment."
+                    : "Update the selected policy details and file."}
+                </DialogDescription>
+              </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="policy-name">Name *</Label>
-              <Input
-                id="policy-name"
-                value={formState.name}
-                onChange={(event) => {
-                  setFormState({ ...formState, name: event.target.value });
-                  setValidationErrors({ ...validationErrors, name: "" });
-                }}
-                className={validationErrors.name ? "border-red-500" : ""}
-              />
-              {validationErrors.name && (
-                <p className="text-xs text-red-500">{validationErrors.name}</p>
-              )}
-            </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="policy-name">Name *</Label>
+                  <Input
+                    id="policy-name"
+                    value={formState.name}
+                    onChange={(event) => {
+                      setFormState({ ...formState, name: event.target.value });
+                      setValidationErrors({ ...validationErrors, name: "" });
+                    }}
+                    className={validationErrors.name ? "border-red-500" : ""}
+                  />
+                  {validationErrors.name && (
+                    <p className="text-xs text-red-500">{validationErrors.name}</p>
+                  )}
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="policy-description">Description</Label>
-              <Textarea
-                id="policy-description"
-                value={formState.description}
-                onChange={(event) => {
-                  setFormState({
-                    ...formState,
-                    description: event.target.value,
-                  });
-                }}
-                rows={5}
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="policy-description">Description</Label>
+                  <Textarea
+                    id="policy-description"
+                    value={formState.description}
+                    onChange={(event) => {
+                      setFormState({
+                        ...formState,
+                        description: event.target.value,
+                      });
+                    }}
+                    rows={5}
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label>Upload files</Label>
-              <div className="flex flex-wrap items-center gap-3">
-                <Input
-                  id="policy-file"
-                  type="file"
-                  className="sr-only"
-                  onChange={(event) =>
-                    setFormState({
-                      ...formState,
-                      file: event.target.files?.[0] || null,
-                    })
-                  }
-                />
-                <Button asChild variant="outline" size="sm">
-                  <Label htmlFor="policy-file" className="cursor-pointer">
-                    Choose files
-                  </Label>
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  {formState.file ? "1 file selected" : "No files selected"}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {formState.file ? (
-                  <Badge
-                    variant="secondary"
-                    className="pl-3 pr-1 py-1 gap-2 group"
-                  >
-                    <span className="truncate max-w-[200px]">
-                      {formState.file.name}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-4 w-4 hover:bg-transparent"
-                      onClick={() =>
+                <div className="space-y-2">
+                  <Label>Upload files</Label>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Input
+                      id="policy-file"
+                      type="file"
+                      className="sr-only"
+                      onChange={(event) =>
                         setFormState({
                           ...formState,
-                          file: null,
+                          file: event.target.files?.[0] || null,
                         })
                       }
-                    >
-                      <X className="h-3 w-3" />
+                    />
+                    <Button asChild variant="outline" size="sm">
+                      <Label htmlFor="policy-file" className="cursor-pointer">
+                        Choose files
+                      </Label>
                     </Button>
-                  </Badge>
-                ) : (
-                  <p className="text-xs text-muted-foreground italic">
-                    No files selected
-                  </p>
-                )}
+                    <span className="text-xs text-muted-foreground">
+                      {formState.file ? "1 file selected" : "No files selected"}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {formState.file ? (
+                      <Badge
+                        variant="secondary"
+                        className="pl-3 pr-1 py-1 gap-2 group"
+                      >
+                        <span className="truncate max-w-[200px]">
+                          {formState.file.name}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-4 w-4 hover:bg-transparent"
+                          onClick={() =>
+                            setFormState({
+                              ...formState,
+                              file: null,
+                            })
+                          }
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">
+                        No files selected
+                      </p>
+                    )}
+                  </div>
+                  {formMode === "edit" &&
+                    activePolicy?.fileUrl &&
+                    !formState.file && (
+                      <p className="text-xs text-muted-foreground">
+                        Current file: {getFileName(activePolicy.fileUrl)}
+                      </p>
+                    )}
+                </div>
               </div>
-              {formMode === "edit" &&
-                activePolicy?.fileUrl &&
-                !formState.file && (
-                  <p className="text-xs text-muted-foreground">
-                    Current file: {getFileName(activePolicy.fileUrl)}
-                  </p>
-                )}
-            </div>
-          </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowForm(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : formMode === "create" ? (
-                "Create Policy"
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowForm(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleSubmit} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : formMode === "create" ? (
+                    "Create Policy"
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete policy</DialogTitle>
-            <DialogDescription>
-              {deleteTarget
-                ? `This will permanently remove "${deleteTarget.name}".`
-                : "This will permanently remove the selected policy."}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDeleteDialog}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Delete policy</DialogTitle>
+                <DialogDescription>
+                  {deleteTarget
+                    ? `This will permanently remove "${deleteTarget.name}".`
+                    : "This will permanently remove the selected policy."}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={closeDeleteDialog}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={confirmDelete}>
+                  Delete
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </div>
   );
 }

@@ -14,7 +14,8 @@ export async function GET(request: Request) {
     const page = searchParams.get("page") || "1";
     const limit = searchParams.get("limit") || "50";
     const response = await fetch(
-      getBackendUrl(`/knowledge?page=${page}&limit=${limit}`)
+      getBackendUrl(`/knowledge?page=${page}&limit=${limit}`),
+      { cache: "no-store" }
     );
     const data = await response.json();
 

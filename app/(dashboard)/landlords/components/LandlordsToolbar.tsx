@@ -8,7 +8,8 @@ interface LandlordsToolbarProps {
   search: string;
   onSearchChange: (value: string) => void;
   onRefresh: () => void;
-  onCreate: () => void;
+  onCreate?: () => void;
+  canCreate?: boolean;
   totalCount: number;
 }
 
@@ -17,6 +18,7 @@ export function LandlordsToolbar({
   onSearchChange,
   onRefresh,
   onCreate,
+  canCreate = true,
   totalCount,
 }: LandlordsToolbarProps) {
   return (
@@ -33,10 +35,12 @@ export function LandlordsToolbar({
       <Button variant="outline" size="icon" onClick={onRefresh}>
         <RefreshCw className="h-4 w-4" />
       </Button>
-      <Button onClick={onCreate}>
-        <Plus className="mr-2 h-4 w-4" />
-        New Landlord
-      </Button>
+      {canCreate && onCreate && (
+        <Button onClick={onCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Landlord
+        </Button>
+      )}
       <div className="text-sm text-muted-foreground whitespace-nowrap">
         {totalCount} landlord{totalCount !== 1 ? "s" : ""}
       </div>

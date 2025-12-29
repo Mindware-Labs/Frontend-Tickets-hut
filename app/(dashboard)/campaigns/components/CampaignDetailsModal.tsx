@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import type { Campaign } from "../types";
+import { useRole } from "@/components/providers/role-provider";
 
 type CampaignTicket = {
   id: number;
@@ -52,6 +53,8 @@ export function CampaignDetailsModal({
   setTicketSearch,
   onViewTickets,
 }: CampaignDetailsModalProps) {
+  const { role } = useRole();
+  const isAgent = role?.toString().toLowerCase() === "agent";
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -111,7 +114,7 @@ export function CampaignDetailsModal({
               <Button onClick={onViewTickets} disabled={!campaign}>
                 View Tickets
               </Button>
-              {campaign?.id && (
+              {campaign?.id && !isAgent && (
                 <Button asChild variant="secondary">
                   <Link href={`/reports/campaigns?campaignId=${campaign.id}`}>
                     Open Report

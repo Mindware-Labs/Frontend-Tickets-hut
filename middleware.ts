@@ -1,54 +1,91 @@
 // middleware.ts
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
+  const { pathname } = request.nextUrl;
 
-  // 1. ALWAYS ALLOW static assets and API routes
   if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api/') ||
-    pathname.startsWith('/images/') ||
-    pathname.includes('.png') ||
-    pathname.includes('.jpg') ||
-    pathname.includes('.jpeg') ||
-    pathname.includes('.gif') ||
-    pathname.includes('.svg') ||
-    pathname.includes('.ico') ||
-    pathname.includes('.webp') ||
-    pathname.includes('.css') ||
-    pathname.includes('.js')
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/images/") ||
+    pathname.includes(".png") ||
+    pathname.includes(".jpg") ||
+    pathname.includes(".jpeg") ||
+    pathname.includes(".gif") ||
+    pathname.includes(".svg") ||
+    pathname.includes(".ico") ||
+    pathname.includes(".webp") ||
+    pathname.includes(".css") ||
+    pathname.includes(".js")
   ) {
-    return NextResponse.next()
+    return NextResponse.next();
   }
 
-  // 2. Public routes that are always accessible
-  const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email']
+  const publicRoutes = [
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/reset-password",
+    "/verify-email",
+  ];
 
-  // 3. Check authentication
-  const authToken = request.cookies.get('auth-token')?.value
+  const authToken = request.cookies.get("auth-token")?.value;
+  let role: string | null = null;
 
-  // 4. If NOT authenticated and NOT on a public route, redirect to login
-  if (!authToken && !publicRoutes.includes(pathname)) {
-    const loginUrl = new URL('/login', request.url)
-    // Add the original pathname as a query param for redirect after login
-    if (pathname !== '/') {
-      loginUrl.searchParams.set('redirect', pathname)
+  if (authToken) {
+    try {
+      const payloadPart = authToken.split(".")[1];
+      if (payloadPart) {
+        const base64 = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+        const payloadString = atob(base64);
+        const payload = JSON.parse(payloadString);
+        role = payload?.role || null;
+      }
+    } catch {
+      role = null;
     }
-    return NextResponse.redirect(loginUrl)
   }
 
-  // 5. If authenticated and trying to access login/register, redirect to dashboard
+  if (!authToken && !publicRoutes.includes(pathname)) {
+    const loginUrl = new URL("/login", request.url);
+    if (pathname !== "/") {
+      loginUrl.searchParams.set("redirect", pathname);
+    }
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (pathname.startsWith("/dashboard") && role !== "admin") {
+    return NextResponse.redirect(new URL("/tickets", request.url));
+  }
+
+  if (pathname.startsWith("/reports/landlords") && role !== "admin") {
+    return NextResponse.redirect(new URL("/landlords", request.url));
+  }
+
+  if (pathname.startsWith("/reports/campaigns") && role !== "admin") {
+    return NextResponse.redirect(new URL("/campaigns", request.url));
+  }
+
+  if (
+    (pathname.startsWith("/reports/performance") ||
+      pathname.startsWith("/reports/agents")) &&
+    role !== "admin"
+  ) {
+    return NextResponse.redirect(new URL("/tickets", request.url));
+  }
+
+  if (pathname.startsWith("/users") && role !== "admin") {
+    return NextResponse.redirect(new URL("/tickets", request.url));
+  }
+
   if (authToken && publicRoutes.includes(pathname)) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  return NextResponse.next()
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
-}
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+};

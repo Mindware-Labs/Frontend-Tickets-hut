@@ -26,8 +26,9 @@ interface YardsTableProps {
   yards: Yard[];
   totalFiltered: number;
   onDetails: (yard: Yard) => void;
-  onEdit: (yard: Yard) => void;
-  onDelete: (yard: Yard) => void;
+  onEdit?: (yard: Yard) => void;
+  onDelete?: (yard: Yard) => void;
+  canManage?: boolean;
 }
 
 const getTypeBadge = (type: Yard["yardType"]) => {
@@ -47,6 +48,7 @@ export function YardsTable({
   onDetails,
   onEdit,
   onDelete,
+  canManage = true,
 }: YardsTableProps) {
   return (
     <div className="rounded-lg border bg-background overflow-hidden">
@@ -61,7 +63,7 @@ export function YardsTable({
             <TableHead>Contact</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            {canManage && <TableHead className="text-right">Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -118,30 +120,36 @@ export function YardsTable({
                     </Badge>
                   )}
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onEdit(yard);
-                      }}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onDelete(yard);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </div>
-                </TableCell>
+                {canManage && (
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      {onEdit && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onEdit(yard);
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {onDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onDelete(yard);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             ))
           )}

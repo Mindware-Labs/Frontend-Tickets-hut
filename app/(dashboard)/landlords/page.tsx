@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRole } from "@/components/providers/role-provider";
 import { fetchFromBackend } from "@/lib/api-client";
 import { toast } from "@/hooks/use-toast";
 import { CheckCircle2 } from "lucide-react";
@@ -20,6 +21,11 @@ const DEFAULT_FORM: LandlordFormData = {
 };
 
 export default function LandlordsPage() {
+  const { role } = useRole();
+  const normalizedRole = role?.toString().toLowerCase();
+  const isAgent = normalizedRole === "agent";
+  const canManage = !isAgent;
+
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [yards, setYards] = useState<YardOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -296,11 +302,12 @@ export default function LandlordsPage() {
 
         <LandlordsToolbar
           search={search}
-          onSearchChange={setSearch}
-          onRefresh={fetchLandlords}
-          onCreate={handleCreate}
-          totalCount={filteredLandlords.length}
-        />
+        onSearchChange={setSearch}
+        onRefresh={fetchLandlords}
+        onCreate={canManage ? handleCreate : undefined}
+        canCreate={canManage}
+        totalCount={filteredLandlords.length}
+      />
 
         <LandlordsTable
           loading={loading}
@@ -308,8 +315,9 @@ export default function LandlordsPage() {
           totalFiltered={filteredLandlords.length}
           yards={yards}
           onDetails={handleDetails}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
+          onEdit={canManage ? handleEdit : undefined}
+          onDelete={canManage ? handleDelete : undefined}
+          canManage={canManage}
         />
 
         <LandlordsPagination
@@ -325,54 +333,58 @@ export default function LandlordsPage() {
         />
       </div>
 
-      <LandlordFormModal
-        open={showCreateModal}
-        onOpenChange={(open) => {
-          setShowCreateModal(open);
-          if (!open) clearValidationErrors();
-        }}
-        title="Create New Landlord"
-        description="Fill in the details to create a landlord"
-        submitLabel="Create Landlord"
-        isSubmitting={isSubmitting}
-        formData={formData}
-        onFormChange={setFormData}
-        validationErrors={validationErrors}
-        onValidationErrorChange={setValidationErrors}
-        onSubmit={handleSubmitCreate}
-        yards={yards.filter((yard) => !yard.landlord?.id)}
-        idPrefix="create"
-      />
+      {canManage && (
+        <>
+          <LandlordFormModal
+            open={showCreateModal}
+            onOpenChange={(open) => {
+              setShowCreateModal(open);
+              if (!open) clearValidationErrors();
+            }}
+            title="Create New Landlord"
+            description="Fill in the details to create a landlord"
+            submitLabel="Create Landlord"
+            isSubmitting={isSubmitting}
+            formData={formData}
+            onFormChange={setFormData}
+            validationErrors={validationErrors}
+            onValidationErrorChange={setValidationErrors}
+            onSubmit={handleSubmitCreate}
+            yards={yards.filter((yard) => !yard.landlord?.id)}
+            idPrefix="create"
+          />
 
-      <LandlordFormModal
-        open={showEditModal}
-        onOpenChange={(open) => {
-          setShowEditModal(open);
-          if (!open) clearValidationErrors();
-        }}
-        title="Edit Landlord"
-        description="Update landlord details"
-        submitLabel="Save Changes"
-        isSubmitting={isSubmitting}
-        formData={formData}
-        onFormChange={setFormData}
-        validationErrors={validationErrors}
-        onValidationErrorChange={setValidationErrors}
-        onSubmit={handleSubmitEdit}
-        yards={yards}
-        idPrefix="edit"
-      />
+          <LandlordFormModal
+            open={showEditModal}
+            onOpenChange={(open) => {
+              setShowEditModal(open);
+              if (!open) clearValidationErrors();
+            }}
+            title="Edit Landlord"
+            description="Update landlord details"
+            submitLabel="Save Changes"
+            isSubmitting={isSubmitting}
+            formData={formData}
+            onFormChange={setFormData}
+            validationErrors={validationErrors}
+            onValidationErrorChange={setValidationErrors}
+            onSubmit={handleSubmitEdit}
+            yards={yards}
+            idPrefix="edit"
+          />
 
-      <DeleteLandlordModal
-        open={showDeleteModal}
-        onOpenChange={(open) => {
-          setShowDeleteModal(open);
-          if (!open) clearValidationErrors();
-        }}
-        landlordName={selectedLandlord?.name}
-        isSubmitting={isSubmitting}
-        onConfirm={handleSubmitDelete}
-      />
+          <DeleteLandlordModal
+            open={showDeleteModal}
+            onOpenChange={(open) => {
+              setShowDeleteModal(open);
+              if (!open) clearValidationErrors();
+            }}
+            landlordName={selectedLandlord?.name}
+            isSubmitting={isSubmitting}
+            onConfirm={handleSubmitDelete}
+          />
+        </>
+      )}
 
       <LandlordDetailsModal
         open={showDetailsModal}

@@ -16,7 +16,8 @@ interface YardsFiltersProps {
   statusFilter: string;
   onTypeChange: (value: string) => void;
   onStatusChange: (value: string) => void;
-  onCreate: () => void;
+  onCreate?: () => void;
+  canCreate?: boolean;
 }
 
 export function YardsFilters({
@@ -25,6 +26,7 @@ export function YardsFilters({
   onTypeChange,
   onStatusChange,
   onCreate,
+  canCreate = true,
 }: YardsFiltersProps) {
   return (
     <div className="w-52 flex-shrink-0 space-y-3">
@@ -33,10 +35,12 @@ export function YardsFilters({
         <p className="text-xs text-muted-foreground">Manage all yards</p>
       </div>
 
-      <Button onClick={onCreate} className="w-full" size="sm">
-        <Plus className="mr-2 h-4 w-4" />
-        New Yard
-      </Button>
+      {canCreate && onCreate && (
+        <Button onClick={onCreate} className="w-full" size="sm">
+          <Plus className="mr-2 h-4 w-4" />
+          New Yard
+        </Button>
+      )}
 
       <div className="space-y-2">
         <h3 className="text-xs font-semibold">Filters</h3>

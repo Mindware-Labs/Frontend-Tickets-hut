@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { fetchFromBackend } from "@/lib/api-client";
+import { useRole } from "@/components/providers/role-provider";
 import { toast } from "@/hooks/use-toast";
 import { CheckCircle2 } from "lucide-react";
 import { CampaignOption, Customer, CustomerFormData } from "./types";
@@ -18,6 +19,11 @@ const DEFAULT_FORM: CustomerFormData = {
 };
 
 export default function CustomersPage() {
+  const { role } = useRole();
+  const normalizedRole = role?.toString().toLowerCase();
+  const isAgent = normalizedRole === "agent";
+  const canManage = !isAgent;
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -271,7 +277,7 @@ export default function CustomersPage() {
           search={search}
           onSearchChange={setSearch}
           onRefresh={fetchCustomers}
-          onCreate={handleCreate}
+          onCreate={canManage ? handleCreate : undefined}
           totalCount={filteredCustomers.length}
         />
 
@@ -279,8 +285,9 @@ export default function CustomersPage() {
           loading={loading}
           customers={paginatedCustomers}
           totalFiltered={filteredCustomers.length}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
+          onEdit={canManage ? handleEdit : undefined}
+          onDelete={canManage ? handleDelete : undefined}
+          canManage={canManage}
         />
 
         <CustomersPagination
@@ -296,55 +303,59 @@ export default function CustomersPage() {
         />
       </div>
 
-      <CustomerFormModal
-        open={showCreateModal}
-        onOpenChange={(open) => {
-          setShowCreateModal(open);
-          if (!open) clearValidationErrors();
-        }}
-        title="Create New Customer"
-        description="Fill in the details to create a customer"
-        submitLabel="Create Customer"
-        isSubmitting={isSubmitting}
-        formData={formData}
-        onFormChange={setFormData}
-        validationErrors={validationErrors}
-        onValidationErrorChange={setValidationErrors}
-        onSubmit={handleSubmitCreate}
-        campaigns={campaigns}
-        idPrefix="create"
-      />
+      {canManage && (
+        <>
+          <CustomerFormModal
+            open={showCreateModal}
+            onOpenChange={(open) => {
+              setShowCreateModal(open);
+              if (!open) clearValidationErrors();
+            }}
+            title="Create New Customer"
+            description="Fill in the details to create a customer"
+            submitLabel="Create Customer"
+            isSubmitting={isSubmitting}
+            formData={formData}
+            onFormChange={setFormData}
+            validationErrors={validationErrors}
+            onValidationErrorChange={setValidationErrors}
+            onSubmit={handleSubmitCreate}
+            campaigns={campaigns}
+            idPrefix="create"
+          />
 
-      <CustomerFormModal
-        open={showEditModal}
-        onOpenChange={(open) => {
-          setShowEditModal(open);
-          if (!open) clearValidationErrors();
-        }}
-        title="Edit Customer"
-        description="Update customer details"
-        submitLabel="Save Changes"
-        isSubmitting={isSubmitting}
-        formData={formData}
-        onFormChange={setFormData}
-        validationErrors={validationErrors}
-        onValidationErrorChange={setValidationErrors}
-        onSubmit={handleSubmitEdit}
-        campaigns={campaigns}
-        idPrefix="edit"
-      />
+          <CustomerFormModal
+            open={showEditModal}
+            onOpenChange={(open) => {
+              setShowEditModal(open);
+              if (!open) clearValidationErrors();
+            }}
+            title="Edit Customer"
+            description="Update customer details"
+            submitLabel="Save Changes"
+            isSubmitting={isSubmitting}
+            formData={formData}
+            onFormChange={setFormData}
+            validationErrors={validationErrors}
+            onValidationErrorChange={setValidationErrors}
+            onSubmit={handleSubmitEdit}
+            campaigns={campaigns}
+            idPrefix="edit"
+          />
 
-      <DeleteCustomerModal
-        open={showDeleteModal}
-        onOpenChange={(open) => {
-          setShowDeleteModal(open);
-          if (!open) clearValidationErrors();
-        }}
-        customerName={selectedCustomer?.name}
-        ticketCount={selectedCustomer?.ticketCount}
-        isSubmitting={isSubmitting}
-        onConfirm={handleSubmitDelete}
-      />
+          <DeleteCustomerModal
+            open={showDeleteModal}
+            onOpenChange={(open) => {
+              setShowDeleteModal(open);
+              if (!open) clearValidationErrors();
+            }}
+            customerName={selectedCustomer?.name}
+            ticketCount={selectedCustomer?.ticketCount}
+            isSubmitting={isSubmitting}
+            onConfirm={handleSubmitDelete}
+          />
+        </>
+      )}
     </>
   );
 }

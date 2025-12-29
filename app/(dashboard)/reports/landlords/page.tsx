@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { fetchFromBackend } from "@/lib/api-client";
 import type { Landlord, YardOption } from "../../landlords/types";
+import { useRole } from "@/components/providers/role-provider";
 
 type LandlordReport = {
   totals: { total: number; inbound: number; outbound: number };
@@ -33,6 +34,10 @@ type LandlordReport = {
 };
 
 export default function LandlordReportsPage() {
+  const { role } = useRole();
+  const normalizedRole = role?.toString().toLowerCase();
+  const isAgent = normalizedRole === "agent";
+  const router = useRouter();
   const searchParams = useSearchParams();
   const landlordIdParam = searchParams.get("landlordId");
 
@@ -54,6 +59,11 @@ export default function LandlordReportsPage() {
   const [reportData, setReportData] = useState<LandlordReport | null>(null);
 
   useEffect(() => {
+    if (isAgent) {
+      router.replace("/landlords");
+      return;
+    }
+
     const loadLandlords = async () => {
       try {
         const data = await fetchFromBackend("/landlords?page=1&limit=500");
@@ -79,13 +89,17 @@ export default function LandlordReportsPage() {
     };
     loadLandlords();
     loadYards();
-  }, []);
+  }, [isAgent]);
 
   useEffect(() => {
     if (landlordIdParam) {
       setSelectedLandlordId(landlordIdParam);
     }
   }, [landlordIdParam]);
+
+  if (isAgent) {
+    return null;
+  }
 
   const selectedLandlord = useMemo(() => {
     return (

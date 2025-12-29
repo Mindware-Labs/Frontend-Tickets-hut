@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useRole } from "@/components/providers/role-provider";
 import { fetchFromBackend } from "@/lib/api-client";
 import { toast } from "@/hooks/use-toast";
 import { YardsFilters } from "./components/YardsFilters";
@@ -23,6 +24,11 @@ type YardTicket = {
 };
 
 export default function YardsPage() {
+  const { role } = useRole();
+  const normalizedRole = role?.toString().toLowerCase();
+  const isAgent = normalizedRole === "agent";
+  const canManage = !isAgent;
+
   const [yards, setYards] = useState<Yard[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -376,7 +382,8 @@ export default function YardsPage() {
           statusFilter={statusFilter}
           onTypeChange={setTypeFilter}
           onStatusChange={setStatusFilter}
-          onCreate={handleCreate}
+          onCreate={canManage ? handleCreate : undefined}
+          canCreate={canManage}
         />
 
         {/* Main area */}
@@ -393,8 +400,9 @@ export default function YardsPage() {
             yards={paginatedYards}
             totalFiltered={filteredYards.length}
             onDetails={handleDetails}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
+            onEdit={canManage ? handleEdit : undefined}
+            onDelete={canManage ? handleDelete : undefined}
+            canManage={canManage}
           />
 
           <YardsPagination
