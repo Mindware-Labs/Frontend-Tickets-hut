@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
-import { fetchFromBackend } from "@/lib/api-client";
+import { NextRequest, NextResponse } from "next/server";
+import { fetchFromBackendServer } from "@/lib/api-server";
 
 // GET /api/agents - Fetch all agents
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const data = await fetchFromBackend("/agents");
+    const data = await fetchFromBackendServer(request, "/agents");
     return NextResponse.json({
       success: true,
       data: data.data || data,

@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchFromBackend } from "@/lib/api-client";
+import { fetchFromBackendServer } from "@/lib/api-server";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const landlord = await fetchFromBackend(`/landlords/${params.id}`);
+    const landlord = await fetchFromBackendServer(
+      request,
+      `/landlords/${params.id}`
+    );
     return NextResponse.json(landlord);
   } catch (error) {
     console.error("Error fetching landlord:", error);
@@ -23,10 +26,14 @@ export async function PATCH(
 ) {
   try {
     const body = await request.json();
-    const landlord = await fetchFromBackend(`/landlords/${params.id}`, {
-      method: "PATCH",
-      body: JSON.stringify(body),
-    });
+    const landlord = await fetchFromBackendServer(
+      request,
+      `/landlords/${params.id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }
+    );
     return NextResponse.json(landlord);
   } catch (error) {
     console.error("Error updating landlord:", error);
@@ -42,7 +49,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    await fetchFromBackend(`/landlords/${params.id}`, {
+    await fetchFromBackendServer(request, `/landlords/${params.id}`, {
       method: "DELETE",
     });
     return NextResponse.json({ success: true });

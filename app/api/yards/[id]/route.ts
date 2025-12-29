@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchFromBackend } from "@/lib/api-client";
+import { fetchFromBackendServer } from "@/lib/api-server";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const yard = await fetchFromBackend(`/yards/${params.id}`);
+    const yard = await fetchFromBackendServer(request, `/yards/${params.id}`);
     return NextResponse.json(yard);
   } catch (error) {
     console.error("Error fetching yard:", error);
@@ -23,7 +23,7 @@ export async function PATCH(
 ) {
   try {
     const body = await request.json();
-    const yard = await fetchFromBackend(`/yards/${params.id}`, {
+    const yard = await fetchFromBackendServer(request, `/yards/${params.id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     });
@@ -42,7 +42,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    await fetchFromBackend(`/yards/${params.id}`, {
+    await fetchFromBackendServer(request, `/yards/${params.id}`, {
       method: "DELETE",
     });
     return NextResponse.json({ success: true });

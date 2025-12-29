@@ -1,32 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { fetchFromBackendServer } from "@/lib/api-server";
 
-const BACKEND_API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
-function getBackendUrl(path: string) {
-  const cleaned = path.startsWith("/") ? path : `/${path}`;
-  return `${BACKEND_API_URL}${cleaned}`;
-}
-
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const page = searchParams.get("page") || "1";
     const limit = searchParams.get("limit") || "50";
-    const response = await fetch(
-      getBackendUrl(`/policies?page=${page}&limit=${limit}`)
+    const data = await fetchFromBackendServer(
+      request,
+      `/policies?page=${page}&limit=${limit}`
     );
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: data?.message || "Failed to fetch policies",
-        },
-        { status: response.status }
-      );
-    }
 
     return NextResponse.json({
       success: true,
@@ -44,7 +27,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const upstream = new FormData();
@@ -52,21 +35,10 @@ export async function POST(request: Request) {
       upstream.append(key, value);
     }
 
-    const response = await fetch(getBackendUrl("/policies/with-file"), {
+    const data = await fetchFromBackendServer(request, "/policies/with-file", {
       method: "POST",
       body: upstream,
     });
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: data?.message || "Failed to create policy",
-        },
-        { status: response.status }
-      );
-    }
 
     return NextResponse.json({
       success: true,

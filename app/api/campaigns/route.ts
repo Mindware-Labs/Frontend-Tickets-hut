@@ -1,12 +1,15 @@
-import { NextResponse } from "next/server"
-import { fetchFromBackend } from "@/lib/api-client"
+import { NextRequest, NextResponse } from "next/server"
+import { fetchFromBackendServer } from "@/lib/api-server"
 
 // GET /api/campaigns - Fetch all campaigns
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const query = searchParams.toString()
-    const data = await fetchFromBackend(query ? `/campaign?${query}` : "/campaign")
+    const data = await fetchFromBackendServer(
+      request,
+      query ? `/campaign?${query}` : "/campaign"
+    )
 
     return NextResponse.json({
       success: true,
@@ -25,10 +28,10 @@ export async function GET(request: Request) {
 }
 
 // POST /api/campaigns - Create a new campaign
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const data = await fetchFromBackend("/campaign", {
+    const data = await fetchFromBackendServer(request, "/campaign", {
       method: "POST",
       body: JSON.stringify(body),
     })

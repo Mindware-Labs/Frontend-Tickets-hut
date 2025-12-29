@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { fetchFromBackend } from "@/lib/api-client";
+import { NextRequest, NextResponse } from "next/server";
+import { fetchFromBackendServer } from "@/lib/api-server";
 
 interface RouteParams {
   params: Promise<{
@@ -8,10 +8,10 @@ interface RouteParams {
 }
 
 // GET /api/tickets/[id] - Fetch single ticket
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const data = await fetchFromBackend(`/tickets/${id}`);
+    const data = await fetchFromBackendServer(request, `/tickets/${id}`);
 
     return NextResponse.json({
       success: true,
@@ -29,12 +29,12 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 // PATCH /api/tickets/[id] - Update ticket
-export async function PATCH(request: Request, { params }: RouteParams) {
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const body = await request.json();
 
-    const data = await fetchFromBackend(`/tickets/${id}`, {
+    const data = await fetchFromBackendServer(request, `/tickets/${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     });
@@ -59,11 +59,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 }
 
 // DELETE /api/tickets/[id] - Delete ticket
-export async function DELETE(request: Request, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    await fetchFromBackend(`/tickets/${id}`, {
+    await fetchFromBackendServer(request, `/tickets/${id}`, {
       method: "DELETE",
     });
 

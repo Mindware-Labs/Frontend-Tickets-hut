@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
-import { fetchFromBackend } from "@/lib/api-client";
+import { NextRequest, NextResponse } from "next/server";
+import { fetchFromBackendServer } from "@/lib/api-server";
 
 // GET /api/tickets - Fetch all tickets
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const page = searchParams.get("page") || "1";
@@ -12,7 +12,10 @@ export async function GET(request: Request) {
     console.log(`[NextAPI] GET /api/tickets page=${page} limit=${limit}`);
 
     // Llamamos al backend usando la configuración que ya arreglamos en api-client
-    const data = await fetchFromBackend(`/tickets?page=${page}&limit=${limit}`);
+    const data = await fetchFromBackendServer(
+      request,
+      `/tickets?page=${page}&limit=${limit}`
+    );
 
     // Solo logueamos el conteo para no saturar la consola
     const count = data?.total || (Array.isArray(data) ? data.length : 0);
@@ -44,13 +47,13 @@ export async function GET(request: Request) {
 }
 
 // POST /api/tickets - Create a new ticket
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
     console.log(`[NextAPI] POST /api/tickets - Creating ticket...`);
 
-    const data = await fetchFromBackend("/tickets", {
+    const data = await fetchFromBackendServer(request, "/tickets", {
       method: "POST",
       body: JSON.stringify(body),
     });

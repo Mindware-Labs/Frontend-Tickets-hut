@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { fetchFromBackend } from "@/lib/api-client"
+import { fetchFromBackendServer } from "@/lib/api-server"
 
 // GET /api/campaigns/[id] - Fetch single campaign
 export async function GET(
@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } },
 ) {
   try {
-    const data = await fetchFromBackend(`/campaign/${params.id}`)
+    const data = await fetchFromBackendServer(request, `/campaign/${params.id}`)
 
     return NextResponse.json({
       success: true,
@@ -31,7 +31,7 @@ export async function PATCH(
 ) {
   try {
     const body = await request.json()
-    const data = await fetchFromBackend(`/campaign/${params.id}`, {
+    const data = await fetchFromBackendServer(request, `/campaign/${params.id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     })
@@ -57,7 +57,7 @@ export async function DELETE(
   { params }: { params: { id: string } },
 ) {
   try {
-    await fetchFromBackend(`/campaign/${params.id}`, {
+    await fetchFromBackendServer(request, `/campaign/${params.id}`, {
       method: "DELETE",
     })
 

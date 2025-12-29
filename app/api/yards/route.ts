@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchFromBackend } from "@/lib/api-client";
+import { fetchFromBackendServer } from "@/lib/api-server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const yards = await fetchFromBackend("/yards");
+    const yards = await fetchFromBackendServer(request, "/yards");
     return NextResponse.json(yards);
   } catch (error) {
     console.error("Error fetching yards:", error);
@@ -17,7 +17,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const yard = await fetchFromBackend("/yards", {
+    const yard = await fetchFromBackendServer(request, "/yards", {
       method: "POST",
       body: JSON.stringify(body),
     });

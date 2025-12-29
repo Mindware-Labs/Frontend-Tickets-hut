@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchFromBackend } from "@/lib/api-client";
+import { fetchFromBackendServer } from "@/lib/api-server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const landlords = await fetchFromBackend("/landlords?page=1&limit=500");
+    const landlords = await fetchFromBackendServer(
+      request,
+      "/landlords?page=1&limit=500"
+    );
     return NextResponse.json(landlords);
   } catch (error) {
     console.error("Error fetching landlords:", error);
@@ -17,7 +20,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const landlord = await fetchFromBackend("/landlords", {
+    const landlord = await fetchFromBackendServer(request, "/landlords", {
       method: "POST",
       body: JSON.stringify(body),
     });

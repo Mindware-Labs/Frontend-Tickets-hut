@@ -1,31 +1,13 @@
-import { NextResponse } from "next/server";
-
-const BACKEND_API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
-function getBackendUrl(path: string) {
-  const cleaned = path.startsWith("/") ? path : `/${path}`;
-  return `${BACKEND_API_URL}${cleaned}`;
-}
+import { NextRequest, NextResponse } from "next/server";
+import { fetchFromBackendServer } from "@/lib/api-server";
 
 export async function GET(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const response = await fetch(getBackendUrl(`/policies/${id}`));
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: data?.message || "Failed to fetch policy",
-        },
-        { status: response.status }
-      );
-    }
+    const data = await fetchFromBackendServer(request, `/policies/${id}`);
 
     return NextResponse.json({
       success: true,
@@ -43,7 +25,7 @@ export async function GET(
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -54,21 +36,14 @@ export async function PATCH(
       upstream.append(key, value);
     }
 
-    const response = await fetch(getBackendUrl(`/policies/${id}/with-file`), {
-      method: "PATCH",
-      body: upstream,
-    });
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: data?.message || "Failed to update policy",
-        },
-        { status: response.status }
-      );
-    }
+    const data = await fetchFromBackendServer(
+      request,
+      `/policies/${id}/with-file`,
+      {
+        method: "PATCH",
+        body: upstream,
+      }
+    );
 
     return NextResponse.json({
       success: true,
@@ -87,25 +62,14 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const response = await fetch(getBackendUrl(`/policies/${id}`), {
+    const data = await fetchFromBackendServer(request, `/policies/${id}`, {
       method: "DELETE",
     });
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: data?.message || "Failed to delete policy",
-        },
-        { status: response.status }
-      );
-    }
 
     return NextResponse.json({
       success: true,

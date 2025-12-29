@@ -83,9 +83,13 @@ export async function fetchFromBackendServer(
 
   // Prepare headers
   const headers: any = {
-    "Content-Type": "application/json",
     ...options.headers,
   };
+
+  // Only set JSON content type when we're not sending FormData
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = headers["Content-Type"] || "application/json";
+  }
 
   // Add Authorization header if token exists
   if (token) {
