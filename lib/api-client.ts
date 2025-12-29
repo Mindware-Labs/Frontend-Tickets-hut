@@ -1,6 +1,6 @@
 import { getCookie } from './cookie-utils';
 
-const BACKEND_API_URL = "https://daring-peace-production-52e0.up.railway.app/api";
+const BACKEND_API_URL = "https://daring-peace-production-52e0.up.railway.app";
 // Flag to prevent multiple simultaneous redirects
 let isRedirecting = false;
 

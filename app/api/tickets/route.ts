@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const page = searchParams.get("page") || "1";
     const limit = searchParams.get("limit") || "50";
 
-    log(`GET /api/tickets page=${page} limit=${limit}`);
+    log(`GET /tickets page=${page} limit=${limit}`);
 
     const data = await fetchFromBackend(`/tickets?page=${page}&limit=${limit}`);
 
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       count: data?.total || (Array.isArray(data) ? data.length : 0),
     });
   } catch (error: any) {
-    log(`ERROR in GET /api/tickets: ${error.message}`);
+    log(`ERROR in GET /tickets: ${error.message}`);
     return NextResponse.json(
       {
         success: false,
