@@ -10,14 +10,14 @@ function log(msg: string) {
   fs.appendFileSync(LOG_FILE, `[${timestamp}] ${msg}\n`);
 }
 
-// GET tickets - Fetch all tickets
+// GET /api/tickets - Fetch all tickets
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const page = searchParams.get("page") || "1";
     const limit = searchParams.get("limit") || "50";
 
-    log(`GET tickets page=${page} limit=${limit}`);
+    log(`GET /api/tickets page=${page} limit=${limit}`);
 
     const data = await fetchFromBackend(`/tickets?page=${page}&limit=${limit}`);
 
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       count: data?.total || (Array.isArray(data) ? data.length : 0),
     });
   } catch (error: any) {
-    log(`ERROR in GET tickets: ${error.message}`);
+    log(`ERROR in GET /api/tickets: ${error.message}`);
     return NextResponse.json(
       {
         success: false,
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   }
 }
 
-// POST tickets - Create a new ticket
+// POST /api/tickets - Create a new ticket
 export async function POST(request: Request) {
   try {
     const body = await request.json();
