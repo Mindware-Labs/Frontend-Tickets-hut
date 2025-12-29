@@ -2,6 +2,39 @@ import { getCookie } from './cookie-utils';
 
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
+// Flag to prevent multiple simultaneous redirects
+let isRedirecting = false;
+
+/**
+ * Clear authentication tokens and redirect to login
+ */
+function handleUnauthorized(): void {
+  if (typeof window === 'undefined' || isRedirecting) {
+    return;
+  }
+
+  isRedirecting = true;
+
+  // Clear tokens from localStorage
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('user_data');
+
+  // Clear cookie
+  document.cookie = 'auth-token=; path=/; max-age=0; SameSite=Lax';
+
+  // Dispatch event for other parts of the app
+  window.dispatchEvent(new Event('user-role-updated'));
+
+  // Get current path for redirect after login
+  const currentPath = window.location.pathname;
+  const loginUrl = currentPath === '/' || currentPath === '/login' 
+    ? '/login' 
+    : `/login?redirect=${encodeURIComponent(currentPath)}`;
+
+  // Redirect to login page
+  window.location.href = loginUrl;
+}
+
 /**
  * Get JWT token from cookies or localStorage (cookies take priority)
  */
@@ -68,8 +101,12 @@ export async function fetchFromBackend(
     if (process.env.NODE_ENV === 'development') {
       console.error('[api-client] 401 Unauthorized for:', endpoint, 'Token present:', !!token);
     }
-    // Don't redirect immediately - let the calling code handle it
-    // This prevents unwanted redirects during page load
+    
+    // Clear stale token and redirect to login in browser context
+    if (typeof window !== 'undefined') {
+      handleUnauthorized();
+    }
+    
     const error = new Error('Session expired. Please login again.') as Error & { status?: number };
     error.status = 401;
     throw error;
@@ -133,6 +170,11 @@ export async function fetchBlobFromBackend(
   });
 
   if (response.status === 401) {
+    // Clear stale token and redirect to login in browser context
+    if (typeof window !== 'undefined') {
+      handleUnauthorized();
+    }
+    
     const error = new Error("Session expired. Please login again.") as Error & {
       status?: number;
     };
