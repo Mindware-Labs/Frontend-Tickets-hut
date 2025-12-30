@@ -225,7 +225,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   };
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar 
+      collapsible="icon" 
+      className="bg-[#0a0e27] text-white border-r border-white/10"
+      {...props}
+    >
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -261,12 +265,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 ) : (
                   <div className="grid flex-1 text-left text-sm leading-tight relative z-10">
                     <div className="flex items-center gap-2">
-                      <span className="truncate font-bold text-foreground">
+                      <span className="truncate font-bold text-white">
                         Center Quest
                       </span>
                       <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
                     </div>
-                    <span className="truncate text-xs text-muted-foreground mt-0.5">
+                    <span className="truncate text-xs text-white/70 mt-0.5">
                       Tickets System
                     </span>
                   </div>
@@ -279,7 +283,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         {/* Main Navigation */}
         <SidebarGroup>
-          <SidebarGroupLabel>Platform</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-white/70">Platform</SidebarGroupLabel>
           <SidebarMenu>
             {filteredNavMain.map((item) => {
               if (!item.items?.length) {
@@ -296,8 +300,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         {active && (
                           <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                         )}
-                        {item.icon && <item.icon />}
-                        <span>{item.title}</span>
+                        {item.icon && (
+                          <item.icon className="stroke-white stroke-2" />
+                        )}
+                        <span className="text-white">{item.title}</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -317,8 +323,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         {active && (
                           <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                         )}
-                        {item.icon && <item.icon />}
-                        <span>{item.title}</span>
+                        {item.icon && (
+                          <item.icon className="stroke-white stroke-2" />
+                        )}
+                        <span className="text-white">{item.title}</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -338,8 +346,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         {active && (
                           <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                         )}
-                        {item.icon && <item.icon />}
-                        <span>{item.title}</span>
+                        {item.icon && (
+                          <item.icon className="stroke-white stroke-2" />
+                        )}
+                        <span className="text-white">{item.title}</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -363,9 +373,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         {active && (
                           <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                         )}
-                        {item.icon && <item.icon />}
-                        <span>{item.title}</span>
-                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                        {item.icon && (
+                          <item.icon className="stroke-white stroke-2" />
+                        )}
+                        <span className="text-white">{item.title}</span>
+                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 stroke-white stroke-2" />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
@@ -394,7 +406,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
         {/* Core Sections (Management) - SIEMPRE visible */}
         <SidebarGroup>
-        <SidebarGroupLabel>Management</SidebarGroupLabel>
+        <SidebarGroupLabel className="text-white/70">Management</SidebarGroupLabel>
         <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
@@ -407,7 +419,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {pathname.startsWith("/customers") && (
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                   )}
-                  <Users />
+                  <Users className="stroke-white stroke-2" />
                   <span>Customer Management</span>
                 </a>
               </SidebarMenuButton>
@@ -423,7 +435,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {pathname.startsWith("/users") && (
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                   )}
-                  <Users />
+                  <Users className="stroke-white stroke-2" />
                   <span>User Management</span>
                 </a>
               </SidebarMenuButton>
@@ -439,7 +451,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {pathname.startsWith("/profile") && (
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                   )}
-                  <UserCircle />
+                  <UserCircle className="stroke-white stroke-2" />
                   <span>Profile</span>
                 </a>
               </SidebarMenuButton>
@@ -455,20 +467,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild size="sm">
                     <a href={item.url}>
-                      <item.icon />
+                      <item.icon className="stroke-white stroke-2" />
                       <span>{item.title}</span>
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
 
-              {/* Copyright footer */}
-              <div className="px-2 py-3 mt-1 border-t border-border/50">
-                <footer className="text-xs text-muted-foreground text-center">
-                  © {new Date().getFullYear()} Mindware Labs. All rights
-                  reserved.
-                </footer>
-              </div>
+              {/* Separator - only show when expanded */}
+              {state === "expanded" && (
+                <>
+                  <SidebarSeparator className="my-2 bg-white/20" />
+
+                  {/* Copyright footer - only show when expanded */}
+                  <div className="px-2 py-3">
+                    <footer className="text-xs text-white/70 text-center space-y-1">
+                      <div>© 2025 Mindv Labs.</div>
+                      <div>All Rights Reserved</div>
+                    </footer>
+                  </div>
+                </>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
