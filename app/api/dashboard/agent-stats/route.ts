@@ -161,30 +161,34 @@ async function fetchTicketsWithLimit(
   const tickets: Ticket[] = [];
   let total = 0;
 
+  console.log(`[agent-stats] Fetching tickets from database for agentId: ${agentId}`);
+
   for (let page = 1; page <= maxPages; page += 1) {
+    // Build query with assignedTo filter if agentId is provided
+    let queryParams = `page=${page}&limit=${limit}`;
+    if (agentId !== null) {
+      // Pass assignedTo as query parameter to filter in the database
+      queryParams += `&assignedTo=${agentId}`;
+    }
+
     const response = await fetchFromBackendServer(
       request,
-      `/tickets?page=${page}&limit=${limit}`
+      `/tickets?${queryParams}`
     );
     const pageTickets: Ticket[] = response?.data || response || [];
     if (page === 1 && typeof response?.total === "number") {
       total = response.total;
     }
 
-    // Filter tickets by agent if agentId is provided
-    let filteredTickets = pageTickets;
-    if (agentId !== null) {
-      filteredTickets = pageTickets.filter((ticket) => {
-        const assignedToId = ticket.assignedTo || ticket.assignedToUser?.id;
-        return assignedToId === agentId;
-      });
-    }
+    console.log(`[agent-stats] Page ${page}: ${pageTickets.length} tickets from database (total: ${total})`);
 
-    tickets.push(...filteredTickets);
+    tickets.push(...pageTickets);
 
     if (pageTickets.length < limit) break;
     if (total && tickets.length >= total) break;
   }
+
+  console.log(`[agent-stats] Total tickets from database: ${total || tickets.length}`);
 
   return { tickets, total: total || tickets.length };
 }
@@ -219,22 +223,48 @@ export async function GET(request: NextRequest) {
       5,
       agentId
     );
+    
+    console.log(`[agent-stats] Processing ${tickets.length} tickets for agent ${agentId}`);
+    
+    // If no tickets found, log warning but continue
+    if (tickets.length === 0) {
+      console.warn(`[agent-stats] WARNING: No tickets found for agent ${agentId}. This might mean:`);
+      console.warn(`[agent-stats] 1. No tickets are assigned to this agent`);
+      console.warn(`[agent-stats] 2. The agentId doesn't match the assignedTo field format`);
+      console.warn(`[agent-stats] 3. All tickets are unassigned`);
+    }
+    
     let campaigns: Campaign[] = [];
     try {
       campaigns = await fetchCampaigns(request, 200);
-    } catch {
+      console.log(`[agent-stats] Found ${campaigns.length} campaigns`);
+    } catch (error) {
+      console.error(`[agent-stats] Error fetching campaigns:`, error);
       campaigns = [];
     }
-    const totalTickets = total;
+    const totalTickets = tickets.length; // Use actual filtered count
     const totalCalls = totalTickets;
+    
+    console.log(`[agent-stats] Total tickets: ${totalTickets}, Total calls: ${totalCalls}`);
+
+    // Create campaignsById map first (needed for campaignCounts calculation)
+    const campaignsById = campaigns.reduce<Record<number, string>>(
+      (acc, campaign) => {
+        acc[campaign.id] = campaign.nombre;
+        return acc;
+      },
+      {}
+    );
 
     const openTickets = tickets.filter(
-      (ticket) => ticket.status === "OPEN"
+      (ticket) => ticket.status === "OPEN" || ticket.status === "Open"
     ).length;
     const inProgressTickets = tickets.filter(
-      (ticket) => ticket.status === "IN_PROGRESS"
+      (ticket) => ticket.status === "IN_PROGRESS" || ticket.status === "In Progress"
     ).length;
     const activeTickets = openTickets + inProgressTickets;
+    
+    console.log(`[agent-stats] Open: ${openTickets}, In Progress: ${inProgressTickets}, Active: ${activeTickets}`);
     const closedTickets = tickets.filter((ticket) =>
       STATUS_CLOSED.has(ticket.status || "")
     ).length;
@@ -247,17 +277,31 @@ export async function GET(request: NextRequest) {
     const resolutionRate =
       totalTickets > 0 ? Math.round((closedTickets / totalTickets) * 100) : 0;
 
+    // Fix: Use campaignId to get actual campaign names
     const campaignCounts = tickets.reduce<Record<string, number>>(
       (acc, ticket) => {
-        const label = normalizeLabel(
-          ticket.campaign || "Unspecified",
-          CAMPAIGN_LABELS
-        );
-        acc[label] = (acc[label] || 0) + 1;
+        let campaignName = "Unspecified";
+        
+        if (ticket.campaignId && campaignsById[ticket.campaignId]) {
+          campaignName = campaignsById[ticket.campaignId];
+        } else if (ticket.campaign && typeof ticket.campaign === "object") {
+          const maybeCampaign = ticket.campaign as { nombre?: string; id?: number };
+          if (maybeCampaign.nombre) {
+            campaignName = maybeCampaign.nombre;
+          } else if (maybeCampaign.id && campaignsById[maybeCampaign.id]) {
+            campaignName = campaignsById[maybeCampaign.id];
+          }
+        } else if (typeof ticket.campaign === "string") {
+          campaignName = normalizeLabel(ticket.campaign, CAMPAIGN_LABELS);
+        }
+        
+        acc[campaignName] = (acc[campaignName] || 0) + 1;
         return acc;
       },
       {}
     );
+    
+    console.log(`[agent-stats] Campaign counts:`, campaignCounts);
 
     const dispositionCounts = tickets.reduce<Record<string, number>>(
       (acc, ticket) => {
@@ -303,17 +347,15 @@ export async function GET(request: NextRequest) {
       calls: bucket.count,
     }));
 
-    const campaignsByName = campaigns.map((campaign) => ({
-      name: campaign.nombre,
-      count: 1,
-    }));
-
-    const ticketsByCampaign = campaignsByName.length
-      ? campaignsByName
-      : Object.entries(campaignCounts).map(([name, count]) => ({
+    // Fix: Use campaignCounts (real ticket counts) instead of campaignsByName
+    const ticketsByCampaign = Object.entries(campaignCounts).length > 0
+      ? Object.entries(campaignCounts).map(([name, count]) => ({
           name,
           count,
-        }));
+        }))
+      : FALLBACK_CHART_ITEM;
+    
+    console.log(`[agent-stats] Tickets by campaign:`, ticketsByCampaign);
 
     const ticketsByDisposition = Object.entries(dispositionCounts).map(
       ([name, count]) => ({
@@ -322,21 +364,22 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    const campaignsById = campaigns.reduce<Record<number, string>>(
-      (acc, campaign) => {
-        acc[campaign.id] = campaign.nombre;
-        return acc;
-      },
-      {}
-    );
+    // campaignsById already created above, no need to recreate
 
-    const recentTickets = tickets.slice(0, 5).map((ticket) => ({
-      id: ticket.id,
-      clientName: ticket.customer?.name || "Unassigned",
-      campaign: getCampaignLabel(ticket, campaignsById),
-      status: normalizeLabel(ticket.status || "Unspecified", STATUS_LABELS),
-      createdAt: ticket.createdAt || new Date().toISOString(),
-    }));
+    const recentTickets = tickets.slice(0, 5).map((ticket) => {
+      const clientName = ticket.customer?.name || 
+                        (ticket.customer as any)?.nombre || 
+                        "Unassigned";
+      return {
+        id: ticket.id,
+        clientName,
+        campaign: getCampaignLabel(ticket, campaignsById),
+        status: normalizeLabel(ticket.status || "Unspecified", STATUS_LABELS),
+        createdAt: ticket.createdAt || new Date().toISOString(),
+      };
+    });
+    
+    console.log(`[agent-stats] Recent tickets:`, recentTickets);
 
     return NextResponse.json({
       success: true,
