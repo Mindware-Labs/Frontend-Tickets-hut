@@ -506,15 +506,18 @@ export default function TicketsPage() {
         priorityFilter === "all" ||
         ticket.priority === priorityFilter ||
         priority === priorityFilter.toUpperCase();
+      const directionFilterValue = directionFilter.toLowerCase();
+      const ticketDirection = ticket.direction
+        ? ticket.direction.toString().toLowerCase()
+        : "";
       const matchesDirection =
         directionFilter === "all" ||
         ticket.direction === directionFilter ||
-        ticket.direction?.toString().toLowerCase() ===
-          directionFilter.toLowerCase();
+        ticketDirection === directionFilterValue;
       const isMissed = isMissedCall(ticket);
 
       let matchesView = true;
-      if (activeView === "missed") {
+      if (activeView === "missed" || directionFilterValue === "missed") {
         matchesView = isMissed;
       } else if (activeView === "assigned_me") {
         matchesView = assigneeName === "Agent Smith";
@@ -532,7 +535,7 @@ export default function TicketsPage() {
         matchesView = priority === "HIGH" || ticket.priority === "High";
       }
 
-      if (activeView !== "missed") {
+      if (activeView !== "missed" && directionFilterValue !== "missed") {
         matchesView = matchesView && !isMissed;
       }
 
@@ -1674,6 +1677,7 @@ export default function TicketsPage() {
                 <SelectItem value="all">All Directions</SelectItem>
                 <SelectItem value="inbound">Inbound</SelectItem>
                 <SelectItem value="outbound">Outbound</SelectItem>
+                <SelectItem value="missed">Missed</SelectItem>
               </SelectContent>
             </Select>
           </div>
