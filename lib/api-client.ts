@@ -1,7 +1,7 @@
 import { getCookie } from "./cookie-utils";
 
-const BACKEND_API_URL = "https://daring-peace-production-52e0.up.railway.app";
-// Flag to prevent multiple simultaneous redirects
+const BACKEND_API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 let isRedirecting = false;
 
 function handleUnauthorized(): void {

@@ -80,6 +80,10 @@ import {
   CreateTicketFormData,
   CustomerOption,
   ManagementType,
+  TicketStatus,
+  TicketPriority,
+  OnboardingOption,
+  ArOption,
   TicketDisposition,
   YardOption,
 } from "./types";
@@ -96,28 +100,10 @@ declare module "@/lib/mock-data" {
     customer?: { name: string; phone?: string };
     customerPhone?: string;
     disposition?: string;
+    campaignOption?: string;
     onboardingOption?: string;
     attachments?: string[];
   }
-}
-
-export enum OnboardingOption {
-  NOT_REGISTER = "NOT_REGISTERED",
-  REGISTER = "REGISTERED",
-  PAID_WITH_LL = "PAID_WITH_LL",
-}
-
-export enum TicketStatus {
-  OPEN = "OPEN",
-  IN_PROGRESS = "IN_PROGRESS",
-  CLOSED = "CLOSED",
-}
-
-export enum TicketPriority {
-  LOW = "LOW",
-  MEDIUM = "MEDIUM",
-  HIGH = "HIGH",
-  EMERGENCY = "EMERGENCY",
 }
 
 export default function TicketsPage() {
@@ -166,7 +152,7 @@ export default function TicketsPage() {
     customerPhone: "",
     yardId: "",
     campaignId: "",
-    onboardingOption: "",
+    campaignOption: "",
     agentId: "",
     status: TicketStatus.IN_PROGRESS,
     priority: TicketPriority.LOW,
@@ -184,7 +170,7 @@ export default function TicketsPage() {
   const [editData, setEditData] = useState<{
     disposition?: string;
     issueDetail?: string;
-    onboardingOption?: string;
+    campaignOption?: string;
     status?: string;
     priority?: string;
     attachments?: string[];
@@ -587,14 +573,19 @@ export default function TicketsPage() {
     setEditData({
       disposition: ticket.disposition || "",
       issueDetail: ticket.issueDetail || "",
-      onboardingOption: ticket.onboardingOption || "",
+      campaignOption:
+        (ticket as any).campaignOption ||
+        (ticket as any).onboardingOption ||
+        "",
       status: ticket.status?.toString().toUpperCase().replace(" ", "_") || "",
       priority: ticket.priority?.toString().toUpperCase() || "",
       attachments: ticket.attachments || [],
       // Load campaign, or leave empty if none
       campaignId: ticket.campaignId
         ? ticket.campaignId.toString()
-        : (ticket.campaign && typeof ticket.campaign === "object" && "id" in ticket.campaign)
+        : ticket.campaign &&
+          typeof ticket.campaign === "object" &&
+          "id" in ticket.campaign
         ? (ticket.campaign as { id: string | number }).id.toString()
         : "",
     });
@@ -611,14 +602,13 @@ export default function TicketsPage() {
     try {
       setIsUpdating(true);
 
-
       const updatePayload: any = {
         ...editData,
         yardId: selectedYardId ? parseInt(selectedYardId) : null,
         status: editData.status?.toUpperCase().replace(" ", "_"),
         priority: editData.priority?.toUpperCase(),
         disposition: editData.disposition || null,
-        onboardingOption: editData.onboardingOption || null,
+        campaignOption: editData.campaignOption || null,
         issueDetail: editData.issueDetail || null,
         campaignId: editData.campaignId ? parseInt(editData.campaignId) : null,
       };
@@ -769,7 +759,7 @@ export default function TicketsPage() {
       customerPhone: "",
       yardId: "",
       campaignId: "",
-      onboardingOption: "",
+      campaignOption: "",
       agentId: "",
       status: TicketStatus.IN_PROGRESS,
       priority: TicketPriority.LOW,
@@ -818,7 +808,7 @@ export default function TicketsPage() {
         campaignId: createFormData.campaignId
           ? Number(createFormData.campaignId)
           : undefined,
-        onboardingOption: createFormData.onboardingOption || undefined,
+        campaignOption: createFormData.campaignOption || undefined,
         agentId: createFormData.agentId
           ? Number(createFormData.agentId)
           : undefined,
@@ -941,8 +931,17 @@ export default function TicketsPage() {
     }
     return null;
   })();
-  const showOnboardingOption =
-    selectedCampaignForEdit?.tipo?.toString().toUpperCase() === "ONBOARDING";
+  const selectedCampaignTypeForEdit = selectedCampaignForEdit?.tipo
+    ?.toString()
+    .toUpperCase();
+  const isOnboardingCampaignForEdit =
+    selectedCampaignTypeForEdit === ManagementType.ONBOARDING;
+  const isArCampaignForEdit = selectedCampaignTypeForEdit === ManagementType.AR;
+  const campaignOptionValuesForEdit = isOnboardingCampaignForEdit
+    ? Object.values(OnboardingOption)
+    : isArCampaignForEdit
+    ? Object.values(ArOption)
+    : [];
 
   const metadataFields = [
     {
@@ -1012,12 +1011,14 @@ export default function TicketsPage() {
                   : campaigns.find(
                       (campaign) => campaign.id.toString() === value
                     );
+              const selectedType = selected?.tipo?.toString().toUpperCase();
               setEditData((prev) => ({
                 ...prev,
                 campaignId: value === "none" ? "" : value,
-                onboardingOption:
-                  selected?.tipo?.toString().toUpperCase() === "ONBOARDING"
-                    ? prev.onboardingOption
+                campaignOption:
+                  selectedType === ManagementType.ONBOARDING ||
+                  selectedType === ManagementType.AR
+                    ? ""
                     : "",
               }));
             }}
@@ -1047,7 +1048,10 @@ export default function TicketsPage() {
                   </div>
                 ) : (
                   filteredCampaignsEdit.map((campaign) => (
-                    <SelectItem key={campaign.id} value={campaign.id.toString()}>
+                    <SelectItem
+                      key={campaign.id}
+                      value={campaign.id.toString()}
+                    >
                       {campaign.nombre}
                     </SelectItem>
                   ))
@@ -1120,21 +1124,21 @@ export default function TicketsPage() {
         </div>
       ),
     },
-    showOnboardingOption
+    campaignOptionValuesForEdit.length > 0
       ? {
-          key: "onboardingOption",
-          filled: Boolean(editData.onboardingOption),
+          key: "campaignOption",
+          filled: Boolean(editData.campaignOption),
           node: (
             <div className="space-y-1">
               <p className="text-sm font-medium text-muted-foreground">
-                Onboarding Option
+                Campaign Option
               </p>
               <Select
-                value={editData.onboardingOption}
+                value={editData.campaignOption}
                 onValueChange={(v) =>
                   setEditData((prev) => ({
                     ...prev,
-                    onboardingOption: v,
+                    campaignOption: v,
                   }))
                 }
               >
@@ -1142,7 +1146,7 @@ export default function TicketsPage() {
                   <SelectValue placeholder="Select option" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(OnboardingOption).map((o) => (
+                  {campaignOptionValuesForEdit.map((o) => (
                     <SelectItem key={o} value={o}>
                       {formatEnumLabel(o)}
                     </SelectItem>
@@ -1618,7 +1622,10 @@ export default function TicketsPage() {
             <Star className="mr-2 h-4 w-4" />
             High Priority
             <span className="ml-auto text-xs">
-              {tickets.filter((t) => !isMissedCall(t) && t.priority === "High").length}
+              {
+                tickets.filter((t) => !isMissedCall(t) && t.priority === "High")
+                  .length
+              }
             </span>
           </Button>
         </div>

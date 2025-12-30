@@ -31,6 +31,7 @@ import {
   CustomerOption,
   ManagementType,
   OnboardingOption,
+  ArOption,
   TicketDisposition,
   TicketPriority,
   TicketStatus,
@@ -140,6 +141,16 @@ export function CreateTicketModal({
       (campaign) => campaign.id.toString() === createFormData.campaignId
     );
   }, [campaigns, createFormData.campaignId]);
+
+  const selectedCampaignType = selectedCampaign?.tipo?.toString().toUpperCase();
+  const isOnboardingCampaign =
+    selectedCampaignType === ManagementType.ONBOARDING;
+  const isArCampaign = selectedCampaignType === ManagementType.AR;
+  const campaignOptionValues = isOnboardingCampaign
+    ? Object.values(OnboardingOption)
+    : isArCampaign
+    ? Object.values(ArOption)
+    : [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -336,9 +347,10 @@ export function CreateTicketModal({
                   setCreateFormData({
                     ...createFormData,
                     campaignId: value === "none" ? "" : value,
-                    onboardingOption:
-                      selected?.tipo === ManagementType.ONBOARDING
-                        ? createFormData.onboardingOption
+                    campaignOption:
+                      selected?.tipo === ManagementType.ONBOARDING ||
+                      selected?.tipo === ManagementType.AR
+                        ? ""
                         : "",
                   });
                 }}
@@ -382,15 +394,15 @@ export function CreateTicketModal({
                 </SelectContent>
               </Select>
 
-              {selectedCampaign?.tipo === ManagementType.ONBOARDING && (
+              {campaignOptionValues.length > 0 && (
                 <div className="space-y-2 mt-6">
-                  <Label>Onboarding Option</Label>
+                  <Label>Campaign Option</Label>
                   <Select
-                    value={createFormData.onboardingOption}
+                    value={createFormData.campaignOption}
                     onValueChange={(value) =>
                       setCreateFormData({
                         ...createFormData,
-                        onboardingOption: value === "none" ? "" : value,
+                        campaignOption: value === "none" ? "" : value,
                       })
                     }
                   >
@@ -399,7 +411,7 @@ export function CreateTicketModal({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">No option</SelectItem>
-                      {Object.values(OnboardingOption).map((value) => (
+                      {campaignOptionValues.map((value) => (
                         <SelectItem key={value} value={value}>
                           {formatEnumLabel(value)}
                         </SelectItem>
@@ -571,7 +583,10 @@ export function CreateTicketModal({
                   }}
                 />
                 <Button asChild variant="outline" size="sm">
-                  <Label htmlFor="create-ticket-files" className="cursor-pointer">
+                  <Label
+                    htmlFor="create-ticket-files"
+                    className="cursor-pointer"
+                  >
                     Choose files
                   </Label>
                 </Button>
@@ -580,7 +595,7 @@ export function CreateTicketModal({
                     ? `${attachmentFiles.length} file${
                         attachmentFiles.length > 1 ? "s" : ""
                       } selected`
-                    :""}
+                    : ""}
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">

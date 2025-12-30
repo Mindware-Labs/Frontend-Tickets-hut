@@ -24,6 +24,7 @@ type Ticket = {
   customerPhone?: string | null;
   campaignId?: number | null;
   campaign?: { id?: number | null } | null;
+  campaingOption?: string | null;
   onboardingOption?: string | null;
   issueDetail?: string | null;
   createdAt?: string | null;
@@ -244,7 +245,9 @@ export default function CampaignReportsPage() {
       };
 
       customers.forEach((ticket) => {
-        switch (ticket.onboardingOption) {
+        const option =
+          ticket.campaingOption ?? ticket.onboardingOption ?? null;
+        switch (option) {
           case ONBOARDING.REGISTERED:
             groups.registered.push(ticket);
             break;

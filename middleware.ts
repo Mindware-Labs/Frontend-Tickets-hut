@@ -30,7 +30,13 @@ export function middleware(request: NextRequest) {
     "/verify-email",
   ];
 
-  const authToken = request.cookies.get("auth-token")?.value;
+  const cookieToken =
+    request.cookies.get("auth-token")?.value ||
+    request.cookies.get("auth_token")?.value;
+  const headerToken = request.headers
+    .get("authorization")
+    ?.replace(/^Bearer\s+/i, "");
+  const authToken = cookieToken || headerToken || null;
   let role: string | null = null;
 
   if (authToken) {

@@ -33,6 +33,17 @@ export enum OnboardingOption {
   PAID_WITH_LL = "PAID_WITH_LL",
 }
 
+export enum ArOption {
+  PAID = "PAID",
+  NOT_PAID = "NOT_PAID",
+  OFFLINE_PAYMENT = "OFFLINE_PAYMENT",
+  NOT_PAID_CHECK = "NOT_PAID_CHECK",
+  MOVED_OUT = "MOVED_OUT",
+  CANCELED = "CANCELED",
+  BALANCE_0 = "BALANCE_0",
+  DO_NOT_CALL = "DO_NOT_CALL",
+}
+
 export enum CallDirection {
   INBOUND = "INBOUND",
   OUTBOUND = "OUTBOUND",
@@ -75,7 +86,7 @@ export interface CreateTicketFormData {
   customerPhone: string;
   yardId: string;
   campaignId: string;
-  onboardingOption: string;
+  campaignOption: string;
   agentId: string;
   status: TicketStatus;
   priority: TicketPriority;

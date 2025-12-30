@@ -270,6 +270,9 @@ export async function GET(request: NextRequest) {
           ticketsByCampaign: ticketsByCampaign.length
             ? ticketsByCampaign
             : FALLBACK_CHART_ITEM,
+          ticketsByDisposition: ticketsByDisposition.length
+            ? ticketsByDisposition
+            : FALLBACK_CHART_ITEM,
         },
         recentTickets,
       },
