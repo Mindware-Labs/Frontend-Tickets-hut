@@ -47,6 +47,7 @@ export enum ArOption {
 export enum CallDirection {
   INBOUND = "INBOUND",
   OUTBOUND = "OUTBOUND",
+  MISSED = "MISSED",
 }
 
 export interface CustomerOption {

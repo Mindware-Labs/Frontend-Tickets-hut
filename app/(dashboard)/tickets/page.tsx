@@ -148,6 +148,7 @@ export default function TicketsPage() {
   const [agentSearchCreate, setAgentSearchCreate] = useState("");
   const [campaignSearchCreate, setCampaignSearchCreate] = useState("");
   const [campaignSearchEdit, setCampaignSearchEdit] = useState("");
+  const [agentSearchEdit, setAgentSearchEdit] = useState("");
   const [createFormData, setCreateFormData] = useState<CreateTicketFormData>({
     customerId: "",
     customerPhone: "",
@@ -176,6 +177,7 @@ export default function TicketsPage() {
     priority?: string;
     attachments?: string[];
     campaignId?: string;
+    agentId?: string;
   }>({});
 
   // Helper functions
@@ -478,6 +480,15 @@ export default function TicketsPage() {
     );
   }, [campaigns, campaignSearchEdit]);
 
+  const filteredAgentsEdit = useMemo(() => {
+    const term = agentSearchEdit.toLowerCase();
+    return agents.filter(
+      (agent) =>
+        agent.name.toLowerCase().includes(term) ||
+        (agent.email || "").toLowerCase().includes(term)
+    );
+  }, [agents, agentSearchEdit]);
+
   const filteredTickets = useMemo(() => {
     return tickets.filter((ticket) => {
       const yardName =
@@ -507,15 +518,18 @@ export default function TicketsPage() {
         priorityFilter === "all" ||
         ticket.priority === priorityFilter ||
         priority === priorityFilter.toUpperCase();
+      const directionFilterValue = directionFilter.toLowerCase();
+      const ticketDirection = ticket.direction
+        ? ticket.direction.toString().toLowerCase()
+        : "";
       const matchesDirection =
         directionFilter === "all" ||
         ticket.direction === directionFilter ||
-        ticket.direction?.toString().toLowerCase() ===
-          directionFilter.toLowerCase();
+        ticketDirection === directionFilterValue;
       const isMissed = isMissedCall(ticket);
 
       let matchesView = true;
-      if (activeView === "missed") {
+      if (activeView === "missed" || directionFilterValue === "missed") {
         matchesView = isMissed;
       } else if (activeView === "assigned_me") {
         matchesView = assigneeName === "Agent Smith";
@@ -533,7 +547,7 @@ export default function TicketsPage() {
         matchesView = priority === "HIGH" || ticket.priority === "High";
       }
 
-      if (activeView !== "missed") {
+      if (activeView !== "missed" && directionFilterValue !== "missed") {
         matchesView = matchesView && !isMissed;
       }
 
@@ -571,6 +585,14 @@ export default function TicketsPage() {
     setWasIssueDetailFilled(Boolean(ticket.issueDetail?.trim()));
     setIsIssueDetailEditing(false);
 
+    const ticketAgentId =
+      (ticket as any).agentId?.toString() ||
+      (ticket.assignedTo &&
+      typeof ticket.assignedTo === "object" &&
+      "id" in ticket.assignedTo
+        ? ((ticket.assignedTo as { id?: number }).id || "").toString()
+        : "");
+
     setEditData({
       disposition: ticket.disposition || "",
       issueDetail: ticket.issueDetail || "",
@@ -581,6 +603,7 @@ export default function TicketsPage() {
       status: ticket.status?.toString().toUpperCase().replace(" ", "_") || "",
       priority: ticket.priority?.toString().toUpperCase() || "",
       attachments: ticket.attachments || [],
+      agentId: ticketAgentId,
       // Load campaign, or leave empty if none
       campaignId: ticket.campaignId
         ? ticket.campaignId.toString()
@@ -595,6 +618,7 @@ export default function TicketsPage() {
     setYardSearch("");
     setYardCategory("all");
     setCampaignSearchEdit("");
+    setAgentSearchEdit("");
   };
 
   const handleUpdateTicket = async () => {
@@ -612,6 +636,7 @@ export default function TicketsPage() {
         campaignOption: editData.campaignOption || null,
         issueDetail: editData.issueDetail || null,
         campaignId: editData.campaignId ? parseInt(editData.campaignId) : null,
+        agentId: editData.agentId ? parseInt(editData.agentId) : null,
       };
 
       const response = await fetch(`/api/tickets/${selectedTicket.id}`, {
@@ -1065,20 +1090,58 @@ export default function TicketsPage() {
     },
     {
       key: "assignee",
-      filled: true,
+      filled: Boolean(editData.agentId || selectedTicket?.assignedTo),
       node: (
         <div className="space-y-1">
           <p className="text-sm font-medium text-muted-foreground">Assignee</p>
-          <div className="flex items-center gap-2 h-8">
-            <Avatar className="h-6 w-6">
-              <AvatarFallback className="text-xs">
-                {getAssigneeInitials(selectedTicket?.assignedTo)}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-sm">
-              {getAssigneeName(selectedTicket?.assignedTo)}
-            </span>
-          </div>
+          <Select
+            value={editData.agentId || "none"}
+            onValueChange={(value) =>
+              setEditData((prev) => ({
+                ...prev,
+                agentId: value === "none" ? "" : value,
+              }))
+            }
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder={getAssigneeName(selectedTicket?.assignedTo)} />
+            </SelectTrigger>
+            <SelectContent>
+              <div className="p-2">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search agents..."
+                    className="pl-8"
+                    value={agentSearchEdit}
+                    onChange={(e) => setAgentSearchEdit(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              </div>
+              <ScrollArea className="h-64">
+                <SelectItem value="none">Unassigned</SelectItem>
+                {filteredAgentsEdit.length === 0 ? (
+                  <div className="p-3 text-sm text-muted-foreground">
+                    No agents found
+                  </div>
+                ) : (
+                  filteredAgentsEdit.map((agent) => (
+                    <SelectItem key={agent.id} value={agent.id.toString()}>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{agent.name}</span>
+                        {agent.email && (
+                          <span className="text-xs text-muted-foreground">
+                            {agent.email}
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))
+                )}
+              </ScrollArea>
+            </SelectContent>
+          </Select>
         </div>
       ),
     },
@@ -1675,6 +1738,7 @@ export default function TicketsPage() {
                 <SelectItem value="all">All Directions</SelectItem>
                 <SelectItem value="inbound">Inbound</SelectItem>
                 <SelectItem value="outbound">Outbound</SelectItem>
+                <SelectItem value="missed">Missed</SelectItem>
               </SelectContent>
             </Select>
           </div>
