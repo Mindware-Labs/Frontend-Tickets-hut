@@ -70,6 +70,7 @@ import {
   Users,
   Sparkles,
   Building,
+  Mail,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Ticket } from "@/lib/mock-data";
@@ -1981,36 +1982,239 @@ export default function TicketsPage() {
             <>
               <DialogHeader>
                 <div className="flex items-center justify-between">
-                  <DialogTitle className="text-xl">Ticket Details</DialogTitle>
+                  <div>
+                    <DialogTitle className="text-xl">Ticket Details</DialogTitle>
+                    <DialogDescription className="mt-1">
+                      Ticket #{selectedTicket.id} • {selectedTicket.createdAt 
+                        ? new Date(selectedTicket.createdAt).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })
+                        : 'N/A'}
+                    </DialogDescription>
+                  </div>
                 </div>
               </DialogHeader>
 
-              <div className="flex items-center gap-3 -mt-2">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {getClientInitials(selectedTicket)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="font-medium">
-                    {getClientName(selectedTicket)}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {getClientPhone(selectedTicket)}
+              <div className="space-y-6">
+                {/* Ticket Overview Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Overview</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Status</p>
+                        <div>
+                          <Badge
+                            variant={
+                              editData.status?.includes("OPEN") || selectedTicket.status?.toString().includes("OPEN")
+                                ? "default"
+                                : editData.status?.includes("IN_PROGRESS") || selectedTicket.status?.toString().includes("IN_PROGRESS")
+                                ? "secondary"
+                                : "outline"
+                            }
+                            className={
+                              editData.status?.includes("CLOSED") || selectedTicket.status?.toString().includes("CLOSED")
+                                ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
+                                : ""
+                            }
+                          >
+                            {editData.status
+                              ? formatEnumLabel(editData.status)
+                              : selectedTicket.status
+                              ? formatEnumLabel(selectedTicket.status.toString())
+                              : "N/A"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Priority</p>
+                        <div>
+                          <Badge
+                            variant="outline"
+                            className={
+                              editData.priority?.includes("HIGH") || selectedTicket.priority?.toString().includes("HIGH")
+                                ? "bg-red-500/10 text-red-700 border-red-500/20"
+                                : editData.priority?.includes("MEDIUM") || selectedTicket.priority?.toString().includes("MEDIUM")
+                                ? "bg-amber-500/10 text-amber-700 border-amber-500/20"
+                                : "bg-blue-500/10 text-blue-700 border-blue-500/20"
+                            }
+                          >
+                            {editData.priority
+                              ? formatEnumLabel(editData.priority)
+                              : selectedTicket.priority
+                              ? formatEnumLabel(selectedTicket.priority.toString())
+                              : "N/A"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Direction</p>
+                        <div>
+                          <Badge variant="outline">
+                            {selectedTicket.direction
+                              ? formatEnumLabel(selectedTicket.direction.toString())
+                              : "N/A"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Assigned To</p>
+                        <p className="text-sm font-medium">
+                          {getAssigneeName(selectedTicket.assignedTo)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Customer Information Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <User className="h-5 w-5" />
+                      Customer Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-14 w-14">
+                        <AvatarFallback className="bg-primary/10 text-primary text-lg">
+                          {getClientInitials(selectedTicket)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 space-y-1">
+                        <div className="font-semibold text-lg">
+                          {getClientName(selectedTicket)}
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <PhoneOutgoing className="h-4 w-4" />
+                            {getClientPhone(selectedTicket)}
+                          </div>
+                          {selectedTicket.customer?.email && (
+                            <div className="flex items-center gap-1">
+                              <Mail className="h-4 w-4" />
+                              {selectedTicket.customer.email}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Campaign and Yard Information */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  {selectedCampaignForEdit && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Tag className="h-5 w-5" />
+                          Campaign
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="font-medium">{selectedCampaignForEdit.nombre || selectedCampaignForEdit.name || "N/A"}</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Type: {selectedCampaignForEdit.tipo 
+                            ? formatEnumLabel(selectedCampaignForEdit.tipo.toString())
+                            : "N/A"}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {selectedYard && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Building className="h-5 w-5" />
+                          Yard
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="font-medium">{selectedYard.name || "N/A"}</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {selectedYard.commonName || ""}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Ticket Details Fields */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Ticket Information</h3>
+                    <TicketDetailsFields
+                      filledMetadataFields={filledMetadataFields}
+                      filledFullFields={filledFullFields}
+                      missingMetadataFields={missingMetadataFields}
+                      missingFullFields={missingFullFields}
+                    />
                   </div>
                 </div>
-              </div>
 
-              <TicketDetailsFields
-                filledMetadataFields={filledMetadataFields}
-                filledFullFields={filledFullFields}
-                missingMetadataFields={missingMetadataFields}
-                missingFullFields={missingFullFields}
-              />
+                {/* Attachments Section */}
+                {(hasSavedAttachments || hasPendingAttachments || attachmentFiles.length > 0) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        Attachments
+                        {hasSavedAttachments && (
+                          <Badge variant="secondary" className="ml-2">
+                            {savedAttachments.length}
+                          </Badge>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {hasSavedAttachments && (
+                          <div>
+                            <p className="text-sm font-medium mb-2">Saved Attachments:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {savedAttachments.map((att, idx) => (
+                                <Badge key={idx} variant="outline" className="gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  {att}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {attachmentFiles.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium mb-2">Pending Upload:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {attachmentFiles.map((file, idx) => (
+                                <Badge key={idx} variant="secondary" className="gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  {file.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
 
               <DialogFooter className="mt-8 pt-6 border-t">
                 <div className="flex items-center justify-between w-full">
-                  <p className="text-xs text-muted-foreground flex items-center gap-1"></p>
+                  <div className="text-xs text-muted-foreground">
+                    Last updated: {selectedTicket.updatedAt 
+                      ? new Date(selectedTicket.updatedAt).toLocaleString()
+                      : 'N/A'}
+                  </div>
                   <div className="flex gap-3">
                     <Button
                       variant="outline"

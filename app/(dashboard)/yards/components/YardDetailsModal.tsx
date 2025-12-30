@@ -10,17 +10,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Building,
+  MapPin,
+  Phone,
+  Link as LinkIcon,
+  User,
+  ExternalLink,
+} from "lucide-react";
 import type { Yard } from "../types";
-
-type YardTicket = {
-  id: number;
-  status?: string | null;
-  createdAt?: string;
-  customer?: { name?: string | null };
-  customerPhone?: string | null;
-};
 
 type YardDetailsModalProps = {
   open: boolean;
@@ -29,7 +35,7 @@ type YardDetailsModalProps = {
   showTicketsPanel: boolean;
   showLandlordPanel: boolean;
   ticketsLoading: boolean;
-  tickets: YardTicket[];
+  tickets: any[];
   ticketSearch: string;
   setTicketSearch: (value: string) => void;
   onViewTickets: () => void;
@@ -43,162 +49,182 @@ export function YardDetailsModal({
   open,
   onOpenChange,
   yard,
-  showTicketsPanel,
+  showTicketsPanel: _showTicketsPanel,
   showLandlordPanel,
-  ticketsLoading,
-  tickets,
-  ticketSearch,
-  setTicketSearch,
-  onViewTickets,
+  ticketsLoading: _ticketsLoading,
+  tickets: _tickets,
+  ticketSearch: _ticketSearch,
+  setTicketSearch: _setTicketSearch,
+  onViewTickets: _onViewTickets,
   onViewLandlord,
 }: YardDetailsModalProps) {
-  const showDetailsPanel = showTicketsPanel || showLandlordPanel;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Yard Details</DialogTitle>
-          <DialogDescription>{yard?.name || "Yard overview"}</DialogDescription>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Building className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl">
+                  {yard?.commonName || yard?.name || "Yard Details"}
+                </DialogTitle>
+                <DialogDescription className="mt-0.5">
+                  {yard?.name !== yard?.commonName && yard?.name && (
+                    <span>{yard.name}</span>
+                  )}
+                  {yard?.id && <span className="ml-2">ID: {yard.id}</span>}
+                </DialogDescription>
+              </div>
+            </div>
+            <Badge
+              variant="secondary"
+              className={
+                yard?.isActive
+                  ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
+                  : "bg-amber-500/10 text-amber-700 border-amber-500/20"
+              }
+            >
+              {yard?.isActive ? "Active" : "Inactive"}
+            </Badge>
+          </div>
         </DialogHeader>
 
-        <div className={showDetailsPanel ? "grid gap-6 md:grid-cols-2" : "space-y-6"}>
-          <div className="space-y-4">
-            <div className="rounded-lg border p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Yard</p>
-                  <p className="text-lg font-semibold">
-                    {yard?.commonName || yard?.name || "N/A"}
-                  </p>
-                </div>
-                <Badge
-                  variant="secondary"
-                  className={
-                    yard?.isActive
-                      ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
-                      : "bg-amber-500/10 text-amber-700 border-amber-500/20"
-                  }
-                >
-                  {yard?.isActive ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <p className="text-xs text-muted-foreground">Type</p>
-                  <p className="text-sm font-medium">
-                    {yard ? getTypeLabel(yard.yardType) : "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Address</p>
-                  <p className="text-sm font-medium">
-                    {yard?.propertyAddress || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Contact</p>
-                  <p className="text-sm font-medium">
-                    {yard?.contactInfo || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Link</p>
-                  <p className="text-sm font-medium">
-                    {yard?.yardLink || "N/A"}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={onViewTickets} disabled={!yard}>
-                View Tickets
-              </Button>
-              <Button variant="outline" onClick={onViewLandlord} disabled={!yard}>
-                View Landlord
-              </Button>
-            </div>
-          </div>
-
-          {showTicketsPanel && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Tickets</h3>
-                <span className="text-xs text-muted-foreground">
-                  {tickets.length} results
-                </span>
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search tickets..."
-                  className="pl-9"
-                  value={ticketSearch}
-                  onChange={(e) => setTicketSearch(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2 max-h-[360px] overflow-y-auto pr-2">
-                {ticketsLoading ? (
-                  <div className="text-sm text-muted-foreground">
-                    Loading tickets...
-                  </div>
-                ) : tickets.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">
-                    No tickets found for this yard.
-                  </div>
-                ) : (
-                  tickets.map((ticket) => (
-                    <div
-                      key={ticket.id}
-                      className="rounded-lg border p-3 space-y-1"
-                    >
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold">#{ticket.id}</p>
-                        <Badge variant="outline">
-                          {ticket.status || "Unknown"}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {ticket.customer?.name || "Unassigned"}
-                      </p>
-                      {ticket.createdAt && (
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(ticket.createdAt).toLocaleDateString()}
-                        </p>
-                      )}
+        <ScrollArea className="flex-1 px-6">
+          <div className="py-4 space-y-4">
+                <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Basic Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Building className="h-3.5 w-3.5" />
+                      Type
                     </div>
-                  ))
+                    <p className="text-sm font-medium">
+                      {yard ? getTypeLabel(yard.yardType) : "N/A"}
+                    </p>
+                  </div>
+                  {yard?.landlord && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <User className="h-3.5 w-3.5" />
+                        Landlord
+                      </div>
+                      <p className="text-sm font-medium truncate">
+                        {yard.landlord.name || "N/A"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {yard?.propertyAddress && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <MapPin className="h-3.5 w-3.5" />
+                      Address
+                    </div>
+                    <p className="text-sm font-medium break-words">{yard.propertyAddress}</p>
+                  </div>
                 )}
-              </div>
-            </div>
-          )}
-
-          {showLandlordPanel && !showTicketsPanel && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Landlord</h3>
-              </div>
-              <div className="rounded-lg border p-4 space-y-2">
-                <div>
-                  <p className="text-xs text-muted-foreground">Name</p>
-                  <p className="text-sm font-medium">
-                    {yard?.landlord?.name || "No landlord assigned"}
-                  </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {yard?.contactInfo && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Phone className="h-3.5 w-3.5" />
+                        Contact
+                      </div>
+                      <p className="text-sm font-medium break-words">{yard.contactInfo}</p>
+                    </div>
+                  )}
+                  {yard?.yardLink && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <LinkIcon className="h-3.5 w-3.5" />
+                        Link
+                      </div>
+                      <a
+                        href={yard.yardLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-primary hover:underline flex items-center gap-1 break-all"
+                      >
+                        View Link
+                        <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                      </a>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Landlord ID</p>
-                  <p className="text-sm font-medium">
-                    {yard?.landlord?.id ?? yard?.landlordId ?? "N/A"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+              </CardContent>
+                </Card>
 
-        <DialogFooter>
+            {/* Action Buttons */}
+            {yard?.landlord && (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={showLandlordPanel ? "default" : "outline"}
+                  onClick={onViewLandlord}
+                  disabled={!yard}
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <User className="h-4 w-4" />
+                  View Landlord
+                </Button>
+              </div>
+            )}
+
+                {/* Landlord Panel */}
+                {showLandlordPanel && yard?.landlord && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Landlord Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Name</p>
+                          <p className="text-sm font-medium">
+                            {yard.landlord.name || "N/A"}
+                          </p>
+                        </div>
+                        {(yard.landlord.id || yard.landlordId) && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Landlord ID
+                            </p>
+                            <p className="text-sm font-medium">
+                              {yard.landlord.id ?? yard.landlordId ?? "N/A"}
+                            </p>
+                          </div>
+                        )}
+                        {yard.landlord.email && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Email</p>
+                            <p className="text-sm font-medium break-words">{yard.landlord.email}</p>
+                          </div>
+                        )}
+                        {yard.landlord.phone && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Phone</p>
+                            <p className="text-sm font-medium">{yard.landlord.phone}</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+          </div>
+        </ScrollArea>
+
+        <DialogFooter className="px-6 py-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
