@@ -376,7 +376,8 @@ export default function YardsPage() {
 
   return (
     <>
-      <div className="flex h-[calc(100vh-4rem)] gap-4">
+      {/* CAMBIO IMPORTANTE: Cambiar h-[calc(100vh-4rem)] por min-h-[calc(100vh-4rem)] */}
+      <div className="flex min-h-[calc(100vh-4rem)] gap-4">
         <YardsFilters
           typeFilter={typeFilter}
           statusFilter={statusFilter}
