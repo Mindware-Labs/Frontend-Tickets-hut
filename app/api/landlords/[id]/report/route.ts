@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchFromBackend } from "@/lib/api-client";
+import { fetchFromBackendServer } from "@/lib/api-server";
 
 export async function GET(
   request: NextRequest,
@@ -17,15 +17,24 @@ export async function GET(
     if (endDate) query.set("endDate", endDate);
     if (yardId) query.set("yardId", yardId);
 
-    const report = await fetchFromBackend(
-      `/landlords/${id}/report?${query.toString()}`
+    const queryString = query.toString();
+    const report = await fetchFromBackendServer(
+      request,
+      queryString
+        ? `/landlords/${id}/report?${queryString}`
+        : `/landlords/${id}/report`
     );
     return NextResponse.json(report);
   } catch (error) {
     console.error("Error fetching landlord report:", error);
+    const status = (error as any)?.status || 500;
+    const message =
+      (error as any)?.body?.message ||
+      (error as any)?.message ||
+      "Failed to fetch report";
     return NextResponse.json(
-      { error: "Failed to fetch report" },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }
@@ -37,16 +46,25 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await request.json();
-    const response = await fetchFromBackend(`/landlords/${id}/report/send`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
+    const response = await fetchFromBackendServer(
+      request,
+      `/landlords/${id}/report/send`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      }
+    );
     return NextResponse.json(response);
   } catch (error) {
     console.error("Error sending landlord report:", error);
+    const status = (error as any)?.status || 500;
+    const message =
+      (error as any)?.body?.message ||
+      (error as any)?.message ||
+      "Failed to send report";
     return NextResponse.json(
-      { error: "Failed to send report" },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }
