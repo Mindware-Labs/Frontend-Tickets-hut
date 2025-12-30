@@ -10,7 +10,20 @@ export default function HomePage() {
   useEffect(() => {
     // Check if user is authenticated
     if (auth.isAuthenticated()) {
-      router.push('/dashboard');
+      // Get user role from localStorage
+      try {
+        const userData = localStorage.getItem('user_data');
+        if (userData) {
+          const user = JSON.parse(userData);
+          const role = user?.role?.toLowerCase();
+          const redirectPath = role === 'agent' ? '/agent-dashboard' : '/dashboard';
+          router.push(redirectPath);
+        } else {
+          router.push('/dashboard');
+        }
+      } catch {
+        router.push('/dashboard');
+      }
     } else {
       router.push('/login');
     }

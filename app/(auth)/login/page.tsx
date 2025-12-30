@@ -38,10 +38,17 @@ function LoginForm() {
 
     try {
       // Call real backend API
-      await auth.login(formData.email, formData.password);
+      const loginResponse = await auth.login(formData.email, formData.password);
 
-      // Get redirect URL from query params if exists
-      const redirectTo = searchParams.get('redirect') || '/dashboard';
+      // Get redirect URL from query params if exists, or determine based on role
+      const redirectParam = searchParams.get('redirect');
+      let redirectTo = redirectParam || '/dashboard';
+      
+      // If no redirect param, redirect based on role
+      if (!redirectParam) {
+        const userRole = loginResponse.user?.role?.toLowerCase();
+        redirectTo = userRole === 'agent' ? '/agent-dashboard' : '/dashboard';
+      }
 
       // Redirect to dashboard or original destination
       router.push(redirectTo);

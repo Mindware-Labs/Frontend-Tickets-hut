@@ -65,6 +65,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/tickets", request.url));
   }
 
+  // Allow agents to access their dashboard
+  if (pathname.startsWith("/agent-dashboard") && role !== "agent") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
   if (pathname.startsWith("/reports/landlords") && role !== "admin") {
     return NextResponse.redirect(new URL("/landlords", request.url));
   }
@@ -86,7 +91,9 @@ export function middleware(request: NextRequest) {
   }
 
   if (authToken && publicRoutes.includes(pathname)) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    // Redirect based on role
+    const redirectPath = role === "agent" ? "/agent-dashboard" : "/dashboard";
+    return NextResponse.redirect(new URL(redirectPath, request.url));
   }
 
   return NextResponse.next();

@@ -194,20 +194,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { role, setRole } = useRole();
   const { state } = useSidebar();
 
-  // Filtrar navegación para agentes: esconder Dashboard/Reports y quitar sub-items de Landlords/Campaigns
+  // Filtrar navegación para agentes: cambiar Dashboard a agent-dashboard, esconder Reports y quitar sub-items de Landlords/Campaigns
   const normalizedRole = role?.toString().toLowerCase();
   const filteredNavMain =
     normalizedRole === "agent"
       ? data.navMain
-          .filter(
-            (item) =>
-              item.title !== "Dashboard" && item.title !== "Reports"
-          )
-          .map((item) =>
-            item.title === "Landlords" || item.title === "Campaigns"
-              ? { ...item, items: [] }
-              : item
-          )
+          .filter((item) => item.title !== "Reports")
+          .map((item) => {
+            // Cambiar Dashboard para agentes
+            if (item.title === "Dashboard") {
+              return { ...item, url: "/agent-dashboard" };
+            }
+            // Quitar sub-items de Landlords/Campaigns
+            if (item.title === "Landlords" || item.title === "Campaigns") {
+              return { ...item, items: [] };
+            }
+            return item;
+          })
       : data.navMain;
 
   // Helper to check if a group is active
@@ -424,22 +427,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                tooltip="Users"
-                isActive={pathname.startsWith("/users")}
-                className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
-              >
-                <a href="/users">
-                  {pathname.startsWith("/users") && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
-                  )}
-                  <Users className="stroke-white stroke-2" />
-                  <span>User Management</span>
-                </a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {normalizedRole !== "agent" && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Users"
+                  isActive={pathname.startsWith("/users")}
+                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
+                >
+                  <a href="/users">
+                    {pathname.startsWith("/users") && (
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
+                    )}
+                    <Users className="stroke-white stroke-2" />
+                    <span>User Management</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
@@ -482,7 +487,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {/* Copyright footer - only show when expanded */}
                   <div className="px-2 py-3">
                     <footer className="text-xs text-white/70 text-center space-y-1">
-                      <div>© 2025 Mindv Labs.</div>
+                      <div>© 2025 Mindware Labs.</div>
                       <div>All Rights Reserved</div>
                     </footer>
                   </div>
