@@ -73,6 +73,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HelpCircle, Mail } from "lucide-react";
 import Image from "next/image";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 // User Mock Data
 const user = {
@@ -193,19 +195,38 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { role, setRole } = useRole();
   const { state } = useSidebar();
+  const { theme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
-  // Filtrar navegación para agentes: cambiar Dashboard a agent-dashboard, esconder Reports y quitar sub-items de Landlords/Campaigns
+  // Detectar tema actual
+  const currentTheme = resolvedTheme || theme || "dark";
+  const isDarkMode = currentTheme === "dark";
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    // Renderizar placeholder mientras se carga el tema
+    return (
+      <Sidebar 
+        collapsible="icon" 
+        className="bg-sidebar text-sidebar-foreground border-r"
+        {...props}
+      />
+    );
+  }
+
+  // Filtrar navegación para agentes
   const normalizedRole = role?.toString().toLowerCase();
   const filteredNavMain =
     normalizedRole === "agent"
       ? data.navMain
           .filter((item) => item.title !== "Reports")
           .map((item) => {
-            // Cambiar Dashboard para agentes
             if (item.title === "Dashboard") {
               return { ...item, url: "/agent-dashboard" };
             }
-            // Quitar sub-items de Landlords/Campaigns
             if (item.title === "Landlords" || item.title === "Campaigns") {
               return { ...item, items: [] };
             }
@@ -215,9 +236,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Helper to check if a group is active
   const isGroupActive = (item: any) => {
-    // Check if exact match on parent URL (rare) or specific child
     if (pathname === item.url) return true;
-    // Check if any child matches
     if (
       item.items?.some(
         (sub: any) => pathname === sub.url || pathname.startsWith(sub.url)
@@ -227,10 +246,53 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return false;
   };
 
+  // Funciones para obtener colores dinámicos
+  const getSidebarBg = () => {
+    return isDarkMode 
+      ? "bg-gray-900"  // Dark mode
+      : "bg-white";    // Light mode
+  };
+
+  const getTextColor = () => {
+    return isDarkMode 
+      ? "text-gray-100" 
+      : "text-gray-900";
+  };
+
+  const getMutedTextColor = () => {
+    return isDarkMode 
+      ? "text-gray-400" 
+      : "text-gray-600";
+  };
+
+  const getBorderColor = () => {
+    return isDarkMode 
+      ? "border-gray-800" 
+      : "border-gray-200";
+  };
+
+  const getHoverColor = () => {
+    return isDarkMode 
+      ? "hover:bg-gray-800" 
+      : "hover:bg-gray-100";
+  };
+
+  const getIconColor = () => {
+    return isDarkMode 
+      ? "text-gray-300" 
+      : "text-gray-700";
+  };
+
+  const getSeparatorColor = () => {
+    return isDarkMode 
+      ? "bg-gray-800" 
+      : "bg-gray-200";
+  };
+
   return (
     <Sidebar 
       collapsible="icon" 
-      className="bg-[#0a0e27] text-white border-r border-white/10"
+      className={`${getSidebarBg()} ${getTextColor()} border-r ${getBorderColor()} transition-colors duration-300`}
       {...props}
     >
       <SidebarHeader>
@@ -241,14 +303,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 {/* Subtle background effect */}
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                {/* Image logo - replaced the Command icon */}
-                <div className="flex aspect-square size-12 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20 backdrop-blur-sm overflow-hidden">
+                {/* Image logo */}
+                <div className={`flex aspect-square size-12 items-center justify-center rounded-lg border backdrop-blur-sm overflow-hidden ${
+                  isDarkMode 
+                    ? "bg-gradient-to-br from-primary/20 to-primary/10 border-primary/20" 
+                    : "bg-gradient-to-br from-primary/10 to-primary/5 border-primary/10"
+                }`}>
                   <div className="relative w-full h-full">
                     <Image
                       src="/images/LOGO CQ-10.png"
                       alt="Center Quest Logo"
                       fill
-                      className="object-contain scale-210" /* Zoom 125% */
+                      className="object-contain scale-210"
                       sizes="40px"
                       priority
                     />
@@ -268,12 +334,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 ) : (
                   <div className="grid flex-1 text-left text-sm leading-tight relative z-10">
                     <div className="flex items-center gap-2">
-                      <span className="truncate font-bold text-white">
+                      <span className={`truncate font-bold ${getTextColor()}`}>
                         Center Quest
                       </span>
-                      <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                      <div className={`h-1.5 w-1.5 rounded-full ${
+                        isDarkMode ? "bg-green-400" : "bg-green-600"
+                      } animate-pulse`} />
                     </div>
-                    <span className="truncate text-xs text-white/70 mt-0.5">
+                    <span className={`truncate text-xs ${getMutedTextColor()} mt-0.5`}>
                       Tickets System
                     </span>
                   </div>
@@ -286,7 +354,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         {/* Main Navigation */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-white/70">Platform</SidebarGroupLabel>
+          <SidebarGroupLabel className={getMutedTextColor()}>
+            Platform
+          </SidebarGroupLabel>
           <SidebarMenu>
             {filteredNavMain.map((item) => {
               if (!item.items?.length) {
@@ -297,16 +367,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       asChild
                       tooltip={item.title}
                       isActive={active}
-                      className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-medium relative overflow-hidden transition-all duration-200"
+                      className={`data-[active=true]:bg-primary/10 data-[active=true]:text-primary ${getHoverColor()} relative overflow-hidden transition-all duration-200`}
                     >
                       <a href={item.url}>
                         {active && (
                           <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                         )}
                         {item.icon && (
-                          <item.icon className="stroke-white stroke-2" />
+                          <item.icon className={`${getIconColor()} stroke-2`} />
                         )}
-                        <span className="text-white">{item.title}</span>
+                        <span className={getTextColor()}>{item.title}</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -320,16 +390,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       asChild
                       tooltip={item.title}
                       isActive={active}
-                      className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-medium relative overflow-hidden transition-all duration-200"
+                      className={`data-[active=true]:bg-primary/10 data-[active=true]:text-primary ${getHoverColor()} relative overflow-hidden transition-all duration-200`}
                     >
                       <a href={item.url}>
                         {active && (
                           <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                         )}
                         {item.icon && (
-                          <item.icon className="stroke-white stroke-2" />
+                          <item.icon className={`${getIconColor()} stroke-2`} />
                         )}
-                        <span className="text-white">{item.title}</span>
+                        <span className={getTextColor()}>{item.title}</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -343,16 +413,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       asChild
                       tooltip={item.title}
                       isActive={active}
-                      className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-medium relative overflow-hidden transition-all duration-200"
+                      className={`data-[active=true]:bg-primary/10 data-[active=true]:text-primary ${getHoverColor()} relative overflow-hidden transition-all duration-200`}
                     >
                       <a href={item.url}>
                         {active && (
                           <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                         )}
                         {item.icon && (
-                          <item.icon className="stroke-white stroke-2" />
+                          <item.icon className={`${getIconColor()} stroke-2`} />
                         )}
-                        <span className="text-white">{item.title}</span>
+                        <span className={getTextColor()}>{item.title}</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -371,16 +441,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <SidebarMenuButton
                         tooltip={item.title}
                         isActive={active}
-                        className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-medium relative overflow-hidden transition-all duration-200"
+                        className={`data-[active=true]:bg-primary/10 data-[active=true]:text-primary ${getHoverColor()} relative overflow-hidden transition-all duration-200`}
                       >
                         {active && (
                           <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                         )}
                         {item.icon && (
-                          <item.icon className="stroke-white stroke-2" />
+                          <item.icon className={`${getIconColor()} stroke-2`} />
                         )}
-                        <span className="text-white">{item.title}</span>
-                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 stroke-white stroke-2" />
+                        <span className={getTextColor()}>{item.title}</span>
+                        <ChevronRight className={`ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 ${getIconColor()} stroke-2`} />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
@@ -390,10 +460,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             <SidebarMenuSubButton
                               asChild
                               isActive={pathname === subItem.url}
-                              className="data-[active=true]:text-primary data-[active=true]:font-medium"
+                              className={`data-[active=true]:text-primary ${getHoverColor()}`}
                             >
                               <a href={subItem.url}>
-                                <span>{subItem.title}</span>
+                                <span className={getTextColor()}>{subItem.title}</span>
                               </a>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
@@ -407,23 +477,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
         </SidebarGroup>
 
-        {/* Core Sections (Management) - SIEMPRE visible */}
+        {/* Core Sections (Management) */}
         <SidebarGroup>
-        <SidebarGroupLabel className="text-white/70">Management</SidebarGroupLabel>
-        <SidebarMenu>
+          <SidebarGroupLabel className={getMutedTextColor()}>
+            Management
+          </SidebarGroupLabel>
+          <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
                 tooltip="Customers"
                 isActive={pathname.startsWith("/customers")}
-                className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
+                className={`data-[active=true]:bg-primary/10 data-[active=true]:text-primary ${getHoverColor()} relative`}
               >
                 <a href="/customers">
                   {pathname.startsWith("/customers") && (
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                   )}
-                  <Users className="stroke-white stroke-2" />
-                  <span>Customer Management</span>
+                  <Users className={`${getIconColor()} stroke-2`} />
+                  <span className={getTextColor()}>Customer Management</span>
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -433,14 +505,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   asChild
                   tooltip="Users"
                   isActive={pathname.startsWith("/users")}
-                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
+                  className={`data-[active=true]:bg-primary/10 data-[active=true]:text-primary ${getHoverColor()} relative`}
                 >
                   <a href="/users">
                     {pathname.startsWith("/users") && (
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                     )}
-                    <Users className="stroke-white stroke-2" />
-                    <span>User Management</span>
+                    <Users className={`${getIconColor()} stroke-2`} />
+                    <span className={getTextColor()}>User Management</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -450,14 +522,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 asChild
                 tooltip="Profile"
                 isActive={pathname.startsWith("/profile")}
-                className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground relative"
+                className={`data-[active=true]:bg-primary/10 data-[active=true]:text-primary ${getHoverColor()} relative`}
               >
                 <a href="/profile">
                   {pathname.startsWith("/profile") && (
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                   )}
-                  <UserCircle className="stroke-white stroke-2" />
-                  <span>Profile</span>
+                  <UserCircle className={`${getIconColor()} stroke-2`} />
+                  <span className={getTextColor()}>Profile</span>
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -470,10 +542,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenu>
               {data.navSecondary.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild size="sm">
+                  <SidebarMenuButton 
+                    asChild 
+                    size="sm"
+                    className={getHoverColor()}
+                  >
                     <a href={item.url}>
-                      <item.icon className="stroke-white stroke-2" />
-                      <span>{item.title}</span>
+                      <item.icon className={`${getIconColor()} stroke-2`} />
+                      <span className={getTextColor()}>{item.title}</span>
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -482,11 +558,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {/* Separator - only show when expanded */}
               {state === "expanded" && (
                 <>
-                  <SidebarSeparator className="my-2 bg-white/20" />
+                  <SidebarSeparator className={`my-2 ${getSeparatorColor()}`} />
 
                   {/* Copyright footer - only show when expanded */}
                   <div className="px-2 py-3">
-                    <footer className="text-xs text-white/70 text-center space-y-1">
+                    <footer className={`text-xs text-center space-y-1 ${getMutedTextColor()}`}>
                       <div>© 2025 Mindware Labs.</div>
                       <div>All Rights Reserved</div>
                     </footer>

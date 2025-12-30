@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { Search, Bell, Sun, Moon } from "lucide-react"
 import { Input } from "@/components/ui/input"
