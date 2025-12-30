@@ -5,14 +5,12 @@ import { fetchFromBackendServer } from "@/lib/api-server";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    // Ignoramos paginación para traer todos los tickets
     const pageSize = 200;
-    const maxPages = 50; // seguridad ante loops infinitos
+    const maxPages = 50;
     let page = 1;
     const allTickets: any[] = [];
     let total = 0;
 
-    // ✅ CORRECCIÓN: Usamos console.log (permitido en Vercel) en vez de guardar en archivo
     console.log(`[NextAPI] GET /api/tickets (todos)`);
 
     while (page <= maxPages) {
@@ -41,14 +39,13 @@ export async function GET(request: NextRequest) {
       data: allTickets,
       count,
     });
-
   } catch (error: any) {
     // ✅ Log del error real en la consola de Vercel
     console.error(`[NextAPI] ERROR in GET /api/tickets:`, error);
-    
+
     // Si el error tiene respuesta del backend, intentamos mostrarla
     if (error.status) {
-       console.error(`[NextAPI] Status Code: ${error.status}`);
+      console.error(`[NextAPI] Status Code: ${error.status}`);
     }
 
     return NextResponse.json(
@@ -65,7 +62,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     console.log(`[NextAPI] POST /api/tickets - Creating ticket...`);
 
     const data = await fetchFromBackendServer(request, "/tickets", {

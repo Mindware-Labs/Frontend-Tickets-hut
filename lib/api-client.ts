@@ -1,59 +1,45 @@
-import { getCookie } from './cookie-utils';
+import { getCookie } from "./cookie-utils";
 
-const BACKEND_API_URL =
-  process.env.NEXT_PUBLIC_BACKEND_API_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  process.env.BACKEND_API_URL ||
-  "http://localhost:3001";
+const BACKEND_API_URL = "https://daring-peace-production-52e0.up.railway.app";
 // Flag to prevent multiple simultaneous redirects
 let isRedirecting = false;
 
-/**
- * Clear authentication tokens and redirect to login
- */
 function handleUnauthorized(): void {
-  if (typeof window === 'undefined' || isRedirecting) {
+  if (typeof window === "undefined" || isRedirecting) {
     return;
   }
 
   isRedirecting = true;
 
-  // Clear tokens from localStorage
-  localStorage.removeItem('auth_token');
-  localStorage.removeItem('user_data');
+  localStorage.removeItem("auth_token");
+  localStorage.removeItem("user_data");
 
-  // Clear cookie
-  document.cookie = 'auth-token=; path=/; max-age=0; SameSite=Lax';
+  document.cookie = "auth-token=; path=/; max-age=0; SameSite=Lax";
 
-  // Dispatch event for other parts of the app
-  window.dispatchEvent(new Event('user-role-updated'));
+  window.dispatchEvent(new Event("user-role-updated"));
 
-  // Get current path for redirect after login
   const currentPath = window.location.pathname;
-  const loginUrl = currentPath === '/' || currentPath === '/login' 
-    ? '/login' 
-    : `/login?redirect=${encodeURIComponent(currentPath)}`;
+  const loginUrl =
+    currentPath === "/" || currentPath === "/login"
+      ? "/login"
+      : `/login?redirect=${encodeURIComponent(currentPath)}`;
 
-  // Redirect to login page
   window.location.href = loginUrl;
 }
 
-/**
- * Get JWT token from cookies or localStorage (cookies take priority)
- */
 function getAuthToken(): string | null {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return null;
   }
-  
+
   // Try to get token from cookies first
-  const cookieToken = getCookie('auth-token');
+  const cookieToken = getCookie("auth-token");
   if (cookieToken) {
     return cookieToken;
   }
-  
+
   // Fallback to localStorage
-  return localStorage.getItem('auth_token');
+  return localStorage.getItem("auth_token");
 }
 
 /**
@@ -78,16 +64,31 @@ export async function fetchFromBackend(
 
   // Add Authorization header if token exists
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   } else {
     // Log warning if no token is found (with debugging info)
-    if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
-      const cookieToken = getCookie('auth-token');
-      const localStorageToken = localStorage.getItem('auth_token');
-      console.warn('[api-client] No auth token found for request to:', endpoint);
-      console.warn('[api-client] Cookie auth-token:', cookieToken ? 'Found' : 'Not found');
-      console.warn('[api-client] localStorage auth_token:', localStorageToken ? 'Found' : 'Not found');
-      console.warn('[api-client] document.cookie:', document.cookie.substring(0, 200));
+    if (
+      process.env.NODE_ENV === "development" &&
+      typeof window !== "undefined"
+    ) {
+      const cookieToken = getCookie("auth-token");
+      const localStorageToken = localStorage.getItem("auth_token");
+      console.warn(
+        "[api-client] No auth token found for request to:",
+        endpoint
+      );
+      console.warn(
+        "[api-client] Cookie auth-token:",
+        cookieToken ? "Found" : "Not found"
+      );
+      console.warn(
+        "[api-client] localStorage auth_token:",
+        localStorageToken ? "Found" : "Not found"
+      );
+      console.warn(
+        "[api-client] document.cookie:",
+        document.cookie.substring(0, 200)
+      );
     }
   }
 
@@ -101,16 +102,23 @@ export async function fetchFromBackend(
 
   // Handle 401 Unauthorized - token expired or invalid
   if (response.status === 401) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[api-client] 401 Unauthorized for:', endpoint, 'Token present:', !!token);
+    if (process.env.NODE_ENV === "development") {
+      console.error(
+        "[api-client] 401 Unauthorized for:",
+        endpoint,
+        "Token present:",
+        !!token
+      );
     }
-    
+
     // Clear stale token and redirect to login in browser context
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       handleUnauthorized();
     }
-    
-    const error = new Error('Session expired. Please login again.') as Error & { status?: number };
+
+    const error = new Error("Session expired. Please login again.") as Error & {
+      status?: number;
+    };
     error.status = 401;
     throw error;
   }
@@ -135,9 +143,7 @@ export async function fetchFromBackend(
       typeof errorData === "string"
         ? errorData
         : errorData.message || `API Error: ${response.status}`;
-    const err = new Error(
-      message
-    ) as Error & { status?: number; body?: any };
+    const err = new Error(message) as Error & { status?: number; body?: any };
     err.status = response.status;
     err.body = errorData;
     throw err;
@@ -174,10 +180,10 @@ export async function fetchBlobFromBackend(
 
   if (response.status === 401) {
     // Clear stale token and redirect to login in browser context
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       handleUnauthorized();
     }
-    
+
     const error = new Error("Session expired. Please login again.") as Error & {
       status?: number;
     };
