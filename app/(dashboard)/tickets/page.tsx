@@ -90,6 +90,7 @@ import {
 } from "./types";
 import { CreateTicketModal } from "./components/CreateTicketModal";
 import { TicketDetailsFields } from "./components/TicketDetailsFields";
+import { auth } from "@/lib/auth";
 
 // Extend the Ticket type
 declare module "@/lib/mock-data" {
@@ -117,6 +118,10 @@ export default function TicketsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [directionFilter, setDirectionFilter] = useState("all");
+  const [campaignFilter, setCampaignFilter] = useState("all");
+  const [yardFilter, setYardFilter] = useState("all");
+  const [campaignFilterSearch, setCampaignFilterSearch] = useState("");
+  const [yardFilterSearch, setYardFilterSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showDetails, setShowDetails] = useState(false);
@@ -134,6 +139,13 @@ export default function TicketsPage() {
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  const [currentUser, setCurrentUser] = useState<{
+    id: number;
+    email?: string;
+    name?: string;
+    lastName?: string;
+    role?: string;
+  } | null>(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -366,6 +378,56 @@ export default function TicketsPage() {
     return parts[parts.length - 1] || value;
   };
 
+  // Declarar currentUserFullName antes de cualquier uso
+  const currentUserFullName = useMemo(() => {
+    if (!currentUser) return "";
+    return [currentUser.name, currentUser.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim()
+      .toLowerCase();
+  }, [currentUser]);
+
+  const currentAgent = useMemo(() => {
+    if (!currentUser) return null;
+    const byUser = (agents as any[]).find(
+      (agent) => (agent as any).userId === currentUser.id
+    );
+    if (byUser) return byUser;
+
+    const email = currentUser.email?.toLowerCase();
+    if (email) {
+      const byEmail = agents.find(
+        (agent: any) => (agent.email || "").toLowerCase() === email
+      );
+      if (byEmail) return byEmail;
+    }
+
+    return null;
+  }, [agents, currentUser]);
+
+  const isTicketAssignedToCurrentUser = (ticket: any) => {
+    if (!currentUser) return false;
+    const assigneeName = getAssigneeName(ticket.assignedTo);
+    const assignedAgentId =
+      (ticket as any).agentId ?? (ticket.assignedTo as any)?.id ?? undefined;
+    const assignedEmail =
+      ((ticket.assignedTo as any)?.email || "").toLowerCase?.() || "";
+
+    return (
+      (!!currentAgent?.id && assignedAgentId === currentAgent.id) ||
+      (assignedEmail &&
+        (currentUser.email || "").toLowerCase() === assignedEmail) ||
+      (currentUserFullName &&
+        assigneeName.toLowerCase() === currentUserFullName)
+    );
+  };
+
+  const myTicketsCount = useMemo(
+    () => tickets.filter((t) => isTicketAssignedToCurrentUser(t)).length,
+    [tickets, currentAgent, currentUser, currentUserFullName]
+  );
+
   const fetchTickets = async () => {
     try {
       setIsLoading(true);
@@ -441,6 +503,13 @@ export default function TicketsPage() {
   };
 
   useEffect(() => {
+    const user = auth.getUser();
+    if (user) {
+      setCurrentUser(user);
+    }
+  }, []);
+
+  useEffect(() => {
     fetchTickets();
     fetchYards();
     fetchCustomers();
@@ -490,8 +559,22 @@ export default function TicketsPage() {
     );
   }, [agents, agentSearchEdit]);
 
+  const filteredCampaignFilterOptions = useMemo(() => {
+    const term = campaignFilterSearch.toLowerCase();
+    return campaigns.filter((c) => c.nombre.toLowerCase().includes(term));
+  }, [campaigns, campaignFilterSearch]);
+
+  const filteredYardFilterOptions = useMemo(() => {
+    const term = yardFilterSearch.toLowerCase();
+    return yards.filter(
+      (y) =>
+        y.name.toLowerCase().includes(term) ||
+        (y.commonName || "").toLowerCase().includes(term)
+    );
+  }, [yards, yardFilterSearch]);
+
   const filteredTickets = useMemo(() => {
-    return tickets.filter((ticket) => {
+    const filtered = tickets.filter((ticket) => {
       const yardName =
         typeof ticket.yard === "string"
           ? ticket.yard
@@ -506,6 +589,7 @@ export default function TicketsPage() {
       const status = normalizeEnumValue(ticket.status as any);
       const priority = (ticket.priority as any)?.toString().toUpperCase();
       const assigneeName = getAssigneeName(ticket.assignedTo);
+      const isAssignedToMe = isTicketAssignedToCurrentUser(ticket);
 
       const matchesSearch =
         clientName.toLowerCase().includes(search.toLowerCase()) ||
@@ -527,13 +611,30 @@ export default function TicketsPage() {
         directionFilter === "all" ||
         ticket.direction === directionFilter ||
         ticketDirection === directionFilterValue;
+      const ticketCampaignId =
+        ticket.campaignId ??
+        (ticket.campaign && typeof ticket.campaign === "object"
+          ? (ticket.campaign as any).id
+          : null);
+      const matchesCampaign =
+        campaignFilter === "all" ||
+        (ticketCampaignId && ticketCampaignId.toString() === campaignFilter);
+
+      const ticketYardId =
+        ticket.yardId ??
+        (ticket.yard && typeof ticket.yard === "object"
+          ? (ticket.yard as any).id
+          : null);
+      const matchesYard =
+        yardFilter === "all" ||
+        (ticketYardId && ticketYardId.toString() === yardFilter);
       const isMissed = isMissedCall(ticket);
 
       let matchesView = true;
       if (activeView === "missed" || directionFilterValue === "missed") {
         matchesView = isMissed;
       } else if (activeView === "assigned_me") {
-        matchesView = assigneeName === "Agent Smith";
+        matchesView = isAssignedToMe;
       } else if (activeView === "unassigned") {
         matchesView = !ticket.assignedTo;
       } else if (activeView === "active") {
@@ -545,7 +646,14 @@ export default function TicketsPage() {
       } else if (activeView === "assigned") {
         matchesView = !!ticket.assignedTo;
       } else if (activeView === "high_priority") {
-        matchesView = priority === "HIGH" || ticket.priority === "High";
+        matchesView =
+          priority === "HIGH" ||
+          (ticket.priority &&
+            ticket.priority.toString().toUpperCase() === "HIGH") ||
+          priority === "EMERGENCY" ||
+          (ticket.priority &&
+            ticket.priority.toString().toUpperCase() === "EMERGENCY") ||
+          false;
       }
 
       if (activeView !== "missed" && directionFilterValue !== "missed") {
@@ -557,9 +665,21 @@ export default function TicketsPage() {
         matchesStatus &&
         matchesPriority &&
         matchesDirection &&
+        matchesCampaign &&
+        matchesYard &&
         matchesView
       );
     });
+    if (activeView === "high_priority") {
+      return filtered.sort((a, b) => {
+        const statusA = normalizeEnumValue(a.status);
+        const statusB = normalizeEnumValue(b.status);
+        if (statusA === "CLOSED" && statusB !== "CLOSED") return 1;
+        if (statusA !== "CLOSED" && statusB === "CLOSED") return -1;
+        return 0;
+      });
+    }
+    return filtered;
   }, [
     tickets,
     search,
@@ -567,6 +687,12 @@ export default function TicketsPage() {
     priorityFilter,
     directionFilter,
     activeView,
+    campaignFilter,
+    yardFilter,
+    currentAgent,
+    currentUser,
+    currentUserFullName,
+    campaigns,
   ]);
 
   const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);
@@ -577,7 +703,15 @@ export default function TicketsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, statusFilter, priorityFilter, directionFilter, activeView]);
+  }, [
+    search,
+    statusFilter,
+    priorityFilter,
+    directionFilter,
+    activeView,
+    campaignFilter,
+    yardFilter,
+  ]);
 
   const handleViewDetails = (ticket: Ticket) => {
     setSelectedTicket(ticket);
@@ -1627,11 +1761,14 @@ export default function TicketsPage() {
             Open
             <span className="ml-auto text-xs">
               {
-                tickets.filter(
-                  (t) =>
-                    !isMissedCall(t) &&
-                    (t.status === "Open" || t.status === "In Progress")
-                ).length
+                tickets.filter((t) => {
+                  if (isMissedCall(t)) return false;
+                  const status = (t.status || "")
+                    .toString()
+                    .toUpperCase()
+                    .replace(/\s+/g, "_");
+                  return status === "OPEN" || status === "IN_PROGRESS";
+                }).length
               }
             </span>
           </Button>
@@ -1656,7 +1793,7 @@ export default function TicketsPage() {
             <span className="ml-auto text-xs">
               {
                 tickets.filter(
-                  (t) => !isMissedCall(t) && t.assignedTo === "Agent Smith"
+                  (t) => !isMissedCall(t) && isTicketAssignedToCurrentUser(t)
                 ).length
               }
             </span>
@@ -1685,15 +1822,50 @@ export default function TicketsPage() {
           </Button>
           <Button
             variant={activeView === "high_priority" ? "secondary" : "ghost"}
-            className="w-full justify-start"
+            className="w-full justify-start relative"
             onClick={() => setActiveView("high_priority")}
           >
             <Star className="mr-2 h-4 w-4" />
             High Priority
+            {(() => {
+              const hasHighOpen = tickets.some((t) => {
+                if (isMissedCall(t)) return false;
+                const priority = (t.priority || "").toString().toUpperCase();
+                const status = (t.status || "")
+                  .toString()
+                  .toUpperCase()
+                  .replace(/\s+/g, "_");
+                return (
+                  (priority === "HIGH" || priority === "EMERGENCY") &&
+                  (status === "OPEN" || status === "IN_PROGRESS")
+                );
+              });
+              if (hasHighOpen) {
+                return (
+                  <span
+                    className="ml-2 animate-pulse"
+                    title="High/Emergency Priority Abierta"
+                  >
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  </span>
+                );
+              }
+              return null;
+            })()}
             <span className="ml-auto text-xs">
               {
-                tickets.filter((t) => !isMissedCall(t) && t.priority === "High")
-                  .length
+                tickets.filter((t) => {
+                  if (isMissedCall(t)) return false;
+                  const priority = (t.priority || "").toString().toUpperCase();
+                  const status = (t.status || "")
+                    .toString()
+                    .toUpperCase()
+                    .replace(/\s+/g, "_");
+                  return (
+                    (priority === "HIGH" || priority === "EMERGENCY") &&
+                    (status === "OPEN" || status === "IN_PROGRESS")
+                  );
+                }).length
               }
             </span>
           </Button>
@@ -1717,7 +1889,6 @@ export default function TicketsPage() {
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
             <Label>Priority</Label>
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
@@ -1732,7 +1903,6 @@ export default function TicketsPage() {
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
             <Label>Direction</Label>
             <Select value={directionFilter} onValueChange={setDirectionFilter}>
@@ -1744,6 +1914,54 @@ export default function TicketsPage() {
                 <SelectItem value="inbound">Inbound</SelectItem>
                 <SelectItem value="outbound">Outbound</SelectItem>
                 <SelectItem value="missed">Missed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Campaign</Label>
+            <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Campaigns" />
+              </SelectTrigger>
+              <SelectContent>
+                <div className="p-2">
+                  <Input
+                    placeholder="Search campaign..."
+                    value={campaignFilterSearch}
+                    onChange={(e) => setCampaignFilterSearch(e.target.value)}
+                    className="h-8"
+                  />
+                </div>
+                <SelectItem value="all">All Campaigns</SelectItem>
+                {filteredCampaignFilterOptions.map((c) => (
+                  <SelectItem key={c.id} value={c.id.toString()}>
+                    {c.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Yard</Label>
+            <Select value={yardFilter} onValueChange={setYardFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Yards" />
+              </SelectTrigger>
+              <SelectContent>
+                <div className="p-2">
+                  <Input
+                    placeholder="Search yard..."
+                    value={yardFilterSearch}
+                    onChange={(e) => setYardFilterSearch(e.target.value)}
+                    className="h-8"
+                  />
+                </div>
+                <SelectItem value="all">All Yards</SelectItem>
+                {filteredYardFilterOptions.map((y) => (
+                  <SelectItem key={y.id} value={y.id.toString()}>
+                    {y.commonName || y.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -1867,7 +2085,7 @@ export default function TicketsPage() {
                           ) : (
                             <Badge
                               variant="outline"
-                              className="border-amber-500/20 bg-amber-500/5 text-amber-600"
+                              className="border-amber-500/20 bg-amber-500/5 text-amber-600 animate-pulse"
                             >
                               <AlertTriangle className="mr-1 h-3 w-3" />
                               Pending
