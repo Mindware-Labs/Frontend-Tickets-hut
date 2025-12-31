@@ -125,11 +125,6 @@ async function fetchCampaigns(request: NextRequest, limit: number) {
 // GET /api/dashboard/stats - Fetch dashboard statistics
 export async function GET(request: NextRequest) {
   try {
-    console.log(
-      "[dashboard/stats] auth header:",
-      request.headers.get("authorization") ? "present" : "missing"
-    );
-    // Eliminado el chequeo de perfil y el bloqueo por Unauthorized
     const { tickets, total } = await fetchTicketsWithLimit(request, 200, 5);
     let campaigns: Campaign[] = [];
     try {
@@ -139,6 +134,15 @@ export async function GET(request: NextRequest) {
     }
     const totalTickets = total;
     const totalCalls = totalTickets;
+
+    // --- CORRECCIÓN 1: Crear el mapa de IDs primero ---
+    const campaignsById = campaigns.reduce<Record<number, string>>(
+      (acc, campaign) => {
+        acc[campaign.id] = campaign.nombre;
+        return acc;
+      },
+      {}
+    );
 
     const openTickets = tickets.filter(
       (ticket) => ticket.status === "OPEN"
@@ -159,12 +163,11 @@ export async function GET(request: NextRequest) {
     const resolutionRate =
       totalTickets > 0 ? Math.round((closedTickets / totalTickets) * 100) : 0;
 
+    // --- CORRECCIÓN 2: Usar getCampaignLabel para contar correctamente ---
+    // Esto asegura que si el ticket tiene campaignId, use el nombre correcto
     const campaignCounts = tickets.reduce<Record<string, number>>(
       (acc, ticket) => {
-        const label = normalizeLabel(
-          ticket.campaign || "Unspecified",
-          CAMPAIGN_LABELS
-        );
+        const label = getCampaignLabel(ticket, campaignsById);
         acc[label] = (acc[label] || 0) + 1;
         return acc;
       },
@@ -215,31 +218,27 @@ export async function GET(request: NextRequest) {
       calls: bucket.count,
     }));
 
-    const campaignsByName = campaigns.map((campaign) => ({
-      name: campaign.nombre,
-      count: 1,
-    }));
+    // --- CORRECCIÓN 3: Asignar el conteo real en lugar de "1" ---
+    // Si tenemos campañas definidas, iteramos sobre ellas y buscamos su conteo
+    const ticketsByCampaign =
+      campaigns.length > 0
+        ? campaigns.map((campaign) => ({
+            name: campaign.nombre,
+            count: campaignCounts[campaign.nombre] || 0, // <--- AQUÍ ESTÁ LA SOLUCIÓN
+          }))
+        : Object.entries(campaignCounts).map(([name, count]) => ({
+            name,
+            count,
+          }));
 
-    const ticketsByCampaign = campaignsByName.length
-      ? campaignsByName
-      : Object.entries(campaignCounts).map(([name, count]) => ({
-          name,
-          count,
-        }));
+    // Ordenar de mayor a menor para que el gráfico se vea mejor
+    ticketsByCampaign.sort((a, b) => b.count - a.count);
 
     const ticketsByDisposition = Object.entries(dispositionCounts).map(
       ([name, count]) => ({
         name,
         count,
       })
-    );
-
-    const campaignsById = campaigns.reduce<Record<number, string>>(
-      (acc, campaign) => {
-        acc[campaign.id] = campaign.nombre;
-        return acc;
-      },
-      {}
     );
 
     const recentTickets = tickets.slice(0, 5).map((ticket) => ({

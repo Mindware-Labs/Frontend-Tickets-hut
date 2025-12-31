@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { FiPhoneCall, FiCheckCircle, FiAlertTriangle } from "react-icons/fi";
 import { Button } from "@/components/ui/button";
-import { useRole } from "@/components/providers/role-provider";
 import {
   Card,
   CardContent,
@@ -51,6 +50,8 @@ import {
   YAxis,
 } from "recharts";
 
+// --- TIPOS ---
+
 type DashboardTicket = {
   id: number;
   clientName: string;
@@ -74,7 +75,8 @@ type DashboardData = {
   };
   charts: {
     callsByDay: { day: string; calls: number }[];
-    ticketsByCampaign: { name: string; count: number }[];
+    // Usamos 'any' aquí temporalmente en la lógica para ser flexibles con lo que llega del backend
+    ticketsByCampaign: any[]; 
     ticketsByDisposition: { name: string; count: number }[];
   };
   recentTickets: DashboardTicket[];
@@ -96,7 +98,6 @@ const RADIAL_PALETTE = [
 ];
 
 export default function DashboardPage() {
-  // Eliminado el uso de isAgent para mostrar el dashboard a todos
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null
@@ -151,6 +152,8 @@ export default function DashboardPage() {
     loadDashboard();
   }, [loadDashboard]);
 
+  // --- PREPARACIÓN DE DATOS ---
+
   const callsData = useMemo(
     () =>
       dashboardData?.charts.callsByDay?.length
@@ -175,13 +178,25 @@ export default function DashboardPage() {
     [dashboardData]
   );
 
-  const campaignData = useMemo(
-    () =>
-      dashboardData?.charts.ticketsByCampaign?.length
-        ? dashboardData.charts.ticketsByCampaign
-        : [{ name: "No data", count: 0 }],
-    [dashboardData]
-  );
+  // --- AQUÍ ESTÁ LA MEJORA PRINCIPAL ---
+  const campaignChartData = useMemo(() => {
+    const rawData = dashboardData?.charts?.ticketsByCampaign || [];
+
+    // Debug: Verifica en la consola qué está llegando realmente
+    console.log("Dashboard - Raw Campaign Data:", rawData);
+
+    return rawData
+      .map((item: any) => ({
+        // Intenta obtener el nombre de varias formas
+        name: item.name || item.nombre || "Unknown",
+        // Intenta obtener la cantidad de varias formas y forza a número
+        tickets: Number(item.count ?? item.ticketCount ?? item.tickets ?? 0),
+        // Color para el gráfico
+        fill: "var(--color-tickets)",
+      }))
+      .sort((a, b) => b.tickets - a.tickets) // Ordenar mayor a menor
+      .slice(0, 10); // Top 10
+  }, [dashboardData]);
 
   const lineChartConfig = useMemo<ChartConfig>(
     () => ({
@@ -235,14 +250,7 @@ export default function DashboardPage() {
     [callsData]
   );
 
-  const campaignChartData = useMemo(
-    () =>
-      campaignData.map((campaign) => ({
-        name: campaign.name,
-        tickets: campaign.count,
-      })),
-    [campaignData]
-  );
+  // --- RENDERIZADO ---
 
   if (isLoading && !dashboardData) return <DashboardSkeleton />;
 
@@ -265,7 +273,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { kpis, charts, recentTickets, generatedAt } = dashboardData;
+  const { kpis, recentTickets, generatedAt } = dashboardData;
 
   const statusClass = (status: string) => {
     if (status === "Open")
@@ -551,12 +559,9 @@ export default function DashboardPage() {
                   </ChartContainer>
                 </CardContent>
                 <CardFooter className="flex-col items-start gap-2 text-sm">
-                  <div className="flex gap-2 leading-none font-medium">
-                    Trending up by 5.2% this month{" "}
-                    <TrendingUp className="h-4 w-4" />
-                  </div>
+              
                   <div className="text-muted-foreground leading-none">
-                    Showing total tickets for the selected campaigns
+                    Showing top active campaigns
                   </div>
                 </CardFooter>
               </Card>
@@ -573,7 +578,9 @@ export default function DashboardPage() {
                   Agents Overview
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {agentsError ? agentsError : `Total agents: ${agents.length}`}
+                  {agentsError
+                    ? agentsError
+                    : `Total agents: ${agents.length}`}
                 </p>
               </div>
               <Button

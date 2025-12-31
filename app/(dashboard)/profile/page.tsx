@@ -125,9 +125,7 @@ export default function ProfilePage() {
             <div className="space-y-1">
               <h3 className="font-medium text-lg leading-none">{displayName}</h3>
               <p className="text-sm text-muted-foreground">{role} Account</p>
-              <Button variant="outline" size="sm" className="mt-2 h-8">
-                Change Avatar
-              </Button>
+
             </div>
           </div>
 
