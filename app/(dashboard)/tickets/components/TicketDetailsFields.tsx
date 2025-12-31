@@ -1,7 +1,13 @@
 "use client";
 
-import { Fragment } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { Fragment, JSX } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 type FieldItem = {
   key: string;
@@ -31,7 +37,8 @@ export function TicketDetailsFields({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {filledMetadataFields.length === 0 && filledFullFields.length === 0 ? (
+          {filledMetadataFields.length === 0 &&
+          filledFullFields.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No completed fields yet.
             </p>
@@ -57,10 +64,13 @@ export function TicketDetailsFields({
       <Card>
         <CardHeader>
           <CardTitle>Missing fields</CardTitle>
-          <CardDescription>Details the agent needs to complete.</CardDescription>
+          <CardDescription>
+            Details the agent needs to complete.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {missingMetadataFields.length === 0 && missingFullFields.length === 0 ? (
+          {missingMetadataFields.length === 0 &&
+          missingFullFields.length === 0 ? (
             <p className="text-sm text-muted-foreground">No pending fields.</p>
           ) : (
             <>
