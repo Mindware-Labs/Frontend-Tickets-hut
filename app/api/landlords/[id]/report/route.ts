@@ -11,11 +11,14 @@ export async function GET(
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
     const yardId = searchParams.get("yardId");
+    const logoUrl = `${request.nextUrl.origin}/images/logo.jpeg`;
 
     const query = new URLSearchParams();
     if (startDate) query.set("startDate", startDate);
     if (endDate) query.set("endDate", endDate);
     if (yardId) query.set("yardId", yardId);
+    query.set("logoUrl", logoUrl);
+    query.set("logo", logoUrl);
 
     const queryString = query.toString();
     const report = await fetchFromBackendServer(
@@ -46,12 +49,14 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await request.json();
+    const logoUrl = `${request.nextUrl.origin}/images/logo.jpeg`;
+    const payload = { ...body, logoUrl, logo: logoUrl };
     const response = await fetchFromBackendServer(
       request,
       `/landlords/${id}/report/send`,
       {
         method: "POST",
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       }
     );
     return NextResponse.json(response);

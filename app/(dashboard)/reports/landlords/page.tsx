@@ -87,6 +87,11 @@ export default function LandlordReportsPage() {
   const [reportData, setReportData] = useState<LandlordReport | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  const getLogoUrl = () =>
+    typeof window !== "undefined"
+      ? `${window.location.origin}/images/logo.jpeg`
+      : "/images/logo.jpeg";
+
   useEffect(() => {
     if (isAgent) {
       router.replace("/landlords");
@@ -232,6 +237,7 @@ export default function LandlordReportsPage() {
       if (reportYardId !== "all") {
         query.set("yardId", reportYardId);
       }
+      query.set("logoUrl", getLogoUrl());
       const response = await fetch(
         `/api/landlords/${selectedLandlordId}/report?${query.toString()}`
       );
@@ -268,6 +274,7 @@ export default function LandlordReportsPage() {
       if (reportYardId !== "all") {
         payload.yardId = Number(reportYardId);
       }
+      payload.logoUrl = getLogoUrl();
       const response = await fetch(
         `/api/landlords/${selectedLandlordId}/report`,
         {
@@ -303,6 +310,7 @@ export default function LandlordReportsPage() {
       if (reportYardId !== "all") {
         query.set("yardId", reportYardId);
       }
+      query.set("logoUrl", getLogoUrl());
       const blob = await fetchBlobFromBackend(
         `/landlords/${selectedLandlordId}/report/pdf?${query.toString()}`,
         { method: "GET" }

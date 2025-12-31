@@ -12,9 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { fetchFromBackend } from "@/lib/api-client";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { fetchFromBackend, fetchBlobFromBackend } from "@/lib/api-client";
 import { CallDirection } from "@/app/(dashboard)/tickets/types";
 import {
   FileText,
@@ -115,6 +113,27 @@ const AR_ICONS: Record<string, React.ReactNode> = {
   DO_NOT_CALL: <PhoneOff className="h-4 w-4 text-red-600" />,
 };
 
+const PDF_COLOR_MAP: Record<string, [number, number, number]> = {
+  "text-blue-600": [37, 99, 235],
+  "text-green-600": [22, 163, 74],
+  "text-amber-600": [217, 119, 6],
+  "text-emerald-600": [5, 150, 105],
+  "text-purple-600": [124, 58, 237],
+  "text-slate-600": [71, 85, 105],
+  "text-orange-600": [234, 88, 12],
+  "text-rose-600": [225, 29, 72],
+  "text-cyan-600": [8, 145, 178],
+  "text-red-600": [220, 38, 38],
+  "text-teal-600": [13, 148, 136],
+};
+
+const getRgbColor = (className?: string): [number, number, number] => {
+  if (className && PDF_COLOR_MAP[className]) return PDF_COLOR_MAP[className];
+  return [55, 65, 81];
+};
+
+type ImageSize = { width: number; height: number };
+
 const categorizeIssueDetail = (detail: string) => {
   const text = detail.toLowerCase();
   const tags: string[] = [];
@@ -205,7 +224,7 @@ const CustomerTable = ({
 
       {/* Container with horizontal scroll for mobile responsiveness */}
       <div className="w-full overflow-x-auto">
-        <div className="min-w-[800px] align-middle">
+        <div className="min-w-200 align-middle">
           <div className="grid grid-cols-12 bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-y">
             <div className="col-span-3 px-6 py-3">Customer</div>
             <div className="col-span-3 px-6 py-3">Phone</div>
@@ -238,7 +257,7 @@ const CustomerTable = ({
                       {row.status}
                     </span>
                   </div>
-                  <div className="col-span-4 px-6 py-3 text-muted-foreground break-words text-xs">
+                  <div className="col-span-4 px-6 py-3 text-muted-foreground wrap-break-word text-xs">
                     {row.specialCase || "—"}
                   </div>
                 </div>
@@ -262,6 +281,13 @@ export default function CampaignReportsPage() {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<ReportData | null>(null);
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  const [logoFormat, setLogoFormat] = useState<"PNG" | "JPEG">("JPEG");
+  const [logoSize, setLogoSize] = useState<ImageSize | null>(null);
+
+  const getLogoUrl = () =>
+    typeof window !== "undefined"
+      ? `${window.location.origin}/images/logo.jpeg`
+      : "/images/logo.jpeg";
 
   useEffect(() => {
     const fetchCampaigns = async () => {
@@ -288,12 +314,23 @@ export default function CampaignReportsPage() {
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        const response = await fetch("/images/LOGO CQ-01.png");
+        const response = await fetch("/images/logo.jpeg");
+        if (!response.ok) throw new Error("Logo not found");
         const blob = await response.blob();
+        const format =
+          blob.type.includes("jpeg") || blob.type.includes("jpg")
+            ? "JPEG"
+            : "PNG";
+        setLogoFormat(format);
         const reader = new FileReader();
         reader.onloadend = () => {
-          if (reader.result && typeof reader.result === "string")
+          if (reader.result && typeof reader.result === "string") {
             setLogoDataUrl(reader.result);
+            const img = new Image();
+            img.onload = () =>
+              setLogoSize({ width: img.width, height: img.height });
+            img.src = reader.result;
+          }
         };
         reader.readAsDataURL(blob);
       } catch (error) {
@@ -310,255 +347,31 @@ export default function CampaignReportsPage() {
   }, [campaigns, selectedCampaignId]);
 
   const buildReport = async () => {
-    if (!selectedCampaignId) {
+    if (!selectedCampaignId || !startDate || !endDate) {
       toast({
-        title: "Select a campaign",
-        description: "Pick a campaign before generating the report.",
+        title: "Select campaign and dates",
+        description: "You must select a campaign and date range.",
         variant: "destructive",
       });
       return;
     }
-
     try {
       setLoading(true);
-      const response = await fetchFromBackend("/tickets?page=1&limit=5000");
-      const items: Ticket[] = response?.data || response || [];
-
-      const campaignId = Number(selectedCampaignId);
-      const start = startDate ? new Date(startDate) : null;
-      const end = endDate ? new Date(endDate) : null;
-      if (end) end.setHours(23, 59, 59, 999);
-
-      const filtered = items.filter((ticket) => {
-        const ticketCampaignId =
-          ticket.campaignId ?? ticket.campaign?.id ?? null;
-        if (ticketCampaignId !== campaignId) return false;
-        if (!start && !end) return true;
-        const createdAt = parseDate(ticket.createdAt);
-        return inRange(createdAt, start, end);
+      const params = new URLSearchParams({
+        startDate,
+        endDate,
       });
-
-      const missedCalls = filtered.filter(
-        (t) => (t.direction || "").toUpperCase() === CallDirection.MISSED
+      const response = await fetchFromBackend(
+        `/campaign/${selectedCampaignId}/report?${params.toString()}`
       );
-
-      const byCustomer = new Map<number, Ticket>();
-      filtered.forEach((ticket) => {
-        if (!ticket.customerId) return;
-        const existing = byCustomer.get(ticket.customerId);
-        if (!existing) {
-          byCustomer.set(ticket.customerId, ticket);
-          return;
-        }
-        const existingUpdated = parseDate(existing.updatedAt)?.getTime() || 0;
-        const currentUpdated = parseDate(ticket.updatedAt)?.getTime() || 0;
-        if (currentUpdated >= existingUpdated) {
-          byCustomer.set(ticket.customerId, ticket);
-        }
-      });
-
-      const customers = Array.from(byCustomer.values());
-      const isArCampaign =
-        (selectedCampaign?.tipo || "").toUpperCase() === "AR";
-
-      let metrics: ReportMetric[] = [];
-      let tables: ReportTable[] = [];
-      const reportLines: string[] = [];
-
-      const buildRows = (items: Ticket[], status: string) =>
-        items.map((ticket) => {
-          const name = getCustomerLabel(ticket);
-          const phone = ticket.customerPhone || ticket.customer?.phone || "";
-          return {
-            name,
-            phone,
-            status,
-            specialCase: ticket.issueDetail?.trim() || "",
-          };
-        });
-
-      if (isArCampaign) {
-        const arGroups = new Map<string, Ticket[]>();
-        customers.forEach((ticket) => {
-          const option =
-            ticket.campaignOption ??
-            ticket.campaingOption ??
-            ticket.onboardingOption ??
-            "";
-          const key = AR_LABELS[option as keyof typeof AR_LABELS]
-            ? option
-            : "UNSPECIFIED";
-          const arr = arGroups.get(key) || [];
-          arr.push(ticket);
-          arGroups.set(key, arr);
-        });
-        Object.keys(AR_LABELS).forEach((key) => {
-          if (!arGroups.has(key)) arGroups.set(key, []);
-        });
-
-        const arPalette = [
-          "text-blue-600",
-          "text-green-600",
-          "text-amber-600",
-          "text-emerald-600",
-          "text-purple-600",
-          "text-slate-600",
-          "text-orange-600",
-          "text-rose-600",
-          "text-cyan-600",
-        ];
-
-        metrics = [
-          {
-            title: "Total Customers",
-            value: customers.length,
-            icon: <Users className="h-4 w-4 text-blue-600" />,
-            color: "text-blue-600",
-          },
-          ...Object.keys(AR_LABELS).map((key, idx) => ({
-            title: AR_LABELS[key],
-            value: arGroups.get(key)?.length || 0,
-            color: arPalette[idx + 1] || "text-slate-600",
-          })),
-          {
-            title: "Missed Calls",
-            value: missedCalls.length,
-            icon: <PhoneMissed className="h-4 w-4 text-red-600" />,
-            color: "text-red-600",
-          },
-        ];
-
-        tables = [
-          ...Object.keys(AR_LABELS).map((key) => ({
-            title: AR_LABELS[key],
-            rows: buildRows(arGroups.get(key) || [], AR_LABELS[key]),
-          })),
-          {
-            title: "Missed Calls",
-            rows: buildRows(missedCalls, "Missed Call"),
-          },
-        ];
-        reportLines.push("AR Campaign Status Report");
-        if (selectedCampaign?.nombre) reportLines.push(selectedCampaign.nombre);
-        reportLines.push(`Total Customers: ${customers.length}`);
-      } else {
-        const groups = {
-          registered: [] as Ticket[],
-          pending: [] as Ticket[],
-          paidWithLandlord: [] as Ticket[],
-          unknown: [] as Ticket[],
-        };
-        customers.forEach((ticket) => {
-          const option =
-            ticket.campaingOption ?? ticket.onboardingOption ?? null;
-          switch (option) {
-            case ONBOARDING.REGISTERED:
-              groups.registered.push(ticket);
-              break;
-            case ONBOARDING.NOT_REGISTERED:
-              groups.pending.push(ticket);
-              break;
-            case ONBOARDING.PAID_WITH_LL:
-              groups.paidWithLandlord.push(ticket);
-              break;
-            default:
-              groups.unknown.push(ticket);
-              break;
-          }
-        });
-
-        const notes = customers
-          .filter((t) => t.issueDetail?.trim())
-          .map((t) => ({
-            customerId: t.customerId,
-            customerName: t.customer?.name,
-            customerPhone: t.customerPhone ?? t.customer?.phone,
-            note: t.issueDetail?.trim() ?? "",
-          }));
-        const specialCases = notes.map((n) => ({
-          ...n,
-          tags: n.note ? categorizeIssueDetail(n.note) : [],
-        }));
-        const specialCaseMap = new Map<string, string>();
-        specialCases.forEach((item) => {
-          const key = `${item.customerName || "Unknown"}::${
-            item.customerPhone || ""
-          }`;
-          if (item.note) specialCaseMap.set(key, item.note);
-        });
-
-        const buildRowsWithNotes = (items: Ticket[], status: string) =>
-          items.map((t) => {
-            const name = getCustomerLabel(t);
-            const phone = t.customerPhone || t.customer?.phone || "";
-            const key = `${name}::${phone}`;
-            return {
-              name,
-              phone,
-              status,
-              specialCase:
-                t.issueDetail?.trim() || specialCaseMap.get(key) || "",
-            };
-          });
-
-        metrics = [
-          {
-            title: "Total Customers",
-            value: customers.length,
-            icon: <Users className="h-4 w-4 text-slate-600" />,
-            color: "text-slate-600",
-          },
-          {
-            title: "Accepted",
-            value: groups.registered.length,
-            icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
-            color: "text-emerald-600",
-          },
-          {
-            title: "LL Pay",
-            value: groups.paidWithLandlord.length,
-            icon: <CreditCard className="h-4 w-4 text-amber-600" />,
-            color: "text-amber-600",
-          },
-          {
-            title: "Missed Calls",
-            value: missedCalls.length,
-            icon: <PhoneMissed className="h-4 w-4 text-rose-600" />,
-            color: "text-rose-600",
-          },
-        ];
-
-        tables = [
-          {
-            title: "Paid with LL",
-            rows: buildRowsWithNotes(groups.paidWithLandlord, "Paid with LL"),
-          },
-          {
-            title: "Registered",
-            rows: buildRowsWithNotes(groups.registered, "Registered"),
-          },
-          {
-            title: "Not Registered",
-            rows: buildRowsWithNotes(groups.pending, "Not Registered"),
-          },
-          {
-            title: "Missed Calls",
-            rows: buildRowsWithNotes(missedCalls, "Missed Call"),
-          },
-        ];
-
-        reportLines.push("Parking Registration & Payment Status Report");
-        if (selectedCampaign?.nombre) reportLines.push(selectedCampaign.nombre);
-        reportLines.push(`Total Customers: ${customers.length}`);
-        reportLines.push(`Accepted: ${groups.registered.length}`);
-      }
-
+      if (!response) throw new Error("No data from backend");
+      // El backend ya entrega los datos agregados y tablas
       setReport({
-        campaign: selectedCampaign,
-        metrics,
-        totalCustomers: customers.length,
-        reportLines,
-        tables,
+        campaign: response.campaign || null,
+        metrics: response.metrics || [],
+        totalCustomers: response.totals?.total || 0,
+        reportLines: [],
+        tables: response.tables || [],
       });
     } catch (error: any) {
       console.error(error);
@@ -573,78 +386,45 @@ export default function CampaignReportsPage() {
     }
   };
 
-  const exportPdf = () => {
+  const exportPdfBackend = async () => {
     if (!report) return;
-    const doc = new jsPDF();
-    const primary = "#1e40af";
-    const gray = "#6b7280";
-    const light = "#f3f4f6";
-    const white = "#ffffff";
-    const pageWidth = doc.internal.pageSize.getWidth();
-
-    doc.setFillColor(light);
-    doc.rect(0, 0, pageWidth, 42, "F");
-    doc.setTextColor(primary);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.text("CAMPAIGN REPORT", 14, 18);
-
-    // Logo logic
-    const logoSize = 30;
-    const logoX = pageWidth - 14 - logoSize;
-    const logoY = 7;
-    if (logoDataUrl)
-      doc.addImage(logoDataUrl, "PNG", logoX, logoY, logoSize, logoSize);
-
-    doc.setTextColor(0);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text("CAMPAIGN:", 14, 30);
-    doc.setFont("helvetica", "normal");
-    doc.text(report.campaign?.nombre || "—", 38, 30);
-
-    if (startDate || endDate) {
-      doc.setFont("helvetica", "bold");
-      doc.text("RANGE:", 120, 30);
-      doc.setFont("helvetica", "normal");
-      doc.text(`${startDate || "Start"} - ${endDate || "End"}`, 145, 30);
-    }
-
-    let currentY = 50;
-
-    currentY += 40;
-    const tableBlock = (title: string, rows: CustomerRow[]) => {
-      doc.setTextColor(primary);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.text(title, 14, currentY);
-      currentY += 4;
-      autoTable(doc, {
-        startY: currentY,
-        head: [["Customer", "Phone", "Status", "Special Case"]],
-        body:
-          rows.length > 0
-            ? rows.map((r) => [
-                r.name,
-                r.phone || "—",
-                r.status,
-                r.specialCase || "—",
-              ])
-            : [["No data", "", "", ""]],
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: [30, 64, 175] },
-        alternateRowStyles: { fillColor: [243, 244, 246] },
-        didDrawPage: (d) => {
-          if (d.cursor) currentY = d.cursor.y + 10;
-        },
+    if (!startDate || !endDate) {
+      toast({
+        title: "Select dates",
+        description: "Start and end date are required to export the PDF.",
+        variant: "destructive",
       });
-    };
-    report.tables.forEach((t) => tableBlock(t.title, t.rows));
-    doc.save(`report_${report.campaign?.id}.pdf`);
+      return;
+    }
+    try {
+      const params = new URLSearchParams({
+        startDate,
+        endDate,
+        logoUrl: getLogoUrl(),
+      });
+      const blob = await fetchBlobFromBackend(
+        `/campaign/${selectedCampaignId}/report/pdf?${params.toString()}`,
+        { method: "GET" }
+      );
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `campaign_report_${selectedCampaignId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to download PDF",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 p-4 md:p-8 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 animate-in fade-in duration-500">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-slate-100 p-4 md:p-8 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 animate-in fade-in duration-500">
       <div className="mx-auto max-w-7xl space-y-10">
         {/* Header Section */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -659,7 +439,7 @@ export default function CampaignReportsPage() {
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              onClick={exportPdf}
+              onClick={exportPdfBackend}
               disabled={!report}
               className="gap-2"
             >
@@ -669,7 +449,7 @@ export default function CampaignReportsPage() {
             <Button
               onClick={buildReport}
               disabled={loading}
-              className="gap-2 min-w-[140px]"
+              className="gap-2 min-w-35"
             >
               {loading ? (
                 <>Generating...</>
@@ -741,7 +521,7 @@ export default function CampaignReportsPage() {
 
         {/* Results Section */}
         {!report ? (
-          <div className="flex min-h-[400px] flex-col items-center justify-center rounded-xl border border-dashed bg-muted/10 p-8 text-center animate-in zoom-in-95 duration-300">
+          <div className="flex min-h-100 flex-col items-center justify-center rounded-xl border border-dashed bg-muted/10 p-8 text-center animate-in zoom-in-95 duration-300">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
               <Search className="h-6 w-6 text-muted-foreground" />
             </div>
