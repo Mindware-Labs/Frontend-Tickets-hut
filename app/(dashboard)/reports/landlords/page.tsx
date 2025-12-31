@@ -2,14 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { fetchFromBackend } from "@/lib/api-client";
+import { fetchBlobFromBackend, fetchFromBackend } from "@/lib/api-client";
 import type { Landlord, YardOption } from "../../landlords/types";
 import { useRole } from "@/components/providers/role-provider";
 
@@ -201,102 +199,35 @@ export default function LandlordReportsPage() {
     }
   };
 
-  const handleDownloadReport = () => {
+  const handleDownloadReport = async () => {
     if (!reportData || !selectedLandlord) return;
-    const doc = new jsPDF();
-
-    doc.setFontSize(16);
-    doc.text("Landlord Report", 14, 18);
-    doc.setFontSize(10);
-    doc.text(`Landlord: ${selectedLandlord.name}`, 14, 26);
-    doc.text(
-      `Range: ${reportStartDate} - ${reportEndDate}`,
-      14,
-      32
-    );
-
-    let currentY = 38;
-
-    autoTable(doc, {
-      startY: currentY,
-      head: [["Metric", "Value"]],
-      body: [
-        ["Total Tickets", reportData.totals.total],
-        ["Inbound", reportData.totals.inbound],
-        ["Outbound", reportData.totals.outbound],
-        ["Avg / Yard", reportData.averagePerYard],
-      ],
-      didDrawPage: (data) => {
-        if (data.cursor) {
-          currentY = data.cursor.y + 8;
-        }
-      },
-    });
-
-    autoTable(doc, {
-      startY: currentY,
-      head: [["Yard", "Total", "Inbound", "Outbound"]],
-      body:
-        reportData.yards.length > 0
-          ? reportData.yards.map((yard) => [
-              yard.name,
-              yard.total,
-              yard.inbound,
-              yard.outbound,
-            ])
-          : [["No data", "", "", ""]],
-      didDrawPage: (data) => {
-        if (data.cursor) {
-          currentY = data.cursor.y + 8;
-        }
-      },
-    });
-
-    autoTable(doc, {
-      startY: currentY,
-      head: [["Top Yard", "Total"]],
-      body:
-        reportData.topYards.length > 0
-          ? reportData.topYards.map((yard) => [yard.name, yard.total])
-          : [["No data", ""]],
-      didDrawPage: (data) => {
-        if (data.cursor) {
-          currentY = data.cursor.y + 8;
-        }
-      },
-    });
-
-    autoTable(doc, {
-      startY: currentY,
-      head: [["Date", "Total", "Inbound", "Outbound"]],
-      body:
-        reportData.callsByDay.length > 0
-          ? reportData.callsByDay.map((day) => [
-              day.date,
-              day.total,
-              day.inbound,
-              day.outbound,
-            ])
-          : [["No data", "", "", ""]],
-      didDrawPage: (data) => {
-        if (data.cursor) {
-          currentY = data.cursor.y + 8;
-        }
-      },
-    });
-
-    autoTable(doc, {
-      startY: currentY,
-      head: [["Status", "Count"]],
-      body: Object.keys(reportData.statusBreakdown).length
-        ? Object.entries(reportData.statusBreakdown).map(([status, count]) => [
-            status,
-            count,
-          ])
-        : [["No data", ""]],
-    });
-
-    doc.save(`landlord_report_${selectedLandlord.id}.pdf`);
+    try {
+      const query = new URLSearchParams({
+        startDate: reportStartDate,
+        endDate: reportEndDate,
+      });
+      if (reportYardId !== "all") {
+        query.set("yardId", reportYardId);
+      }
+      const blob = await fetchBlobFromBackend(
+        `/landlords/${selectedLandlordId}/report/pdf?${query.toString()}`,
+        { method: "GET" }
+      );
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `landlord_report_${selectedLandlordId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to download report.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

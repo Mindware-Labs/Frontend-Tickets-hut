@@ -4,17 +4,25 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { fetchFromBackend } from "@/lib/api-client";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { CallDirection } from "@/app/(dashboard)/tickets/types";
 
 type Campaign = {
   id: number;
   nombre: string;
   yarda?: { name?: string | null } | null;
   isActive?: boolean;
+  tipo?: string;
 };
 
 type Ticket = {
@@ -25,8 +33,10 @@ type Ticket = {
   campaignId?: number | null;
   campaign?: { id?: number | null } | null;
   campaingOption?: string | null;
+  campaignOption?: string | null;
   onboardingOption?: string | null;
   issueDetail?: string | null;
+  direction?: CallDirection | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 };
@@ -38,23 +48,22 @@ type CustomerRow = {
   specialCase: string;
 };
 
+type ReportMetric = {
+  title: string;
+  value: number;
+};
+
+type ReportTable = {
+  title: string;
+  rows: CustomerRow[];
+};
+
 type ReportData = {
   campaign: Campaign | null;
-  summary: {
-    totalCustomers: number;
-    accepted: number;
-    pending: number;
-    llPay: number;
-    notParked: number;
-    pendingUnresponsive: number;
-  };
+  metrics: ReportMetric[];
+  totalCustomers: number;
   reportLines: string[];
-  tables: {
-    paid: CustomerRow[];
-    registered: CustomerRow[];
-    pending: CustomerRow[];
-    noAnswer: CustomerRow[];
-  };
+  tables: ReportTable[];
 };
 
 const ONBOARDING = {
@@ -63,13 +72,28 @@ const ONBOARDING = {
   PAID_WITH_LL: "PAID_WITH_LL",
 };
 
+const AR_LABELS: Record<string, string> = {
+  PAID: "Paid",
+  NOT_PAID: "Not Paid",
+  OFFLINE_PAYMENT: "Offline Payment",
+  NOT_PAID_CHECK: "Not Paid Check",
+  MOVED_OUT: "Moved Out",
+  CANCELED: "Canceled",
+  BALANCE_0: "Balance 0",
+  DO_NOT_CALL: "Do Not Call",
+};
+
 const categorizeIssueDetail = (detail: string) => {
   const text = detail.toLowerCase();
   const tags: string[] = [];
-  if (/(not parked|no longer parked|not parking|not at the location)/i.test(text)) {
+  if (
+    /(not parked|no longer parked|not parking|not at the location)/i.test(text)
+  ) {
     tags.push("not_parked");
   }
-  if (/(out of service|blocked|disconnected|wrong number|no number)/i.test(text)) {
+  if (
+    /(out of service|blocked|disconnected|wrong number|no number)/i.test(text)
+  ) {
     tags.push("unreachable");
   }
   if (/(no further contact|do not contact|police)/i.test(text)) {
@@ -114,12 +138,20 @@ const inRange = (date: Date | null, start: Date | null, end: Date | null) => {
   return true;
 };
 
-const CustomerTable = ({ title, rows }: { title: string; rows: CustomerRow[] }) => {
+const CustomerTable = ({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: CustomerRow[];
+}) => {
   return (
     <div className="space-y-2 rounded-xl border border-border/60 bg-background/60 p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">{title}</h3>
-        <span className="text-xs text-muted-foreground">{rows.length} customers</span>
+        <span className="text-xs text-muted-foreground">
+          {rows.length} customers
+        </span>
       </div>
       <div className="overflow-hidden rounded-lg border border-border/60">
         <div className="grid grid-cols-12 bg-muted/40 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -134,7 +166,10 @@ const CustomerTable = ({ title, rows }: { title: string; rows: CustomerRow[] }) 
           </div>
         ) : (
           rows.map((row, index) => (
-            <div key={`${title}-${index}`} className="grid grid-cols-12 border-t text-sm">
+            <div
+              key={`${title}-${index}`}
+              className="grid grid-cols-12 border-t text-sm"
+            >
               <div className="col-span-4 px-4 py-2 font-medium">{row.name}</div>
               <div className="col-span-3 px-4 py-2 text-muted-foreground">
                 {row.phone || "—"}
@@ -163,6 +198,7 @@ export default function CampaignReportsPage() {
   const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<ReportData | null>(null);
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCampaigns = async () => {
@@ -188,8 +224,31 @@ export default function CampaignReportsPage() {
     }
   }, [campaignIdParam]);
 
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const response = await fetch("/images/LOGO CQ-01.png");
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (reader.result && typeof reader.result === "string") {
+            setLogoDataUrl(reader.result);
+          }
+        };
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        console.error("Error loading logo", error);
+      }
+    };
+    loadLogo();
+  }, []);
+
   const selectedCampaign = useMemo(() => {
-    return campaigns.find((campaign) => campaign.id.toString() === selectedCampaignId) || null;
+    return (
+      campaigns.find(
+        (campaign) => campaign.id.toString() === selectedCampaignId
+      ) || null
+    );
   }, [campaigns, selectedCampaignId]);
 
   const buildReport = async () => {
@@ -221,6 +280,11 @@ export default function CampaignReportsPage() {
         return inRange(createdAt, start, end);
       });
 
+      const missedCalls = filtered.filter(
+        (ticket) =>
+          (ticket.direction || "").toUpperCase() === CallDirection.MISSED
+      );
+
       const byCustomer = new Map<number, Ticket>();
       filtered.forEach((ticket) => {
         if (!ticket.customerId) return;
@@ -237,141 +301,199 @@ export default function CampaignReportsPage() {
       });
 
       const customers = Array.from(byCustomer.values());
-      const groups = {
-        registered: [] as Ticket[],
-        pending: [] as Ticket[],
-        paidWithLandlord: [] as Ticket[],
-        unknown: [] as Ticket[],
-      };
+      const isArCampaign =
+        (selectedCampaign?.tipo || "").toUpperCase() === "AR";
 
-      customers.forEach((ticket) => {
-        const option =
-          ticket.campaingOption ?? ticket.onboardingOption ?? null;
-        switch (option) {
-          case ONBOARDING.REGISTERED:
-            groups.registered.push(ticket);
-            break;
-          case ONBOARDING.NOT_REGISTERED:
-            groups.pending.push(ticket);
-            break;
-          case ONBOARDING.PAID_WITH_LL:
-            groups.paidWithLandlord.push(ticket);
-            break;
-          default:
-            groups.unknown.push(ticket);
-            break;
-        }
-      });
+      let metrics: ReportMetric[] = [];
+      let tables: ReportTable[] = [];
+      const reportLines: string[] = [];
 
-      const notes = customers
-        .filter((ticket) => ticket.issueDetail?.trim())
-        .map((ticket) => ({
-          customerId: ticket.customerId,
-          customerName: ticket.customer?.name ?? null,
-          customerPhone: ticket.customerPhone ?? ticket.customer?.phone ?? null,
-          note: ticket.issueDetail?.trim() ?? "",
-        }));
-
-      const specialCases = notes.map((note) => ({
-        ...note,
-        tags: note.note ? categorizeIssueDetail(note.note) : [],
-      }));
-
-      const specialCaseTags = new Map<number, string[]>();
-      const specialCaseMap = new Map<string, string>();
-      specialCases.forEach((item) => {
-        if (item.customerId) {
-          specialCaseTags.set(item.customerId, item.tags);
-        }
-        const name = item.customerName || "Unknown";
-        const phone = item.customerPhone || "";
-        const key = `${name}::${phone}`;
-        if (item.note) {
-          specialCaseMap.set(key, item.note);
-        }
-      });
-
-      const pendingSet = new Set(groups.pending.map((ticket) => ticket.customerId));
-      const notParkedPending = specialCases.filter(
-        (item) =>
-          item.customerId &&
-          pendingSet.has(item.customerId) &&
-          item.tags.includes("not_parked")
-      ).length;
-      const unreachablePending = specialCases.filter(
-        (item) =>
-          item.customerId &&
-          pendingSet.has(item.customerId) &&
-          item.tags.includes("unreachable")
-      ).length;
-      const pendingUnresponsive = Math.max(
-        0,
-        groups.pending.length - notParkedPending - unreachablePending
-      );
-
-      const notUnresponsiveTags = new Set([
-        "not_parked",
-        "unreachable",
-        "no_contact",
-        "declined",
-        "handled_internally",
-        "paid_by_check",
-        "rate_discrepancy",
-      ]);
-      const unresponsiveCustomers = groups.pending.filter((ticket) => {
-        const tags = specialCaseTags.get(ticket.customerId ?? -1) || [];
-        if (tags.some((tag) => notUnresponsiveTags.has(tag))) {
-          return false;
-        }
-        if (tags.includes("unresponsive")) {
-          return true;
-        }
-        return tags.length === 0;
-      });
-
-      const buildRows = (items: Ticket[], status: string) =>
-        items.map((ticket) => {
-          const name = getCustomerLabel(ticket);
-          const phone = ticket.customerPhone || ticket.customer?.phone || "";
-          const key = `${name}::${phone}`;
-          return {
-            name,
-            phone,
-            status,
-            specialCase: specialCaseMap.get(key) || "",
-          };
+      if (isArCampaign) {
+        const arGroups = new Map<string, Ticket[]>();
+        customers.forEach((ticket) => {
+          const option =
+            ticket.campaignOption ??
+            ticket.campaingOption ??
+            ticket.onboardingOption ??
+            "";
+          const key = AR_LABELS[option as keyof typeof AR_LABELS]
+            ? option
+            : "UNSPECIFIED";
+          const arr = arGroups.get(key) || [];
+          arr.push(ticket);
+          arGroups.set(key, arr);
         });
 
-      const reportLines: string[] = [];
-      reportLines.push("Parking Registration & Payment Status Report");
-      if (selectedCampaign?.nombre) reportLines.push(selectedCampaign.nombre);
-      reportLines.push(`Total Customers: ${customers.length}`);
-      reportLines.push(`Accepted: ${groups.registered.length}`);
-      reportLines.push(`Pending: ${groups.pending.length}`);
-      reportLines.push(`LL Pay: ${groups.paidWithLandlord.length}`);
-      if (notParkedPending > 0 || pendingUnresponsive > 0) {
-        reportLines.push(
-          `Not Parked: ${notParkedPending} | Pending/Unresponsive: ${pendingUnresponsive}`
+        // ensure all AR categories exist
+        Object.keys(AR_LABELS).forEach((key) => {
+          if (!arGroups.has(key)) {
+            arGroups.set(key, []);
+          }
+        });
+
+        metrics = [
+          { title: "Total Customers", value: customers.length },
+          ...Object.keys(AR_LABELS).map((key) => ({
+            title: AR_LABELS[key],
+            value: arGroups.get(key)?.length || 0,
+          })),
+          { title: "Missed Calls", value: missedCalls.length },
+        ];
+
+        const buildRows = (items: Ticket[], status: string) =>
+          items.map((ticket) => {
+            const name = getCustomerLabel(ticket);
+            const phone = ticket.customerPhone || ticket.customer?.phone || "";
+            return {
+              name,
+              phone,
+              status,
+              specialCase: ticket.issueDetail?.trim() || "",
+            };
+          });
+
+        tables = [
+          ...Object.keys(AR_LABELS).map((key) => ({
+            title: AR_LABELS[key],
+            rows: buildRows(arGroups.get(key) || [], AR_LABELS[key]),
+          })),
+          {
+            title: "Missed Calls",
+            rows: buildRows(missedCalls, "Missed Call"),
+          },
+        ];
+
+        reportLines.push("AR Campaign Status Report");
+        if (selectedCampaign?.nombre) reportLines.push(selectedCampaign.nombre);
+        reportLines.push(`Total Customers: ${customers.length}`);
+      } else {
+        const groups = {
+          registered: [] as Ticket[],
+          pending: [] as Ticket[],
+          paidWithLandlord: [] as Ticket[],
+          unknown: [] as Ticket[],
+        };
+
+        customers.forEach((ticket) => {
+          const option =
+            ticket.campaingOption ?? ticket.onboardingOption ?? null;
+          switch (option) {
+            case ONBOARDING.REGISTERED:
+              groups.registered.push(ticket);
+              break;
+            case ONBOARDING.NOT_REGISTERED:
+              groups.pending.push(ticket);
+              break;
+            case ONBOARDING.PAID_WITH_LL:
+              groups.paidWithLandlord.push(ticket);
+              break;
+            default:
+              groups.unknown.push(ticket);
+              break;
+          }
+        });
+
+        const notes = customers
+          .filter((ticket) => ticket.issueDetail?.trim())
+          .map((ticket) => ({
+            customerId: ticket.customerId,
+            customerName: ticket.customer?.name ?? null,
+            customerPhone:
+              ticket.customerPhone ?? ticket.customer?.phone ?? null,
+            note: ticket.issueDetail?.trim() ?? "",
+          }));
+
+        const specialCases = notes.map((note) => ({
+          ...note,
+          tags: note.note ? categorizeIssueDetail(note.note) : [],
+        }));
+
+        const specialCaseMap = new Map<string, string>();
+        specialCases.forEach((item) => {
+          const name = item.customerName || "Unknown";
+          const phone = item.customerPhone || "";
+          const key = `${name}::${phone}`;
+          if (item.note) {
+            specialCaseMap.set(key, item.note);
+          }
+        });
+
+        const pendingSet = new Set(
+          groups.pending.map((ticket) => ticket.customerId)
         );
+        const notParkedPending = specialCases.filter(
+          (item) =>
+            item.customerId &&
+            pendingSet.has(item.customerId) &&
+            item.tags.includes("not_parked")
+        ).length;
+        const unreachablePending = specialCases.filter(
+          (item) =>
+            item.customerId &&
+            pendingSet.has(item.customerId) &&
+            item.tags.includes("unreachable")
+        ).length;
+        const pendingUnresponsive = Math.max(
+          0,
+          groups.pending.length - notParkedPending - unreachablePending
+        );
+
+        const buildRows = (items: Ticket[], status: string) =>
+          items.map((ticket) => {
+            const name = getCustomerLabel(ticket);
+            const phone = ticket.customerPhone || ticket.customer?.phone || "";
+            const key = `${name}::${phone}`;
+            return {
+              name,
+              phone,
+              status,
+              specialCase:
+                ticket.issueDetail?.trim() || specialCaseMap.get(key) || "",
+            };
+          });
+
+        metrics = [
+          { title: "Total Customers", value: customers.length },
+          { title: "Accepted", value: groups.registered.length },
+          { title: "LL Pay", value: groups.paidWithLandlord.length },
+          { title: "Missed Calls", value: missedCalls.length },
+        ];
+
+        tables = [
+          {
+            title: "Paid with LL",
+            rows: buildRows(groups.paidWithLandlord, "Paid with LL"),
+          },
+          {
+            title: "Registered",
+            rows: buildRows(groups.registered, "Registered"),
+          },
+          {
+            title: "Not Registered",
+            rows: buildRows(groups.pending, "Not Registered"),
+          },
+          {
+            title: "Missed Calls",
+            rows: buildRows(missedCalls, "Missed Call"),
+          },
+        ];
+
+        reportLines.push("Parking Registration & Payment Status Report");
+        if (selectedCampaign?.nombre) reportLines.push(selectedCampaign.nombre);
+        reportLines.push(`Total Customers: ${customers.length}`);
+        reportLines.push(`Accepted: ${groups.registered.length}`);
+        reportLines.push(`LL Pay: ${groups.paidWithLandlord.length}`);
+        if (missedCalls.length > 0) {
+          reportLines.push(`Missed Calls: ${missedCalls.length}`);
+        }
       }
 
       setReport({
         campaign: selectedCampaign,
-        summary: {
-          totalCustomers: customers.length,
-          accepted: groups.registered.length,
-          pending: groups.pending.length,
-          llPay: groups.paidWithLandlord.length,
-          notParked: notParkedPending,
-          pendingUnresponsive,
-        },
+        metrics,
+        totalCustomers: customers.length,
         reportLines,
-        tables: {
-          paid: buildRows(groups.paidWithLandlord, "Paid with LL"),
-          registered: buildRows(groups.registered, "Registered"),
-          pending: buildRows(groups.pending, "Not Registered"),
-          noAnswer: buildRows(unresponsiveCustomers, "No Answer"),
-        },
+        tables,
       });
     } catch (error: any) {
       console.error("Error generating report:", error);
@@ -388,48 +510,126 @@ export default function CampaignReportsPage() {
 
   const exportPdf = () => {
     if (!report) return;
+
     const doc = new jsPDF();
+    const primary = "#1e40af";
+    const secondary = "#3b82f6";
+    const gray = "#6b7280";
+    const light = "#f3f4f6";
+    const white = "#ffffff";
 
-    doc.setFontSize(16);
-    doc.text("Campaign Report", 14, 18);
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    doc.setFillColor(light);
+    doc.rect(0, 0, pageWidth, 42, "F");
+
+    doc.setTextColor(primary);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("CAMPAIGN REPORT", 14, 18);
+
+    const logoSize = 30;
+    const logoX = pageWidth - 14 - logoSize;
+    const logoY = 7;
+    if (logoDataUrl) {
+      doc.addImage(logoDataUrl, "PNG", logoX, logoY, logoSize, logoSize);
+    } else {
+      doc.setFillColor(primary);
+      doc.setDrawColor(primary);
+      doc.roundedRect(logoX, logoY, logoSize, logoSize, 3, 3, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text("CQ", logoX + logoSize / 2, logoY + logoSize / 2 + 6, {
+        align: "center",
+        baseline: "middle",
+      });
+    }
+
+    doc.setDrawColor(secondary);
+    doc.setLineWidth(2);
+    doc.line(14, 22, 60, 22);
+
+    doc.setTextColor(0);
     doc.setFontSize(10);
-    if (report.campaign?.nombre) {
-      doc.text(`Campaign: ${report.campaign.nombre}`, 14, 26);
-    }
+    doc.setFont("helvetica", "bold");
+    doc.text("CAMPAIGN:", 14, 30);
+    doc.setFont("helvetica", "normal");
+    doc.text(report.campaign?.nombre || "—", 38, 30);
+
     if (report.campaign?.yarda?.name) {
-      doc.text(`Yard: ${report.campaign.yarda.name}`, 14, 32);
+      doc.setFont("helvetica", "bold");
+      doc.text("YARD:", 14, 36);
+      doc.setFont("helvetica", "normal");
+      doc.text(report.campaign.yarda.name, 32, 36);
     }
+
     if (startDate || endDate) {
-      doc.text(
-        `Range: ${startDate || "Start"} - ${endDate || "End"}`,
-        14,
-        38
-      );
+      doc.setFont("helvetica", "bold");
+      doc.text("RANGE:", 120, 30);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${startDate || "Start"} - ${endDate || "End"}`, 145, 30);
     }
 
-    let currentY = 44;
+    const palette = [
+      "#1e40af",
+      "#10b981",
+      "#f59e0b",
+      "#8b5cf6",
+      "#ef4444",
+      "#0ea5e9",
+      "#22c55e",
+      "#f97316",
+    ];
+    const metrics = report.metrics.map((item, idx) => ({
+      title: item.title,
+      value: item.value,
+      color: palette[idx % palette.length],
+    }));
 
-    autoTable(doc, {
-      startY: currentY,
-      head: [["Metric", "Value"]],
-      body: [
-        ["Total Customers", report.summary.totalCustomers],
-        ["Accepted", report.summary.accepted],
-        ["Pending", report.summary.pending],
-        ["LL Pay", report.summary.llPay],
-        ["Not Parked", report.summary.notParked],
-        ["Pending/Unresponsive", report.summary.pendingUnresponsive],
-      ],
-      didDrawPage: (data) => {
-        if (data.cursor) {
-          currentY = data.cursor.y + 8;
-        }
-      },
+    const boxH = 28;
+    const gap = 6;
+    const startX = 14;
+    const startY = 50;
+    const metricsPerRow = 4;
+    const boxW =
+      (pageWidth - startX * 2 - gap * (metricsPerRow - 1)) / metricsPerRow;
+
+    metrics.forEach((m, idx) => {
+      const x = startX + (boxW + gap) * (idx % metricsPerRow);
+      const y = startY + Math.floor(idx / metricsPerRow) * (boxH + gap);
+
+      doc.setFillColor("#e5e7eb");
+      doc.rect(x + 1.5, y + 1.5, boxW, boxH, "F");
+
+      doc.setFillColor(white);
+      doc.setDrawColor("#e5e7eb");
+      doc.rect(x, y, boxW, boxH, "FD");
+
+      doc.setFillColor(m.color);
+      doc.rect(x, y, boxW, 3, "F");
+
+      doc.setTextColor(gray);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      doc.text(m.title.toUpperCase(), x + 3, y + 10);
+
+      doc.setTextColor(0);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text(String(m.value ?? 0), x + 3, y + 22);
     });
 
-    const drawTable = (title: string, rows: CustomerRow[]) => {
+    const metricRows = Math.ceil(metrics.length / metricsPerRow);
+    let currentY = startY + metricRows * (boxH + gap) + 10;
+
+    const tableBlock = (title: string, rows: CustomerRow[]) => {
+      doc.setTextColor(primary);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
       doc.text(title, 14, currentY);
-      currentY += 6;
+      currentY += 4;
+
       autoTable(doc, {
         startY: currentY,
         head: [["Customer", "Phone", "Status", "Special Case"]],
@@ -442,18 +642,18 @@ export default function CampaignReportsPage() {
                 row.specialCase || "—",
               ])
             : [["No customer data available.", "", "", ""]],
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [30, 64, 175] },
+        alternateRowStyles: { fillColor: [243, 244, 246] },
         didDrawPage: (data) => {
           if (data.cursor) {
-            currentY = data.cursor.y + 8;
+            currentY = data.cursor.y + 10;
           }
         },
       });
     };
 
-    drawTable("Paid with LL", report.tables.paid);
-    drawTable("Registered", report.tables.registered);
-    drawTable("Not Registered", report.tables.pending);
-    drawTable("No Answer", report.tables.noAnswer);
+    report.tables.forEach((table) => tableBlock(table.title, table.rows));
 
     doc.save(`campaign_report_${report.campaign?.id || "campaign"}.pdf`);
   };
@@ -528,35 +728,22 @@ export default function CampaignReportsPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-            <div className="rounded-xl border border-border/60 bg-background/60 p-4 shadow-sm">
-              <p className="text-xs text-muted-foreground">Total Customers</p>
-              <p className="text-2xl font-semibold">{report.summary.totalCustomers}</p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background/60 p-4 shadow-sm">
-              <p className="text-xs text-muted-foreground">Accepted</p>
-              <p className="text-2xl font-semibold">{report.summary.accepted}</p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background/60 p-4 shadow-sm">
-              <p className="text-xs text-muted-foreground">Pending</p>
-              <p className="text-2xl font-semibold">{report.summary.pending}</p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background/60 p-4 shadow-sm">
-              <p className="text-xs text-muted-foreground">LL Pay</p>
-              <p className="text-2xl font-semibold">{report.summary.llPay}</p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background/60 p-4 shadow-sm">
-              <p className="text-xs text-muted-foreground">Not Parked</p>
-              <p className="text-2xl font-semibold">{report.summary.notParked}</p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background/60 p-4 shadow-sm">
-              <p className="text-xs text-muted-foreground">Pending / Unresponsive</p>
-              <p className="text-2xl font-semibold">{report.summary.pendingUnresponsive}</p>
-            </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {report.metrics.map((metric) => (
+              <div
+                key={metric.title}
+                className="rounded-xl border border-border/60 bg-background/60 p-4 shadow-sm"
+              >
+                <p className="text-xs text-muted-foreground">{metric.title}</p>
+                <p className="text-2xl font-semibold">{metric.value}</p>
+              </div>
+            ))}
           </div>
 
           <div className="rounded-xl border border-border/60 bg-background/60 p-4 shadow-sm">
-            <p className="text-xs font-semibold text-muted-foreground">Report Notes</p>
+            <p className="text-xs font-semibold text-muted-foreground">
+              Report Notes
+            </p>
             <div className="mt-2 space-y-1 text-sm">
               {report.reportLines.map((line, index) => (
                 <p key={`${line}-${index}`}>{line}</p>
@@ -565,10 +752,13 @@ export default function CampaignReportsPage() {
           </div>
 
           <div className="grid gap-6">
-            <CustomerTable title="Paid with LL" rows={report.tables.paid} />
-            <CustomerTable title="Registered" rows={report.tables.registered} />
-            <CustomerTable title="Not Registered" rows={report.tables.pending} />
-            <CustomerTable title="No Answer" rows={report.tables.noAnswer} />
+            {report.tables.map((table) => (
+              <CustomerTable
+                key={table.title}
+                title={table.title}
+                rows={table.rows}
+              />
+            ))}
           </div>
         </div>
       )}
