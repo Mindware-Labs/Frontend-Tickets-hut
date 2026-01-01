@@ -43,7 +43,18 @@ export default function Topbar() {
   const { isMobile } = useSidebar()
   const pathname = usePathname()
   const pathSegments = pathname.split('/').filter(Boolean)
-  const currentPage = pathSegments[pathSegments.length - 1] || "Dashboard"
+  const rawPage = pathSegments[pathSegments.length - 1] || "dashboard"
+  const pageTitleMap: Record<string, string> = {
+    "agent-dashboard": "Dashboard",
+    dashboard: "Dashboard",
+  }
+  const currentPage =
+    pageTitleMap[rawPage.toLowerCase()] ||
+    rawPage
+      .replace(/-/g, " ")
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ")
 
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
