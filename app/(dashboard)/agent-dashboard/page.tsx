@@ -84,6 +84,8 @@ type AgentTicket = {
   assignedToUser?: { id?: number; name?: string; email?: string } | null;
   agentId?: number | string | null;
   assignedToId?: number | string | null;
+  campaign?: string | { nombre?: string } | null;
+  disposition?: string | null;
 };
 
 type DashboardData = {
