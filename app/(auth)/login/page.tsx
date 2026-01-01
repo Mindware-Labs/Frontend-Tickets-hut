@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useState, Suspense } from 'react';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, Suspense } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Lock,
   Mail,
@@ -10,67 +10,63 @@ import {
   Eye,
   EyeOff,
   Loader2,
-  ShieldCheck
-} from 'lucide-react';
+  ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import Image from 'next/image';
+import Image from "next/image";
 
-import { auth } from '@/lib/auth';
+import { auth } from "@/lib/auth";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
       // Call real backend API
-      const loginResponse = await auth.login(formData.email, formData.password);
-      const userRole = loginResponse.user?.role?.toLowerCase();
-
-      if (userRole !== 'admin') {
-        auth.logout();
-        setError('Access is restricted to administrators only.');
-        return;
-      }
+      await auth.login(formData.email, formData.password);
 
       // Get redirect URL from query params if exists, or determine based on role
-      const redirectParam = searchParams.get('redirect');
-      let redirectTo = redirectParam || '/dashboard';
-      
+      const redirectParam = searchParams.get("redirect");
+      let redirectTo = redirectParam || "/dashboard";
+
       // If no redirect param, redirect based on role
       if (!redirectParam) {
-        redirectTo = '/dashboard';
+        redirectTo = "/dashboard";
       }
 
       // Redirect to dashboard or original destination
       router.push(redirectTo);
     } catch (err: any) {
-      console.error('Login error:', err);
-      
+      console.error("Login error:", err);
+
       // Handle specific error cases
-      let errorMessage = err.message || 'Login failed. Please check your credentials.';
-      
+      let errorMessage =
+        err.message || "Login failed. Please check your credentials.";
+
       // Check if it's a connection error
-      if (errorMessage.includes('Cannot connect to the server')) {
-        errorMessage = 'Unable to connect to the server. Please ensure the backend is running and try again.';
-      } else if (errorMessage.includes('fetch')) {
-        errorMessage = 'Network error. Please check your connection and ensure the backend server is running.';
+      if (errorMessage.includes("Cannot connect to the server")) {
+        errorMessage =
+          "Unable to connect to the server. Please ensure the backend is running and try again.";
+      } else if (errorMessage.includes("fetch")) {
+        errorMessage =
+          "Network error. Please check your connection and ensure the backend server is running.";
       }
-      
+
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -79,19 +75,17 @@ function LoginForm() {
 
   return (
     <div className="bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl overflow-hidden backdrop-blur-sm">
-
       {/* Card header */}
       <div className="text-center border-b border-slate-800/50 bg-slate-900/50">
-
         {/* --- CHANGE: Replaced the icon div with the logo --- */}
         <div className="mx-auto w-50 h-26 relative ">
-           <Image 
-             src="/images/LOGO CQ-13.png"   
-             alt="cq Logo"
-             fill
-             className="object-contain" // Esto evita que el logo se estire o deforme
-             priority
-           />
+          <Image
+            src="/images/LOGO CQ-13.png"
+            alt="cq Logo"
+            fill
+            className="object-contain" // Esto evita que el logo se estire o deforme
+            priority
+          />
         </div>
         {/* --------------------------------------------------------- */}
 
@@ -101,10 +95,12 @@ function LoginForm() {
       {/* Card body */}
       <div className="p-8 pt-6">
         <form onSubmit={handleSubmit} className="space-y-5" autoComplete="off">
-
           {/* Email Field */}
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
+            <Label
+              htmlFor="email"
+              className="text-slate-300 text-xs font-semibold uppercase tracking-wider"
+            >
               Work Email
             </Label>
             <div className="relative group">
@@ -117,7 +113,9 @@ function LoginForm() {
                 required
                 autoComplete="off"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
               />
             </div>
           </div>
@@ -125,10 +123,16 @@ function LoginForm() {
           {/* Password Field */}
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label htmlFor="password" className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
+              <Label
+                htmlFor="password"
+                className="text-slate-300 text-xs font-semibold uppercase tracking-wider"
+              >
                 Password
               </Label>
-              <Link href="/forgot-password" className="text-xs text-blue-500 hover:text-blue-400 font-medium hover:underline">
+              <Link
+                href="/forgot-password"
+                className="text-xs text-blue-500 hover:text-blue-400 font-medium hover:underline"
+              >
                 Forgot password?
               </Link>
             </div>
@@ -142,18 +146,23 @@ function LoginForm() {
                 required
                 autoComplete="new-password"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
               </button>
             </div>
           </div>
-
 
           {/* Error Message */}
           {error && (
@@ -180,15 +189,14 @@ function LoginForm() {
               </>
             )}
           </Button>
-
         </form>
       </div>
 
       {/* Footer */}
       <div className="p-4 border-t border-slate-600 bg-slate-950/50 text-center">
         <p className="text-xs text-slate-400">
-          System used by CCQUEST and RIG HUT personnel.
-          Access is restricted to authorized users only. <br />
+          System used by CCQUEST and RIG HUT personnel. Access is restricted to
+          authorized users only. <br />
           <span className="text-slate-600">Powered by Mindware Labs.</span>
         </p>
       </div>
@@ -198,13 +206,15 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl overflow-hidden backdrop-blur-sm">
-        <div className="p-8 text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto" />
+    <Suspense
+      fallback={
+        <div className="bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl overflow-hidden backdrop-blur-sm">
+          <div className="p-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto" />
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <LoginForm />
     </Suspense>
   );
