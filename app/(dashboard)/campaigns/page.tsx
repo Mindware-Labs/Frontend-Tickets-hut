@@ -47,6 +47,7 @@ import {
   ShieldAlert,
   Tag,
   Ticket,
+  Megaphone,
 } from "lucide-react";
 
 type CampaignTicket = {
@@ -89,7 +90,7 @@ export default function CampaignsPage() {
   >("all");
   const [yardFilter, setYardFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(9);
+  const [itemsPerPage, setItemsPerPage] = useState(6);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -396,21 +397,23 @@ export default function CampaignsPage() {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-6 animate-in fade-in duration-500">
         {/* Header Section */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight">Campaigns</h1>
+            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+              <Megaphone className="h-8 w-8 text-primary" /> Campaigns
+            </h1>
             <p className="text-muted-foreground">
-              Manage campaigns using real backend data
+              Manage and monitor your communication initiatives.
             </p>
           </div>
           {canManage && (
             <Button
-              className="bg-primary hover:bg-primary/90"
+              className="bg-primary hover:bg-primary/90 shadow-sm gap-2"
               onClick={handleCreate}
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="h-4 w-4" />
               New Campaign
             </Button>
           )}
@@ -422,7 +425,7 @@ export default function CampaignsPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search by name or yard..."
-              className="pl-9"
+              className="pl-9 bg-card border-border/60 focus-visible:ring-primary"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -434,7 +437,7 @@ export default function CampaignsPage() {
                 setTypeFilter(value)
               }
             >
-              <SelectTrigger className="h-10 w-[160px]">
+              <SelectTrigger className="h-10 w-[160px] bg-card border-border/60">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
@@ -451,7 +454,7 @@ export default function CampaignsPage() {
                 setStatusFilter(value)
               }
             >
-              <SelectTrigger className="h-10 w-[150px]">
+              <SelectTrigger className="h-10 w-[150px] bg-card border-border/60">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -465,7 +468,7 @@ export default function CampaignsPage() {
               value={yardFilter}
               onValueChange={(value) => setYardFilter(value)}
             >
-              <SelectTrigger className="h-10 w-[200px]">
+              <SelectTrigger className="h-10 w-[200px] bg-card border-border/60">
                 <SelectValue placeholder="Yard" />
               </SelectTrigger>
               <SelectContent>
@@ -480,60 +483,87 @@ export default function CampaignsPage() {
 
             <Button
               variant="outline"
+              className="border-border/60"
               onClick={() => {
                 setTypeFilter("all");
                 setStatusFilter("all");
                 setYardFilter("all");
+                setSearchTerm("");
               }}
             >
-              Clear Filters
+              Clear
             </Button>
           </div>
         </div>
 
-        {/* Loading State */}
+        {/* Content */}
         {loading ? (
-          <div className="text-sm text-muted-foreground">
-            Loading campaigns...
+          <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+            {/* Simple visual loader placeholder or real spinner */}
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+            <p>Loading campaigns...</p>
+          </div>
+        ) : filteredCampaigns.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed p-12 bg-muted/5">
+            <div className="p-4 rounded-full bg-muted/50 mb-4">
+              <Megaphone className="h-10 w-10 text-muted-foreground/50" />
+            </div>
+            <h3 className="text-lg font-semibold">No campaigns found</h3>
+            <p className="mt-1 text-sm text-muted-foreground max-w-sm text-center">
+              {searchTerm
+                ? "Try adjusting your search terms or filters."
+                : "Get started by creating your first campaign to track customer interactions."}
+            </p>
+            {!searchTerm && canManage && (
+              <Button className="mt-6" onClick={handleCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Campaign
+              </Button>
+            )}
           </div>
         ) : (
-          /* Main Grid with Improved Cards */
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {paginatedCampaigns.map((campaign) => (
               <Card
                 key={campaign.id}
-                className="group relative flex flex-col justify-between overflow-hidden border border-border/50 bg-background/60 text-card-foreground shadow-sm backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5"
+                className="group relative flex flex-col justify-between overflow-hidden border border-border/60 bg-gradient-to-b from-card to-card/50 text-card-foreground shadow-sm transition-all duration-300 hover:shadow-lg hover:border-primary/20"
               >
-                {/* Active Indicator Strip (Left Side) */}
+                {/* Active Indicator Strip */}
                 {campaign.isActive && (
                   <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-emerald-500 to-emerald-600 opacity-80" />
                 )}
 
-                <CardHeader className="pb-4 pt-5">
+                <CardHeader className="pb-4 pt-5 pl-7">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 flex-1 min-w-0">
                       {/* Title & Status Pulse */}
                       <div className="flex items-center gap-2">
-                        <CardTitle className="line-clamp-1 text-lg font-bold tracking-tight text-foreground/90">
+                        <CardTitle className="truncate text-lg font-bold tracking-tight text-foreground/90">
                           {campaign.nombre}
                         </CardTitle>
                         {campaign.isActive ? (
-                          <span className="relative flex h-2.5 w-2.5">
+                          <span
+                            className="relative flex h-2.5 w-2.5 shrink-0"
+                            title="Active"
+                          >
                             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
                             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
                           </span>
                         ) : (
-                          <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+                          <div
+                            className="h-2.5 w-2.5 shrink-0 rounded-full bg-muted-foreground/30"
+                            title="Inactive"
+                          />
                         )}
                       </div>
 
                       {/* ID & Date */}
-                      <CardDescription className="flex items-center gap-1.5 text-xs font-medium">
-                        <span className="font-mono text-primary/70">
+                      <CardDescription className="flex items-center gap-2 text-xs font-medium">
+                        <span className="font-mono text-primary/70 bg-primary/5 px-1.5 rounded-sm">
                           #{campaign.id}
                         </span>
                         <span className="text-muted-foreground/40">•</span>
-                        <span className="flex items-center gap-1 text-muted-foreground">
+                        <span className="flex items-center gap-1 text-muted-foreground truncate">
                           <CalendarDays className="h-3 w-3" />
                           {new Date(campaign.createdAt).toLocaleDateString(
                             "en-US",
@@ -569,7 +599,9 @@ export default function CampaignsPage() {
                         </DropdownMenuItem>
                         {canManage && (
                           <>
-                            <DropdownMenuItem onClick={() => handleEdit(campaign)}>
+                            <DropdownMenuItem
+                              onClick={() => handleEdit(campaign)}
+                            >
                               <CheckCircle2 className="mr-2 h-4 w-4 text-muted-foreground" />
                               Edit Configuration
                             </DropdownMenuItem>
@@ -588,13 +620,13 @@ export default function CampaignsPage() {
                   </div>
                 </CardHeader>
 
-                <CardContent className="space-y-6 pb-6">
+                <CardContent className="space-y-6 pb-6 pl-7 pr-6">
                   {/* Stats Grid */}
-                  <div className="grid grid-cols-2 gap-4 rounded-xl bg-muted/30 p-4 border border-border/40">
+                  <div className="grid grid-cols-2 gap-4 rounded-xl bg-muted/40 p-3 border border-border/30">
                     {/* Tickets Column */}
-                    <div className="space-y-1">
-                      <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        <Ticket className="h-3.5 w-3.5" />
+                    <div className="space-y-0.5">
+                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        <Ticket className="h-3 w-3" />
                         Tickets
                       </span>
                       <p className="text-2xl font-bold tracking-tight text-foreground">
@@ -603,12 +635,12 @@ export default function CampaignsPage() {
                     </div>
 
                     {/* Duration Column */}
-                    <div className="space-y-1 border-l border-border/40 pl-4">
-                      <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        <Clock className="h-3.5 w-3.5" />
+                    <div className="space-y-0.5 border-l border-border/40 pl-4">
+                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        <Clock className="h-3 w-3" />
                         Duration
                       </span>
-                      <p className="text-xl font-semibold tracking-tight text-foreground truncate">
+                      <p className="text-lg font-semibold tracking-tight text-foreground truncate mt-1">
                         {campaign.duracion || "—"}
                       </p>
                     </div>
@@ -628,15 +660,18 @@ export default function CampaignsPage() {
                       className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-500/5 text-orange-700 border-orange-200/40 hover:bg-orange-500/10 dark:text-orange-400 dark:border-orange-900/40 transition-colors"
                     >
                       <MapPin className="h-3 w-3" />
-                      {getYardLabel(campaign)}
+                      <span className="truncate max-w-[120px]">
+                        {getYardLabel(campaign)}
+                      </span>
                     </Badge>
                   </div>
                 </CardContent>
 
-                <CardFooter className="border-t bg-muted/20 px-6 py-3">
+                <CardFooter className="border-t bg-muted/30 px-6 py-3">
                   <Button
                     variant="ghost"
-                    className="group/btn w-full justify-between text-xs font-medium text-muted-foreground hover:text-primary"
+                    size="sm"
+                    className="group/btn w-full justify-between h-auto py-2 px-2 text-xs font-medium text-muted-foreground hover:text-primary hover:bg-background/80"
                     onClick={() => handleDetails(campaign)}
                   >
                     View Full Report
@@ -645,26 +680,6 @@ export default function CampaignsPage() {
                 </CardFooter>
               </Card>
             ))}
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!loading && filteredCampaigns.length === 0 && (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
-            <div className="mt-4 text-center">
-              <h3 className="text-lg font-semibold">No campaigns found</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {searchTerm
-                 ? "Try adjusting your search"
-                 : "Create a campaign to get started"}
-              </p>
-              {!searchTerm && canManage && (
-                <Button className="mt-4" onClick={handleCreate}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Campaign
-                </Button>
-              )}
-            </div>
           </div>
         )}
 

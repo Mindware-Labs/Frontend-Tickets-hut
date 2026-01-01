@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { fetchBlobFromBackend } from "@/lib/api-client";
+import { PaginationFooter } from "@/components/common/pagination-footer";
 
 type AgentReport = {
   period: {
@@ -61,6 +62,8 @@ export default function AgentStatsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [report, setReport] = useState<AgentReport | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const getLogoUrl = () =>
     typeof window !== "undefined"
@@ -116,6 +119,16 @@ export default function AgentStatsPage() {
       agent.name.toLowerCase().includes(term)
     );
   }, [report, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAgents.length / itemsPerPage));
+  const paginatedAgents = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredAgents.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredAgents, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, itemsPerPage, report]);
 
   const handleExport = async (format: "pdf") => {
     if (!report) return;
@@ -325,7 +338,7 @@ export default function AgentStatsPage() {
                   </thead>
 
                   <tbody className="divide-y divide-border/40">
-                    {filteredAgents.map((agent) => (
+                    {paginatedAgents.map((agent) => (
                       <tr
                         key={agent.id}
                         className="hover:bg-muted/40 transition-colors"
@@ -392,9 +405,17 @@ export default function AgentStatsPage() {
                 </table>
               </div>
 
-              <div className="p-4 border-t flex justify-between items-center text-sm text-muted-foreground">
-                <span>Showing {filteredAgents.length} agents</span>
-                <span>Total tickets: {report.kpis.totalTickets}</span>
+              <div className="p-4 border-t flex flex-col sm:flex-row gap-3 sm:gap-6 sm:items-center sm:justify-between text-sm text-muted-foreground">
+                <span className="hidden sm:inline">Total tickets: {report.kpis.totalTickets}</span>
+                <PaginationFooter
+                  totalCount={filteredAgents.length}
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  itemsPerPage={itemsPerPage}
+                  onItemsPerPageChange={(value) => setItemsPerPage(value)}
+                  onPageChange={(value) => setCurrentPage(value)}
+                  itemLabel="agents"
+                />
               </div>
             </div>
           </>

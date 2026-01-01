@@ -146,11 +146,39 @@ export const settingsApi = {
 
   // Profile - get from localStorage, update to backend
   async getProfile(): Promise<Profile> {
-    const profile = getProfileFromStorage();
-    if (!profile) {
+    const localProfile = getProfileFromStorage();
+    const profile = await fetchFromBackend('/auth/profile').catch(() => null);
+    if (profile) {
+      // keep storage in sync for faster subsequent loads
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(
+          PROFILE_STORAGE_KEY,
+          JSON.stringify({
+            name: profile.name,
+            lastName: profile.lastName,
+            avatar: profile.avatar,
+            phone: profile.phone,
+          }),
+        );
+        const currentUser = auth.getUser();
+        if (currentUser) {
+          localStorage.setItem(
+            'user_data',
+            JSON.stringify({
+              ...currentUser,
+              name: profile.name,
+              lastName: profile.lastName,
+              avatar: profile.avatar,
+            }),
+          );
+        }
+      }
+      return profile as Profile;
+    }
+    if (!localProfile) {
       throw new Error('User not authenticated');
     }
-    return profile;
+    return localProfile;
   },
 
   async updateProfile(data: UpdateProfileData): Promise<Profile> {
@@ -168,23 +196,17 @@ export const settingsApi = {
       if (data.avatar !== undefined) updatePayload.avatar = data.avatar;
       
       // Update in backend
-      await fetchFromBackend('/settings/profile', {
+      const updatedProfile = await fetchFromBackend('/auth/profile', {
         method: 'PATCH',
         body: JSON.stringify(updatePayload),
-      });
-      
-      // Update localStorage with new data
-      const updatedProfile: Profile = {
-        ...currentProfile,
-        ...data,
-      };
+      }) as Profile;
 
       // Save to profile storage
       if (typeof window !== 'undefined') {
         localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({
-          name: updatedProfile.name,
-          lastName: updatedProfile.lastName,
-          avatar: updatedProfile.avatar,
+          name: updatedProfile.name ?? data.name,
+          lastName: updatedProfile.lastName ?? data.lastName,
+          avatar: updatedProfile.avatar ?? data.avatar,
           phone: updatedProfile.phone,
         }));
 
@@ -193,14 +215,15 @@ export const settingsApi = {
         if (currentUser) {
           const updatedUserData = {
             ...currentUser,
-            name: updatedProfile.name,
-            lastName: updatedProfile.lastName,
-            avatar: updatedProfile.avatar,
+            name: updatedProfile.name ?? data.name,
+            lastName: updatedProfile.lastName ?? data.lastName,
+            avatar: updatedProfile.avatar ?? data.avatar,
           };
           localStorage.setItem('user_data', JSON.stringify(updatedUserData));
         }
+        window.dispatchEvent(new Event('user-profile-updated'));
       }
-      
+
       return updatedProfile;
     } catch (error: any) {
       console.error('Error updating profile in backend:', error);

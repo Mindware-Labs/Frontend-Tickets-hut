@@ -12,6 +12,10 @@ import {
   ShieldAlert,
   Trash2,
   X,
+  UploadCloud,
+  AlertCircle,
+  ShieldCheck,
+  Shield,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -36,6 +40,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { PaginationFooter } from "@/components/common/pagination-footer";
+import { cn } from "@/lib/utils";
 
 interface PolicyItem {
   id: number;
@@ -268,14 +273,15 @@ export default function PoliciesPage() {
 
   return (
     <div className="p-6 space-y-6 bg-background min-h-screen text-foreground">
+      {/* Page Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <ShieldAlert className="h-6 w-6 text-primary" />
+            <ShieldAlert className="h-7 w-7 text-primary" />
             Rig Hut Policies
           </h1>
-          <p className="text-muted-foreground text-sm">
-            Legal documentation and official regulations.
+          <p className="text-muted-foreground text-sm mt-1">
+            Legal documentation, compliance rules, and official regulations.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
@@ -289,7 +295,7 @@ export default function PoliciesPage() {
             />
           </div>
           {canManage && (
-            <Button onClick={openCreate} className="gap-2">
+            <Button onClick={openCreate} className="gap-2 shadow-sm">
               <Plus className="h-4 w-4" />
               New Policy
             </Button>
@@ -298,14 +304,28 @@ export default function PoliciesPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading policies...
+        <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+          <Loader2 className="h-10 w-10 animate-spin text-primary/50" />
+          <p>Loading policies...</p>
         </div>
       ) : filteredPolicies.length === 0 ? (
-        <Card className="border-dashed border-muted-foreground/40">
-          <CardContent className="py-10 text-center text-muted-foreground">
-            No policies found. Create a new policy to get started.
+        <Card className="border-dashed border-2 border-muted bg-muted/5">
+          <CardContent className="py-20 flex flex-col items-center text-center gap-4">
+            <div className="p-4 rounded-full bg-muted/50">
+              <ShieldCheck className="h-10 w-10 text-muted-foreground/50" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-semibold text-lg">No policies found</h3>
+              <p className="text-muted-foreground max-w-sm">
+                No policy documents match your search or none have been created
+                yet.
+              </p>
+            </div>
+            {canManage && !search && (
+              <Button onClick={openCreate} variant="outline" className="mt-2">
+                <Plus className="h-4 w-4 mr-2" /> Create Policy
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -316,44 +336,39 @@ export default function PoliciesPage() {
               return (
                 <Card
                   key={policy.id}
-                  className="bg-card border-border hover:border-primary/50 transition-all group"
+                  className="bg-card border-border hover:border-primary/40 hover:shadow-md transition-all group flex flex-col"
                 >
-                  <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-2">
-                    <div className="p-2 rounded-lg bg-muted text-primary group-hover:bg-primary/20 group-hover:text-primary transition-colors">
-                      <FileText className="h-6 w-6" />
+                  <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-3">
+                    <div className="p-2.5 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
+                      <FileText className="h-5 w-5" />
                     </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-base text-foreground leading-tight">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle
+                        className="text-base font-semibold leading-tight truncate"
+                        title={policy.name}
+                      >
                         {policy.name}
                       </CardTitle>
-                      <CardDescription className="text-xs text-muted-foreground mt-1">
-                        {policy.fileUrl
-                          ? getFileName(policy.fileUrl)
-                          : "No attachment"}
+                      <CardDescription className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1.5">
+                        <span className="truncate max-w-[150px]">
+                          {policy.fileUrl
+                            ? getFileName(policy.fileUrl)
+                            : "No document attached"}
+                        </span>
                       </CardDescription>
                     </div>
                   </CardHeader>
 
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground line-clamp-3">
+                  <CardContent className="flex-1">
+                    <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
                       {policy.description || "No description provided."}
                     </p>
                   </CardContent>
 
-                  <CardFooter className="flex flex-wrap gap-2 pt-0">
-                    {canManage && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 border-border bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
-                        onClick={() => openEdit(policy)}
-                      >
-                        <Edit2 className="h-4 w-4 mr-2" /> Edit
-                      </Button>
-                    )}
+                  <CardFooter className="flex items-center gap-2 pt-0 pb-4">
                     <Button
                       size="sm"
-                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                      className="flex-1 gap-2 bg-primary/90 hover:bg-primary shadow-sm"
                       onClick={() => {
                         if (downloadUrl) {
                           window.open(downloadUrl, "_blank");
@@ -361,17 +376,28 @@ export default function PoliciesPage() {
                       }}
                       disabled={!downloadUrl}
                     >
-                      <Download className="h-4 w-4 mr-2" /> Download
+                      <Download className="h-3.5 w-3.5" /> Download
                     </Button>
+
                     {canManage && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
-                        onClick={() => openDeleteDialog(policy)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1 border-l pl-2 ml-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => openEdit(policy)}
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => openDeleteDialog(policy)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     )}
                   </CardFooter>
                 </Card>
@@ -394,42 +420,79 @@ export default function PoliciesPage() {
         </>
       )}
 
+      {/* Create / Edit Dialog */}
       {canManage && (
-        <>
-          <Dialog open={showForm} onOpenChange={setShowForm}>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>
-                  {formMode === "create" ? "Add Policy" : "Edit Policy"}
-                </DialogTitle>
-                <DialogDescription>
-                  {formMode === "create"
-                    ? "Create a new policy document with optional attachment."
-                    : "Update the selected policy details and file."}
-                </DialogDescription>
-              </DialogHeader>
+        <Dialog open={showForm} onOpenChange={setShowForm}>
+          <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden bg-background">
+            {/* Modal Header */}
+            <DialogHeader className="p-6 pb-4 bg-muted/20 border-b">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 shadow-sm">
+                  <Shield className="h-6 w-6 text-primary" />
+                </div>
+                <div className="space-y-1 mt-0.5">
+                  <DialogTitle className="text-xl font-bold tracking-tight">
+                    {formMode === "create" ? "Add Policy" : "Edit Policy"}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground">
+                    {formMode === "create"
+                      ? "Create a new policy document with optional attachment."
+                      : "Update the selected policy details and file."}
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
 
-              <div className="space-y-4">
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
+              <div className="space-y-5">
+                {/* Name Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="policy-name">Name *</Label>
-                  <Input
-                    id="policy-name"
-                    value={formState.name}
-                    onChange={(event) => {
-                      setFormState({ ...formState, name: event.target.value });
-                      setValidationErrors({ ...validationErrors, name: "" });
-                    }}
-                    className={validationErrors.name ? "border-red-500" : ""}
-                  />
+                  <Label
+                    htmlFor="policy-name"
+                    className="text-xs uppercase text-muted-foreground font-semibold tracking-wider"
+                  >
+                    Policy Name <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <ShieldAlert className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="policy-name"
+                      placeholder="e.g. Terms of Service Update 2024"
+                      value={formState.name}
+                      onChange={(event) => {
+                        setFormState({
+                          ...formState,
+                          name: event.target.value,
+                        });
+                        setValidationErrors({ ...validationErrors, name: "" });
+                      }}
+                      className={cn(
+                        "pl-9",
+                        validationErrors.name &&
+                          "border-destructive focus-visible:ring-destructive"
+                      )}
+                    />
+                  </div>
                   {validationErrors.name && (
-                    <p className="text-xs text-red-500">{validationErrors.name}</p>
+                    <p className="text-xs text-destructive flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />{" "}
+                      {validationErrors.name}
+                    </p>
                   )}
                 </div>
 
+                {/* Description Textarea */}
                 <div className="space-y-2">
-                  <Label htmlFor="policy-description">Description</Label>
+                  <Label
+                    htmlFor="policy-description"
+                    className="text-xs uppercase text-muted-foreground font-semibold tracking-wider"
+                  >
+                    Description
+                  </Label>
                   <Textarea
                     id="policy-description"
+                    placeholder="Briefly describe the purpose of this policy..."
                     value={formState.description}
                     onChange={(event) => {
                       setFormState({
@@ -437,17 +500,29 @@ export default function PoliciesPage() {
                         description: event.target.value,
                       });
                     }}
-                    rows={5}
+                    rows={4}
+                    className="resize-none"
                   />
                 </div>
 
+                {/* Custom File Upload UI */}
                 <div className="space-y-2">
-                  <Label>Upload files</Label>
-                  <div className="flex flex-wrap items-center gap-3">
+                  <Label className="text-xs uppercase text-muted-foreground font-semibold tracking-wider">
+                    Document File
+                  </Label>
+
+                  <div
+                    className={cn(
+                      "border-2 border-dashed rounded-lg p-6 transition-colors flex flex-col items-center justify-center text-center gap-2",
+                      formState.file
+                        ? "border-primary/30 bg-primary/5"
+                        : "border-muted-foreground/20 hover:border-primary/50 hover:bg-muted/30"
+                    )}
+                  >
                     <Input
                       id="policy-file"
                       type="file"
-                      className="sr-only"
+                      className="hidden"
                       onChange={(event) =>
                         setFormState({
                           ...formState,
@@ -455,55 +530,69 @@ export default function PoliciesPage() {
                         })
                       }
                     />
-                    <Button asChild variant="outline" size="sm">
-                      <Label htmlFor="policy-file" className="cursor-pointer">
-                        Choose files
-                      </Label>
-                    </Button>
-                    <span className="text-xs text-muted-foreground">
-                      {formState.file ? "1 file selected" : "No files selected"}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
+
                     {formState.file ? (
-                      <Badge
-                        variant="secondary"
-                        className="pl-3 pr-1 py-1 gap-2 group"
-                      >
-                        <span className="truncate max-w-[200px]">
-                          {formState.file.name}
-                        </span>
+                      <div className="w-full flex items-center justify-between gap-3 p-2 bg-background rounded border shadow-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="p-2 bg-primary/10 rounded">
+                            <FileText className="h-4 w-4 text-primary" />
+                          </div>
+                          <span className="text-sm font-medium truncate">
+                            {formState.file.name}
+                          </span>
+                        </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-4 w-4 hover:bg-transparent"
-                          onClick={() =>
-                            setFormState({
-                              ...formState,
-                              file: null,
-                            })
-                          }
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setFormState({ ...formState, file: null });
+                          }}
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-4 w-4" />
                         </Button>
-                      </Badge>
+                      </div>
                     ) : (
-                      <p className="text-xs text-muted-foreground italic">
-                        No files selected
-                      </p>
+                      <Label
+                        htmlFor="policy-file"
+                        className="cursor-pointer flex flex-col items-center gap-2 w-full h-full"
+                      >
+                        <div className="p-3 bg-muted rounded-full">
+                          <UploadCloud className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground">
+                            Click to upload a document
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            PDF, DOCX, or images (Max 10MB)
+                          </p>
+                        </div>
+                      </Label>
                     )}
                   </div>
+
                   {formMode === "edit" &&
                     activePolicy?.fileUrl &&
                     !formState.file && (
-                      <p className="text-xs text-muted-foreground">
-                        Current file: {getFileName(activePolicy.fileUrl)}
-                      </p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 p-2 rounded border border-dashed">
+                        <FileText className="h-3 w-3" />
+                        <span>
+                          Current file:{" "}
+                          <span className="font-medium text-foreground">
+                            {getFileName(activePolicy.fileUrl)}
+                          </span>
+                        </span>
+                      </div>
                     )}
                 </div>
               </div>
+            </div>
 
-              <DialogFooter>
+            {/* Modal Footer */}
+            <DialogFooter className="p-4 bg-muted/20 border-t">
+              <div className="flex w-full justify-end gap-2">
                 <Button
                   variant="outline"
                   onClick={() => setShowForm(false)}
@@ -523,32 +612,39 @@ export default function PoliciesPage() {
                     "Save Changes"
                   )}
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Delete policy</DialogTitle>
-                <DialogDescription>
-                  {deleteTarget
-                    ? `This will permanently remove "${deleteTarget.name}".`
-                    : "This will permanently remove the selected policy."}
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button variant="outline" onClick={closeDeleteDialog}>
-                  Cancel
-                </Button>
-                <Button variant="destructive" onClick={confirmDelete}>
-                  Delete
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" /> Delete Policy
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-medium text-foreground">
+                "{deleteTarget?.name}"
+              </span>
+              ?
+              <br />
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={closeDeleteDialog}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete Permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

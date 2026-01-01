@@ -369,7 +369,11 @@ export default function LandlordsPage() {
             validationErrors={validationErrors}
             onValidationErrorChange={setValidationErrors}
             onSubmit={handleSubmitEdit}
-            yards={yards}
+            yards={yards.filter(
+              (yard) =>
+                !yard.landlord?.id ||
+                (selectedLandlord && yard.landlord.id === selectedLandlord.id)
+            )}
             idPrefix="edit"
           />
 

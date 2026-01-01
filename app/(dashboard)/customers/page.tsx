@@ -11,6 +11,7 @@ import { CustomersTable } from "./components/CustomersTable";
 import { CustomersPagination } from "./components/CustomersPagination";
 import { CustomerFormModal } from "./components/CustomerFormModal";
 import { DeleteCustomerModal } from "./components/DeleteCustomerModal";
+import { CustomerDetailsModal } from "./components/CustomerDetailsModal";
 
 const DEFAULT_FORM: CustomerFormData = {
   name: "",
@@ -39,6 +40,9 @@ export default function CustomersPage() {
     Record<string, string>
   >({});
   const [formData, setFormData] = useState<CustomerFormData>(DEFAULT_FORM);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [customerTickets, setCustomerTickets] = useState<any[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
 
   const fetchCustomers = async () => {
     try {
@@ -122,6 +126,32 @@ export default function CustomersPage() {
     setSelectedCustomer(customer);
     clearValidationErrors();
     setShowDeleteModal(true);
+  };
+
+  const handleDetails = async (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setShowDetailsModal(true);
+    setTicketsLoading(true);
+    setCustomerTickets([]);
+    try {
+      const response = await fetchFromBackend("/tickets?page=1&limit=500");
+      const tickets = Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response)
+        ? response
+        : [];
+      const filtered = tickets.filter(
+        (ticket: any) =>
+          ticket.customerId === customer.id ||
+          ticket.customer?.id === customer.id
+      );
+      setCustomerTickets(filtered);
+    } catch (error) {
+      console.error("Error fetching tickets for customer", error);
+      setCustomerTickets([]);
+    } finally {
+      setTicketsLoading(false);
+    }
   };
 
   const buildPayload = (data: CustomerFormData) => ({
@@ -285,6 +315,7 @@ export default function CustomersPage() {
           loading={loading}
           customers={paginatedCustomers}
           totalFiltered={filteredCustomers.length}
+          onDetails={handleDetails}
           onEdit={canManage ? handleEdit : undefined}
           onDelete={canManage ? handleDelete : undefined}
           canManage={canManage}
@@ -302,6 +333,14 @@ export default function CustomersPage() {
           onPageChange={setCurrentPage}
         />
       </div>
+
+      <CustomerDetailsModal
+        open={showDetailsModal}
+        onOpenChange={(open) => setShowDetailsModal(open)}
+        customer={selectedCustomer}
+        tickets={customerTickets}
+        ticketsLoading={ticketsLoading}
+      />
 
       {canManage && (
         <>

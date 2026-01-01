@@ -53,7 +53,7 @@ export default function Topbar() {
   const [mounted, setMounted] = useState(false)
 
 
-  useEffect(() => {
+  const refreshUser = () => {
     const storedUser = auth.getUser()
     if (storedUser) {
       const fullName = [storedUser.name, storedUser.lastName]
@@ -63,6 +63,25 @@ export default function Topbar() {
         name: fullName || storedUser.email || "User",
         email: storedUser.email || "",
       })
+    }
+  }
+
+  useEffect(() => {
+    refreshUser()
+
+    const handleProfileUpdate = () => refreshUser()
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'user_data' || event.key === 'user_profile') {
+        refreshUser()
+      }
+    }
+
+    window.addEventListener('user-profile-updated', handleProfileUpdate)
+    window.addEventListener('storage', handleStorage)
+
+    return () => {
+      window.removeEventListener('user-profile-updated', handleProfileUpdate)
+      window.removeEventListener('storage', handleStorage)
     }
   }, [])
 

@@ -47,10 +47,10 @@ export function CampaignsPagination({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="5">5 / page</SelectItem>
-            <SelectItem value="10">10 / page</SelectItem>
-            <SelectItem value="20">20 / page</SelectItem>
-            <SelectItem value="50">50 / page</SelectItem>
+            <SelectItem value="6">6 / page</SelectItem>
+            <SelectItem value="12">12 / page</SelectItem>
+            <SelectItem value="18">18 / page</SelectItem>
+            <SelectItem value="24">24 / page</SelectItem>
           </SelectContent>
         </Select>
         <div className="flex items-center gap-1">

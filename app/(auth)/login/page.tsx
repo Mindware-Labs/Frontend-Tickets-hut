@@ -39,6 +39,13 @@ function LoginForm() {
     try {
       // Call real backend API
       const loginResponse = await auth.login(formData.email, formData.password);
+      const userRole = loginResponse.user?.role?.toLowerCase();
+
+      if (userRole !== 'admin') {
+        auth.logout();
+        setError('Access is restricted to administrators only.');
+        return;
+      }
 
       // Get redirect URL from query params if exists, or determine based on role
       const redirectParam = searchParams.get('redirect');
@@ -46,8 +53,7 @@ function LoginForm() {
       
       // If no redirect param, redirect based on role
       if (!redirectParam) {
-        const userRole = loginResponse.user?.role?.toLowerCase();
-        redirectTo = userRole === 'agent' ? '/agent-dashboard' : '/dashboard';
+        redirectTo = '/dashboard';
       }
 
       // Redirect to dashboard or original destination
@@ -179,12 +185,6 @@ function LoginForm() {
       </div>
 
       {/* Footer */}
-      <p className="text-sm text-slate-400 text-center p-3">
-        Don't have an account?{' '}
-        <Link href="/register" className="text-blue-400 hover:text-blue-300 font-medium hover:underline transition-colors">
-          Sign Up
-        </Link>
-      </p>
       <div className="p-4 border-t border-slate-600 bg-slate-950/50 text-center">
         <p className="text-xs text-slate-400">
           System used by CCQUEST and RIG HUT personnel.

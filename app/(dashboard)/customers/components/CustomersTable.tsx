@@ -19,6 +19,7 @@ interface CustomersTableProps {
   totalFiltered: number;
   onEdit?: (customer: Customer) => void;
   onDelete?: (customer: Customer) => void;
+  onDetails?: (customer: Customer) => void;
   canManage?: boolean;
 }
 
@@ -28,6 +29,7 @@ export function CustomersTable({
   totalFiltered,
   onEdit,
   onDelete,
+  onDetails,
   canManage = true,
 }: CustomersTableProps) {
   return (
@@ -57,7 +59,11 @@ export function CustomersTable({
             </TableRow>
           ) : (
             customers.map((customer) => (
-              <TableRow key={customer.id} className="hover:bg-muted/50">
+              <TableRow
+                key={customer.id}
+                className="hover:bg-muted/50 cursor-pointer"
+                onClick={() => onDetails?.(customer)}
+              >
                 <TableCell className="font-medium">#{customer.id}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -97,7 +103,10 @@ export function CustomersTable({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onEdit(customer)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(customer);
+                          }}
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
@@ -106,7 +115,10 @@ export function CustomersTable({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onDelete(customer)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(customer);
+                          }}
                         >
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>

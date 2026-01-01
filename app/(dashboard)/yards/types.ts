@@ -11,6 +11,8 @@ export interface Yard {
   landlord?: { id: number; name: string; email?: string; phone?: string };
   landlordId?: number | null;
   ticketCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface YardFormData {

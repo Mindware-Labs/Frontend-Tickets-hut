@@ -28,10 +28,6 @@ interface RegisterResponse {
     email: string;
 }
 
-interface VerifyEmailCodeResponse {
-    message: string;
-}
-
 interface ForgotPasswordResponse {
     message: string;
 }
@@ -106,7 +102,6 @@ export const auth = {
 
     /**
      * Register new user
-     * Note: After registration, user must verify email before logging in
      */
     async register(data: RegisterData): Promise<RegisterResponse> {
         try {
@@ -185,7 +180,7 @@ export const auth = {
 
             // Return success response
             return {
-                message: result.message || 'User registered successfully. Please check your email to verify your account.',
+                message: result.message || 'User registered successfully. You can now log in.',
                 email: registerPayload.email
             };
         } catch (error: any) {
@@ -202,35 +197,6 @@ export const auth = {
             // Fallback error
             throw new Error('Registration failed. Please try again.');
         }
-    },
-
-    /**
-     * Verify email with a 6-digit code
-     */
-    async verifyEmailCode(email: string, code: string): Promise<VerifyEmailCodeResponse> {
-        const response = await fetch(`${API_URL}/auth/verify-email-code`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email, code }),
-        });
-
-        const responseText = await response.text();
-        let data: any;
-
-        try {
-            data = JSON.parse(responseText);
-        } catch (parseError) {
-            throw new Error(responseText || 'Invalid response from server');
-        }
-
-        if (!response.ok) {
-            const errorMessage = data.message || data.error || 'Verification failed';
-            throw new Error(errorMessage);
-        }
-
-        return data as VerifyEmailCodeResponse;
     },
 
     /**

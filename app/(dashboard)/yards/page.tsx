@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useRole } from "@/components/providers/role-provider";
 import { fetchFromBackend } from "@/lib/api-client";
 import { toast } from "@/hooks/use-toast";
@@ -24,10 +25,13 @@ type YardTicket = {
 };
 
 export default function YardsPage() {
+  const searchParams = useSearchParams();
   const { role } = useRole();
   const normalizedRole = role?.toString().toLowerCase();
   const isAgent = normalizedRole === "agent";
   const canManage = !isAgent;
+  const yardIdParam = searchParams?.get("yardId");
+  const yardIdFilter = yardIdParam ? Number(yardIdParam) : null;
 
   const [yards, setYards] = useState<Yard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,9 +104,11 @@ export default function YardsPage() {
         (statusFilter === "active" && yard.isActive) ||
         (statusFilter === "inactive" && !yard.isActive);
 
-      return matchesSearch && matchesType && matchesStatus;
+      const matchesQuery = yardIdFilter ? yard.id === yardIdFilter : true;
+
+      return matchesSearch && matchesType && matchesStatus && matchesQuery;
     });
-  }, [yards, search, typeFilter, statusFilter]);
+  }, [yards, search, typeFilter, statusFilter, yardIdFilter]);
 
   // Pagination
   const totalPages = Math.ceil(filteredYards.length / itemsPerPage);
@@ -113,7 +119,15 @@ export default function YardsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, typeFilter, statusFilter]);
+  }, [search, typeFilter, statusFilter, yardIdFilter]);
+
+  useEffect(() => {
+    if (!yardIdFilter || yards.length === 0) return;
+    const match = yards.find((y) => y.id === yardIdFilter);
+    if (match) {
+      handleDetails(match);
+    }
+  }, [yardIdFilter, yards]);
 
   const resetForm = () => {
     setFormData({

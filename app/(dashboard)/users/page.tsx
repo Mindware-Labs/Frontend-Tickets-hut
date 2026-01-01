@@ -22,6 +22,39 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { fetchFromBackend } from "@/lib/api-client";
 import { UsersPagination } from "./components/UsersPagination";
+import {
+  Users,
+  Search,
+  Plus,
+  Loader2,
+  MoreVertical,
+  Edit2,
+  Trash2,
+  Shield,
+  UserCog,
+  Mail,
+  CheckCircle2,
+  Ban,
+  UserPlus,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 type UserRole = "admin" | "agent";
 
@@ -65,7 +98,7 @@ export default function UsersPage() {
     Record<string, string>
   >({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(6); // Grid view: multiples of 6
 
   const fetchUsers = async () => {
     try {
@@ -152,11 +185,6 @@ export default function UsersPage() {
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
       return;
     }
 
@@ -174,10 +202,10 @@ export default function UsersPage() {
 
       const resetCode = response?.reset?.resetCode;
       toast({
-        title: "User created",
+        title: "User created successfully",
         description: resetCode
           ? `Reset code (dev): ${resetCode}`
-          : "A reset code was sent to the user email.",
+          : "A reset code has been sent to the user's email.",
       });
 
       setShowCreate(false);
@@ -201,11 +229,6 @@ export default function UsersPage() {
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
       return;
     }
 
@@ -274,7 +297,7 @@ export default function UsersPage() {
         body: JSON.stringify({ isActive: !user.isActive }),
       });
       toast({
-        title: user.isActive ? "User blocked" : "User unblocked",
+        title: user.isActive ? "User blocked" : "User activated",
         description: `${user.email} is now ${
           user.isActive ? "blocked" : "active"
         }.`,
@@ -291,305 +314,466 @@ export default function UsersPage() {
 
   return (
     <div className="p-6 space-y-6 bg-background min-h-screen animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Users</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage system access and account status.
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Users className="h-7 w-7 text-primary" />
+            Team Members
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Manage system access, roles, and account status.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Input
-            placeholder="Search users..."
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            className="w-64"
-          />
-          <Button onClick={handleCreate}>New User</Button>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search users..."
+              className="pl-9 bg-card border-border focus-visible:ring-primary text-foreground placeholder:text-muted-foreground"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Button onClick={handleCreate} className="gap-2 shadow-sm">
+            <UserPlus className="h-4 w-4" />
+            New User
+          </Button>
         </div>
       </div>
 
+      {/* Content */}
       {loading ? (
-        <div className="text-sm text-muted-foreground">Loading users...</div>
-      ) : (
-        <div className="rounded-xl border border-border/60 bg-background/60 shadow-sm overflow-hidden">
-          <div className="grid grid-cols-12 bg-muted/40 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <div className="col-span-3 px-4 py-3">User</div>
-            <div className="col-span-3 px-4 py-3">Email</div>
-            <div className="col-span-2 px-4 py-3">Role</div>
-            <div className="col-span-2 px-4 py-3">Status</div>
-            <div className="col-span-2 px-4 py-3 text-right">Actions</div>
-          </div>
-          {paginatedUsers.length === 0 ? (
-            <div className="px-4 py-6 text-sm text-muted-foreground">
-              No users found.
-            </div>
-          ) : (
-            paginatedUsers.map((user) => (
-              <div key={user.id} className="grid grid-cols-12 border-t text-sm">
-                <div className="col-span-3 px-4 py-3 font-medium">
-                  {user.name} {user.lastName}
-                </div>
-                <div className="col-span-3 px-4 py-3 text-muted-foreground">
-                  {user.email}
-                </div>
-                <div className="col-span-2 px-4 py-3">
-                  <Badge variant="outline">{user.role}</Badge>
-                </div>
-                <div className="col-span-2 px-4 py-3">
-                  <Badge variant={user.isActive ? "outline" : "destructive"}>
-                    {user.isActive ? "Active" : "Blocked"}
-                  </Badge>
-                </div>
-                <div className="col-span-2 px-4 py-3 flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(user)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleToggleStatus(user)}
-                  >
-                    {user.isActive ? "Block" : "Unblock"}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDelete(user)}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
+        <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+          <Loader2 className="h-10 w-10 animate-spin text-primary/50" />
+          <p>Loading users...</p>
         </div>
+      ) : filteredUsers.length === 0 ? (
+        <Card className="border-dashed border-2 border-muted bg-muted/5">
+          <CardContent className="py-20 flex flex-col items-center text-center gap-4">
+            <div className="p-4 rounded-full bg-muted/50">
+              <Users className="h-10 w-10 text-muted-foreground/50" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-semibold text-lg">No users found</h3>
+              <p className="text-muted-foreground max-w-sm">
+                Try adjusting your search terms or create a new user to get
+                started.
+              </p>
+            </div>
+            {!search && (
+              <Button onClick={handleCreate} variant="outline" className="mt-2">
+                <Plus className="h-4 w-4 mr-2" /> Add First User
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedUsers.map((user) => (
+              <Card
+                key={user.id}
+                className="bg-card border-border hover:border-primary/40 hover:shadow-md transition-all group relative overflow-hidden"
+              >
+                {/* Status Indicator Stripe */}
+                <div
+                  className={cn(
+                    "absolute top-0 left-0 w-1 h-full",
+                    user.isActive ? "bg-emerald-500" : "bg-destructive"
+                  )}
+                />
+
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pl-6">
+                  <div className="flex gap-3 items-center">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold shadow-sm">
+                      {user.name.charAt(0)}
+                      {user.lastName.charAt(0)}
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-semibold">
+                        {user.name} {user.lastName}
+                      </CardTitle>
+                      <CardDescription className="text-xs mt-0.5 flex items-center gap-1.5">
+                        <Badge
+                          variant="secondary"
+                          className="px-1.5 py-0 h-5 text-[10px] uppercase tracking-wider font-semibold"
+                        >
+                          {user.role}
+                        </Badge>
+                        <span
+                          className={cn(
+                            "text-[10px] font-medium flex items-center gap-1",
+                            user.isActive
+                              ? "text-emerald-600"
+                              : "text-destructive"
+                          )}
+                        >
+                          {user.isActive ? (
+                            <CheckCircle2 className="h-3 w-3" />
+                          ) : (
+                            <Ban className="h-3 w-3" />
+                          )}
+                          {user.isActive ? "Active" : "Blocked"}
+                        </span>
+                      </CardDescription>
+                    </div>
+                  </div>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 -mr-2"
+                      >
+                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => handleEdit(user)}>
+                        <Edit2 className="h-4 w-4 mr-2" /> Edit Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleToggleStatus(user)}
+                      >
+                        {user.isActive ? (
+                          <Ban className="h-4 w-4 mr-2" />
+                        ) : (
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                        )}
+                        {user.isActive ? "Block Access" : "Unblock Access"}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleDelete(user)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete User
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </CardHeader>
+
+                <CardContent className="pl-6 pt-2 pb-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 p-2 rounded border border-dashed">
+                    <Mail className="h-3.5 w-3.5" />
+                    <span className="truncate">{user.email}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <UsersPagination
+            totalCount={filteredUsers.length}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            itemsPerPage={itemsPerPage}
+            onItemsPerPageChange={(value) => {
+              setItemsPerPage(value);
+              setCurrentPage(1);
+            }}
+            onPageChange={setCurrentPage}
+          />
+        </>
       )}
 
-      {!loading && filteredUsers.length > 0 && (
-        <UsersPagination
-          totalCount={filteredUsers.length}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          itemsPerPage={itemsPerPage}
-          onItemsPerPageChange={(value) => {
-            setItemsPerPage(value);
-            setCurrentPage(1);
-          }}
-          onPageChange={setCurrentPage}
-        />
-      )}
-
+      {/* Create Modal */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Create User</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-primary" /> Create New User
+            </DialogTitle>
             <DialogDescription>
-              A random password will be created and a reset code will be
-              emailed.
+              Add a new member to the team. They will receive a reset code via
+              email.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-2">
-              <div>
+
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-name">
+                  First Name <span className="text-destructive">*</span>
+                </Label>
                 <Input
-                  placeholder="First name"
+                  id="create-name"
+                  placeholder="John"
                   value={formData.name}
-                  onChange={(event) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      name: event.target.value,
-                    }))
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
                   }
+                  className={cn(validationErrors.name && "border-destructive")}
                 />
                 {validationErrors.name && (
-                  <p className="text-xs text-red-500 mt-1">
+                  <p className="text-xs text-destructive">
                     {validationErrors.name}
                   </p>
                 )}
               </div>
-              <div>
+              <div className="space-y-2">
+                <Label htmlFor="create-lastname">
+                  Last Name <span className="text-destructive">*</span>
+                </Label>
                 <Input
-                  placeholder="Last name"
+                  id="create-lastname"
+                  placeholder="Doe"
                   value={formData.lastName}
-                  onChange={(event) =>
+                  onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      lastName: event.target.value,
+                      lastName: e.target.value,
                     }))
                   }
+                  className={cn(
+                    validationErrors.lastName && "border-destructive"
+                  )}
                 />
                 {validationErrors.lastName && (
-                  <p className="text-xs text-red-500 mt-1">
+                  <p className="text-xs text-destructive">
                     {validationErrors.lastName}
                   </p>
                 )}
               </div>
             </div>
-            <div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-email">
+                Email Address <span className="text-destructive">*</span>
+              </Label>
               <Input
-                placeholder="Email"
+                id="create-email"
                 type="email"
+                placeholder="john.doe@company.com"
                 value={formData.email}
-                onChange={(event) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    email: event.target.value,
-                  }))
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, email: e.target.value }))
                 }
+                className={cn(validationErrors.email && "border-destructive")}
               />
               {validationErrors.email && (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-destructive">
                   {validationErrors.email}
                 </p>
               )}
             </div>
-            <div>
-              <Select
-                value={formData.role}
-                onValueChange={(value: UserRole) =>
-                  setFormData((prev) => ({ ...prev, role: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="agent">Agent</SelectItem>
-                  {/* Si hay otros roles, se pueden agregar aquí, pero no se bloquea por rol */}
-                </SelectContent>
-              </Select>
+
+            <div className="space-y-2">
+              <Label>
+                Role Assignment <span className="text-destructive">*</span>
+              </Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div
+                  onClick={() =>
+                    setFormData((prev) => ({ ...prev, role: "agent" }))
+                  }
+                  className={cn(
+                    "cursor-pointer border rounded-lg p-3 flex flex-col gap-1 transition-all hover:border-primary/50",
+                    formData.role === "agent"
+                      ? "bg-primary/5 border-primary ring-1 ring-primary/20"
+                      : "bg-card"
+                  )}
+                >
+                  <div className="flex items-center gap-2 font-medium text-sm">
+                    <UserCog className="h-4 w-4" /> Agent
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Limited access to assigned tasks.
+                  </p>
+                </div>
+                <div
+                  onClick={() =>
+                    setFormData((prev) => ({ ...prev, role: "admin" }))
+                  }
+                  className={cn(
+                    "cursor-pointer border rounded-lg p-3 flex flex-col gap-1 transition-all hover:border-primary/50",
+                    formData.role === "admin"
+                      ? "bg-primary/5 border-primary ring-1 ring-primary/20"
+                      : "bg-card"
+                  )}
+                >
+                  <div className="flex items-center gap-2 font-medium text-sm">
+                    <Shield className="h-4 w-4" /> Admin
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Full system control.
+                  </p>
+                </div>
+              </div>
               {validationErrors.role && (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-destructive">
                   {validationErrors.role}
                 </p>
               )}
             </div>
           </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreate(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowCreate(false)}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
             <Button onClick={handleSubmitCreate} disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Create User"}
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Create User
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Edit Modal */}
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
+            <DialogTitle>Edit User Details</DialogTitle>
             <DialogDescription>
-              Update user details or block access.
+              Update information for {selectedUser?.email}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-2">
-              <div>
+
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">First Name</Label>
                 <Input
-                  placeholder="First name"
+                  id="edit-name"
                   value={formData.name}
-                  onChange={(event) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      name: event.target.value,
-                    }))
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
                   }
                 />
               </div>
-              <div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-lastname">Last Name</Label>
                 <Input
-                  placeholder="Last name"
+                  id="edit-lastname"
                   value={formData.lastName}
-                  onChange={(event) =>
+                  onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      lastName: event.target.value,
+                      lastName: e.target.value,
                     }))
                   }
                 />
               </div>
             </div>
-            <div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email Address</Label>
               <Input
-                placeholder="Email"
+                id="edit-email"
                 type="email"
                 value={formData.email}
-                onChange={(event) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    email: event.target.value,
-                  }))
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, email: e.target.value }))
                 }
               />
             </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <Select
-                value={formData.role}
-                onValueChange={(value: UserRole) =>
-                  setFormData((prev) => ({ ...prev, role: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="agent">Agent</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
-                value={formData.isActive ? "active" : "blocked"}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    isActive: value === "active",
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="blocked">Blocked</SelectItem>
-                </SelectContent>
-              </Select>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value: UserRole) =>
+                    setFormData((prev) => ({ ...prev, role: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="agent">Agent</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select
+                  value={formData.isActive ? "active" : "blocked"}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      isActive: value === "active",
+                    }))
+                  }
+                >
+                  <SelectTrigger
+                    className={cn(
+                      formData.isActive
+                        ? "text-emerald-600"
+                        : "text-destructive"
+                    )}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active" className="text-emerald-600">
+                      Active
+                    </SelectItem>
+                    <SelectItem value="blocked" className="text-destructive">
+                      Blocked
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEdit(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowEdit(false)}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
             <Button onClick={handleSubmitEdit} disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Changes"}
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Delete Modal */}
       <Dialog open={showDelete} onOpenChange={setShowDelete}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <Trash2 className="h-5 w-5" /> Delete User
+            </DialogTitle>
             <DialogDescription>
-              This action cannot be undone. Are you sure you want to delete{" "}
-              {selectedUser?.email}?
+              Are you sure you want to permanently delete{" "}
+              <span className="font-medium text-foreground">
+                {selectedUser?.name} {selectedUser?.lastName}
+              </span>
+              ?
+              <br />
+              This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDelete(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleSubmitDelete}>
-              Delete
+            <Button
+              variant="destructive"
+              onClick={handleSubmitDelete}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Deleting..." : "Delete Permanently"}
             </Button>
           </DialogFooter>
         </DialogContent>

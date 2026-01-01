@@ -1,236 +1,160 @@
-"use client"
+"use client";
 
-import { mockTickets } from "@/lib/mock-data"
-import { notFound } from "next/navigation"
-import Link from "next/link"
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { fetchFromBackend } from "@/lib/api-client";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  ArrowLeft,
+  Calendar,
+  Hash,
+  Loader2,
+  Ticket as TicketIcon,
+  User,
+  Phone,
+} from "lucide-react";
 
 interface TicketDetailPageProps {
-  params: Promise<{ id: string }>
+  params: { id: string };
 }
 
-export default async function TicketDetailPage({ params }: TicketDetailPageProps) {
-  const { id } = await params
-  const ticket = mockTickets.find((t) => t.id === id)
+export default function TicketDetailPage({ params }: TicketDetailPageProps) {
+  const { id } = params;
+  const router = useRouter();
+  const [ticket, setTicket] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!ticket) {
-    notFound()
-  }
+  useEffect(() => {
+    const loadTicket = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const data = await fetchFromBackend(`/tickets/${id}`);
+        setTicket(data);
+      } catch (err: any) {
+        setError(err?.message || "Ticket not found");
+        setTicket(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadTicket();
+  }, [id]);
+
+  const status = (ticket?.status || "").toLowerCase();
+  const statusVariant =
+    status.includes("closed") || status.includes("resolved")
+      ? "bg-emerald-500/10 text-emerald-700 border-emerald-200"
+      : status.includes("open")
+        ? "bg-amber-500/10 text-amber-700 border-amber-200"
+        : "bg-muted text-muted-foreground border-border";
 
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <Link href="/tickets" className="text-decoration-none text-muted mb-2 d-block">
-            <i className="bi bi-arrow-left me-2"></i>Back to Tickets
-          </Link>
-          <h2>{ticket.id}</h2>
-        </div>
-        <div className="d-flex gap-2">
-          <button className="btn btn-outline-secondary">
-            <i className="bi bi-pencil me-2"></i>Edit
-          </button>
-          <button className="btn btn-success">
-            <i className="bi bi-check-circle me-2"></i>Mark as Closed
-          </button>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" onClick={() => router.push("/tickets")} className="gap-2">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Tickets
+        </Button>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Hash className="h-4 w-4" />
+          <span className="font-mono text-sm">Ticket #{id}</span>
         </div>
       </div>
 
-      <div className="row g-4">
-        {/* Client Information */}
-        <div className="col-lg-4">
-          <div className="card mb-4">
-            <div className="card-header bg-white">
-              <h5 className="mb-0">
-                <i className="bi bi-person me-2"></i>Client Information
-              </h5>
-            </div>
-            <div className="card-body">
-              <div className="mb-3">
-                <label className="text-muted small">Name</label>
-                <p className="mb-0 fw-semibold">{ticket.clientName}</p>
-              </div>
-              <div className="mb-3">
-                <label className="text-muted small">Phone</label>
-                <p className="mb-0">{ticket.phone}</p>
-              </div>
-              <div className="mb-3">
-                <label className="text-muted small">Status</label>
-                <div>
-                  <span
-                    className={`badge ${
-                      ticket.status === "Open"
-                        ? "badge-open"
-                        : ticket.status === "In Progress"
-                          ? "badge-in-progress"
-                          : "badge-closed"
-                    }`}
-                  >
-                    {ticket.status}
-                  </span>
-                </div>
-              </div>
-              <div className="mb-0">
-                <label className="text-muted small">Priority</label>
-                <div>
-                  <span
-                    className={`badge ${
-                      ticket.priority === "High"
-                        ? "bg-danger"
-                        : ticket.priority === "Medium"
-                          ? "bg-warning"
-                          : "bg-secondary"
-                    }`}
-                  >
-                    {ticket.priority}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Call Information */}
-          <div className="card">
-            <div className="card-header bg-white">
-              <h5 className="mb-0">
-                <i className="bi bi-telephone me-2"></i>Call Information
-              </h5>
-            </div>
-            <div className="card-body">
-              <div className="mb-3">
-                <label className="text-muted small">Aircall ID</label>
-                <p className="mb-0 font-monospace">{ticket.aircallId}</p>
-              </div>
-              <div className="mb-3">
-                <label className="text-muted small">Call Duration</label>
-                <p className="mb-0">{ticket.callDuration}</p>
-              </div>
-              <div className="mb-0">
-                <label className="text-muted small">Created Date</label>
-                <p className="mb-0">{new Date(ticket.createdAt).toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Loading ticket...
         </div>
-
-        {/* Ticket Details */}
-        <div className="col-lg-8">
-          {/* Ticket Metadata */}
-          <div className="card mb-4">
-            <div className="card-header bg-white">
-              <h5 className="mb-0">
-                <i className="bi bi-ticket-perforated me-2"></i>Ticket Details
-              </h5>
-            </div>
-            <div className="card-body">
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="text-muted small">Type</label>
-                  <p className="mb-0">
-                    <span className={`badge ${ticket.type === "Onboarding" ? "bg-info" : "bg-warning"}`}>
-                      {ticket.type}
-                    </span>
-                  </p>
+      ) : error || !ticket ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-destructive">
+          <p className="font-semibold">Ticket not found</p>
+          <p className="text-sm opacity-80">{error}</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            <div className="rounded-lg border bg-card p-5 shadow-sm">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <TicketIcon className="h-5 w-5 text-primary" />
+                  <h2 className="text-lg font-semibold">Ticket Details</h2>
                 </div>
-                <div className="col-md-6 mb-3">
-                  <label className="text-muted small">Campaign</label>
-                  <p className="mb-0">{ticket.campaign}</p>
-                </div>
-                <div className="col-md-6 mb-0">
-                  <label className="text-muted small">Assigned To</label>
-                  <p className="mb-0">{ticket.assignedTo || "Unassigned"}</p>
-                </div>
+                <Badge
+                  variant="outline"
+                  className={`text-xs uppercase tracking-wide border ${statusVariant}`}
+                >
+                  {ticket.status || "Unknown"}
+                </Badge>
               </div>
-            </div>
-          </div>
-
-          {/* Timeline */}
-          <div className="card mb-4">
-            <div className="card-header bg-white">
-              <h5 className="mb-0">
-                <i className="bi bi-clock-history me-2"></i>Timeline
-              </h5>
-            </div>
-            <div className="card-body">
-              <div className="timeline">
-                <div className="timeline-item d-flex mb-3">
-                  <div className="timeline-marker bg-primary"></div>
-                  <div className="ms-3">
-                    <p className="mb-1 fw-semibold">Ticket Created</p>
-                    <small className="text-muted">{new Date(ticket.createdAt).toLocaleString()}</small>
-                    <p className="mb-0 mt-1 small">Ticket automatically created from Aircall</p>
-                  </div>
+              <div className="mt-4 space-y-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>
+                    Created:{" "}
+                    {ticket.createdAt
+                      ? new Date(ticket.createdAt).toLocaleString()
+                      : "N/A"}
+                  </span>
                 </div>
-                {ticket.assignedTo && (
-                  <div className="timeline-item d-flex mb-3">
-                    <div className="timeline-marker bg-info"></div>
-                    <div className="ms-3">
-                      <p className="mb-1 fw-semibold">Assigned</p>
-                      <small className="text-muted">
-                        {new Date(new Date(ticket.createdAt).getTime() + 3600000).toLocaleString()}
-                      </small>
-                      <p className="mb-0 mt-1 small">Ticket assigned to {ticket.assignedTo}</p>
-                    </div>
-                  </div>
-                )}
-                {ticket.status === "Closed" && (
-                  <div className="timeline-item d-flex">
-                    <div className="timeline-marker bg-success"></div>
-                    <div className="ms-3">
-                      <p className="mb-1 fw-semibold">Closed</p>
-                      <small className="text-muted">
-                        {new Date(new Date(ticket.createdAt).getTime() + 7200000).toLocaleString()}
-                      </small>
-                      <p className="mb-0 mt-1 small">Ticket marked as closed</p>
-                    </div>
+                {ticket.issueDetail && (
+                  <div className="mt-3">
+                    <p className="text-foreground font-semibold mb-1">
+                      Description
+                    </p>
+                    <p className="text-sm leading-relaxed">{ticket.issueDetail}</p>
                   </div>
                 )}
               </div>
             </div>
+
+            {ticket.campaign && (
+              <div className="rounded-lg border bg-card p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-foreground mb-2">
+                  Campaign
+                </h3>
+                <p className="text-muted-foreground text-sm">
+                  {ticket.campaign.nombre || ticket.campaign.name || "N/A"}
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Comments Section */}
-          <div className="card mb-4">
-            <div className="card-header bg-white">
-              <h5 className="mb-0">
-                <i className="bi bi-chat-left-text me-2"></i>Comments
-              </h5>
-            </div>
-            <div className="card-body">
-              <div className="mb-3">
-                <textarea className="form-control" rows={3} placeholder="Add a comment..."></textarea>
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-card p-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Customer
+              </h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">
+                    {ticket.customer?.name || ticket.customerName || "N/A"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span>{ticket.customerPhone || "No phone"}</span>
+                </div>
               </div>
-              <button className="btn btn-primary">
-                <i className="bi bi-send me-2"></i>Post Comment
-              </button>
-            </div>
-          </div>
-
-          {/* Attachments Section */}
-          <div className="card">
-            <div className="card-header bg-white">
-              <h5 className="mb-0">
-                <i className="bi bi-paperclip me-2"></i>Attachments
-              </h5>
-            </div>
-            <div className="card-body">
-              <div className="border-2 border-dashed rounded p-4 text-center">
-                <i className="bi bi-cloud-upload fs-2 text-muted"></i>
-                <p className="text-muted mb-0 mt-2">Drop files here or click to upload</p>
-              </div>
+              {ticket.customerId && (
+                <Link
+                  href={`/customers?customerId=${ticket.customerId}`}
+                  className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  View customer
+                  <ArrowLeft className="h-3 w-3 rotate-180" />
+                </Link>
+              )}
             </div>
           </div>
         </div>
-      </div>
-
-      <style jsx>{`
-        .timeline-marker {
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          flex-shrink: 0;
-          margin-top: 4px;
-        }
-      `}</style>
+      )}
     </div>
-  )
+  );
 }
