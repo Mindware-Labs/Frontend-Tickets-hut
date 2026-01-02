@@ -58,6 +58,7 @@ import {
   CheckCircle2,
   Loader2,
   Download,
+  Upload,
   X,
   FileText,
   Edit2,
@@ -90,6 +91,7 @@ import {
 } from "./types";
 import { CreateTicketModal } from "./components/CreateTicketModal";
 import { TicketDetailsFields } from "./components/TicketDetailsFields";
+import { ViewTicketModal } from "./components/ViewTicketModal";
 import { auth } from "@/lib/auth";
 
 // Extend the Ticket type
@@ -146,6 +148,7 @@ export default function TicketsPage() {
     lastName?: string;
     role?: string;
   } | null>(null);
+  const [showViewModal, setShowViewModal] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -207,12 +210,14 @@ export default function TicketsPage() {
   };
 
   const getClientName = (ticket: any) => {
+    if (!ticket) return "Unknown Caller";
     if (ticket.clientName) return ticket.clientName;
     if (ticket.customer?.name) return ticket.customer.name;
     return "Unknown Caller";
   };
 
   const getClientPhone = (ticket: any) => {
+    if (!ticket) return "-";
     if (ticket.phone) return ticket.phone;
     if (ticket.customerPhone) return ticket.customerPhone;
     if (ticket.customer?.phone) return ticket.customer.phone;
@@ -220,6 +225,7 @@ export default function TicketsPage() {
   };
 
   const getClientInitials = (ticket: any) => {
+    if (!ticket) return "NA";
     const name = getClientName(ticket);
     return name.substring(0, 2).toUpperCase();
   };
@@ -293,17 +299,17 @@ export default function TicketsPage() {
     return value.toString().trim().toUpperCase().replace(/\s+/g, "_");
   };
 
-  const getCampaign = (ticket: Ticket) => {
+  const getCampaign = (ticket: Ticket): string | null => {
     if (
       ticket.campaign &&
       typeof ticket.campaign === "object" &&
       "nombre" in ticket.campaign
     ) {
-      return (ticket.campaign as { nombre?: string }).nombre;
+      return (ticket.campaign as { nombre?: string }).nombre ?? null;
     }
     if (ticket.campaignId) {
       const campaign = campaigns.find((c) => c.id === ticket.campaignId);
-      return campaign?.nombre || null;
+      return campaign?.nombre ?? null;
     }
     return null;
   };
@@ -749,7 +755,17 @@ export default function TicketsPage() {
         : "",
     });
 
-    setShowDetails(true);
+    const hasYardAssignedForView =
+      Boolean(ticket.yardId) ||
+      (typeof ticket.yard === "string"
+        ? ticket.yard.trim() !== ""
+        : Boolean(ticket.yard));
+
+    if (hasYardAssignedForView) {
+      setShowViewModal(true);
+    } else {
+      setShowDetails(true);
+    }
     setYardSearch("");
     setYardCategory("all");
     setCampaignSearchEdit("");
@@ -785,13 +801,17 @@ export default function TicketsPage() {
       const result = await response.json();
 
       if (result.success) {
+        const updatedTicket = { ...selectedTicket, ...result.data };
+
         setTickets((prev) =>
-          prev.map((t) =>
-            t.id === selectedTicket.id ? { ...t, ...result.data } : t
-          )
+          prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t))
         );
 
-        setSelectedTicket({ ...selectedTicket, ...result.data });
+        setSelectedTicket(updatedTicket);
+
+        if (attachmentFiles.length > 0) {
+          await handleUploadAttachments(updatedTicket);
+        }
 
         toast({
           title: "Success",
@@ -823,8 +843,9 @@ export default function TicketsPage() {
     }
   };
 
-  const handleUploadAttachments = async () => {
-    if (!selectedTicket || attachmentFiles.length === 0) return;
+  const handleUploadAttachments = async (ticketOverride?: Ticket) => {
+    const targetTicket = ticketOverride || selectedTicket;
+    if (!targetTicket || attachmentFiles.length === 0) return;
 
     try {
       setIsUploadingAttachments(true);
@@ -832,7 +853,7 @@ export default function TicketsPage() {
       attachmentFiles.forEach((file) => formData.append("files", file));
 
       const response = await fetch(
-        `/api/tickets/${selectedTicket.id}/attachments`,
+        `/api/tickets/${targetTicket.id}/attachments`,
         {
           method: "POST",
           body: formData,
@@ -841,13 +862,20 @@ export default function TicketsPage() {
       const result = await response.json();
 
       if (result?.success) {
-        setSelectedTicket(result.data);
+        const mergedTicket = {
+          ...targetTicket,
+          ...(result.data || {}),
+          attachments:
+            result.data?.attachments || targetTicket.attachments || [],
+        };
+
+        setSelectedTicket(mergedTicket);
         setTickets((prev) =>
-          prev.map((t) => (t.id === selectedTicket.id ? result.data : t))
+          prev.map((t) => (t.id === targetTicket.id ? mergedTicket : t))
         );
         setEditData((prev) => ({
           ...prev,
-          attachments: result.data.attachments || prev.attachments || [],
+          attachments: mergedTicket.attachments || prev.attachments || [],
         }));
         setAttachmentFiles([]);
         toast({
@@ -1364,6 +1392,39 @@ export default function TicketsPage() {
 
   const baseFullFields = [
     {
+      key: "customerInfo",
+      filled: Boolean(
+        selectedTicket?.customer || selectedTicket?.customerPhone
+      ),
+      node: (
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-muted-foreground">
+            Customer Information
+          </p>
+          <div className="p-3 rounded-md border bg-muted/30 space-y-2">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="font-semibold">
+                {getClientName(selectedTicket)}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <PhoneIncoming className="h-4 w-4" />
+              <span>{getClientPhone(selectedTicket)}</span>
+            </div>
+            {selectedTicket?.customer?.email && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Mail className="h-4 w-4" />
+                <span className="truncate">
+                  {selectedTicket.customer.email}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
       key: "yardAssignment",
       filled: hasYardAssigned,
       node: (
@@ -1616,6 +1677,24 @@ export default function TicketsPage() {
               } selected`
             : ""}
         </span>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => handleUploadAttachments()}
+          disabled={attachmentFiles.length === 0 || isUploadingAttachments}
+        >
+          {isUploadingAttachments ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            <>
+              <Upload className="mr-2 h-4 w-4" />
+              Upload
+            </>
+          )}
+        </Button>
       </div>
       <div className="flex flex-wrap gap-2">
         {attachmentFiles.map((file, idx) => (
@@ -2260,6 +2339,28 @@ export default function TicketsPage() {
         setAttachmentFiles={setCreateAttachmentFiles}
         isCreating={isCreating}
         onSubmit={handleCreateTicket}
+      />
+
+      <ViewTicketModal
+        open={showViewModal}
+        onOpenChange={setShowViewModal}
+        ticket={selectedTicket}
+        savedAttachments={savedAttachments}
+        onEdit={() => {
+          setShowViewModal(false);
+          setShowDetails(true);
+        }}
+        formatEnumLabel={formatEnumLabel}
+        getStatusBadgeColor={getStatusBadgeColor}
+        getPriorityColor={getPriorityColor}
+        getDirectionIcon={getDirectionIcon}
+        getDirectionText={getDirectionText}
+        getCampaign={getCampaign}
+        getAttachmentUrl={getAttachmentUrl}
+        getAttachmentLabel={getAttachmentLabel}
+        getClientName={getClientName}
+        getClientPhone={getClientPhone}
+        getYardDisplayName={getYardDisplayName}
       />
 
       {/* Central dialog for ticket details */}
