@@ -68,6 +68,7 @@ export interface CampaignOption {
   nombre: string;
   tipo: ManagementType;
   isActive: boolean;
+  yardaId?: number;
 }
 
 export interface YardOption {

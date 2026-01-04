@@ -235,6 +235,21 @@ export function ViewTicketModal({
                       value={getCampaign(ticket) || "No campaign"}
                     />
 
+                    {(ticket.campaignOption ||
+                      (ticket as any).onboardingOption) && (
+                      <>
+                        <Separator className="opacity-50" />
+                        <DetailRow
+                          icon={Tag}
+                          label="Campaign Option"
+                          value={formatEnumLabel(
+                            (ticket.campaignOption ||
+                              (ticket as any).onboardingOption) as any
+                          )}
+                        />
+                      </>
+                    )}
+
                     <Separator className="opacity-50" />
 
                     <DetailRow

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator"; // Asegúrate de tener este componente o usa un <div className="h-[1px] bg-border" />
+import { Separator } from "@/components/ui/separator";
 import {
   Search,
   X,
@@ -39,12 +39,14 @@ import {
   FileText,
   UploadCloud,
   Paperclip,
+  Pencil,
+  ExternalLink,
+  Download,
 } from "lucide-react";
 import {
   AgentOption,
   CallDirection,
   CampaignOption,
-  CreateTicketFormData,
   CustomerOption,
   ManagementType,
   OnboardingOption,
@@ -54,59 +56,78 @@ import {
   TicketStatus,
   YardOption,
 } from "../types";
-import { cn } from "@/lib/utils"; // Utilidad estándar de shadcn
+import { Ticket } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 
-interface CreateTicketModalProps {
+interface EditTicketFormData {
+  customerId: string;
+  customerPhone: string;
+  yardId: string;
+  campaignId: string;
+  campaignOption: string;
+  agentId: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  direction: CallDirection;
+  callDate: string;
+  disposition: string;
+  issueDetail: string;
+  attachments: string[];
+}
+
+interface EditTicketModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  ticket: Ticket | null;
   customers: CustomerOption[];
   yards: YardOption[];
   agents: AgentOption[];
   campaigns: CampaignOption[];
-  createFormData: CreateTicketFormData;
-  setCreateFormData: (next: CreateTicketFormData) => void;
-  createValidationErrors: Record<string, string>;
-  setCreateValidationErrors: (next: Record<string, string>) => void;
-  customerSearchCreate: string;
-  setCustomerSearchCreate: (value: string) => void;
-  yardSearchCreate: string;
-  setYardSearchCreate: (value: string) => void;
-  agentSearchCreate: string;
-  setAgentSearchCreate: (value: string) => void;
-  campaignSearchCreate: string;
-  setCampaignSearchCreate: (value: string) => void;
-  newAttachment: string;
-  setNewAttachment: (value: string) => void;
+  editFormData: EditTicketFormData;
+  setEditFormData: (next: EditTicketFormData) => void;
+  customerSearchEdit: string;
+  setCustomerSearchEdit: (value: string) => void;
+  yardSearchEdit: string;
+  setYardSearchEdit: (value: string) => void;
+  agentSearchEdit: string;
+  setAgentSearchEdit: (value: string) => void;
+  campaignSearchEdit: string;
+  setCampaignSearchEdit: (value: string) => void;
   attachmentFiles: File[];
   setAttachmentFiles: (next: File[]) => void;
-  isCreating: boolean;
+  savedAttachments: string[];
+  isUpdating: boolean;
   onSubmit: () => void;
+  getAttachmentLabel: (value: string) => string;
+  getAttachmentUrl: (value: string) => string;
 }
 
-export function CreateTicketModal({
+export function EditTicketModal({
   open,
   onOpenChange,
+  ticket,
   customers,
   yards,
   agents,
   campaigns,
-  createFormData,
-  setCreateFormData,
-  createValidationErrors,
-  setCreateValidationErrors,
-  customerSearchCreate,
-  setCustomerSearchCreate,
-  yardSearchCreate,
-  setYardSearchCreate,
-  agentSearchCreate,
-  setAgentSearchCreate,
-  campaignSearchCreate,
-  setCampaignSearchCreate,
+  editFormData,
+  setEditFormData,
+  customerSearchEdit,
+  setCustomerSearchEdit,
+  yardSearchEdit,
+  setYardSearchEdit,
+  agentSearchEdit,
+  setAgentSearchEdit,
+  campaignSearchEdit,
+  setCampaignSearchEdit,
   attachmentFiles,
   setAttachmentFiles,
-  isCreating,
+  savedAttachments,
+  isUpdating,
   onSubmit,
-}: CreateTicketModalProps) {
+  getAttachmentLabel,
+  getAttachmentUrl,
+}: EditTicketModalProps) {
   const formatEnumLabel = (value: string) => {
     if (value === OnboardingOption.PAID_WITH_LL) return "Paid with LL";
     return value
@@ -117,45 +138,45 @@ export function CreateTicketModal({
   };
 
   // --- LOGIC (MEMOS) ---
-  const filteredCustomersCreate = useMemo(() => {
-    const term = customerSearchCreate.toLowerCase();
+  const filteredCustomersEdit = useMemo(() => {
+    const term = customerSearchEdit.toLowerCase();
     return customers.filter((customer) =>
       customer.name.toLowerCase().includes(term)
     );
-  }, [customers, customerSearchCreate]);
+  }, [customers, customerSearchEdit]);
 
-  const filteredYardsCreate = useMemo(() => {
-    const term = yardSearchCreate.toLowerCase();
+  const filteredYardsEdit = useMemo(() => {
+    const term = yardSearchEdit.toLowerCase();
     return yards.filter(
       (yard) =>
         yard.name.toLowerCase().includes(term) ||
         yard.commonName.toLowerCase().includes(term) ||
         yard.propertyAddress.toLowerCase().includes(term)
     );
-  }, [yards, yardSearchCreate]);
+  }, [yards, yardSearchEdit]);
 
-  const filteredAgentsCreate = useMemo(() => {
-    const term = agentSearchCreate.toLowerCase();
+  const filteredAgentsEdit = useMemo(() => {
+    const term = agentSearchEdit.toLowerCase();
     return agents.filter(
       (agent) =>
         agent.name.toLowerCase().includes(term) ||
         (agent.email || "").toLowerCase().includes(term)
     );
-  }, [agents, agentSearchCreate]);
+  }, [agents, agentSearchEdit]);
 
-  const filteredCampaignsCreate = useMemo(() => {
-    const term = campaignSearchCreate.toLowerCase();
+  const filteredCampaignsEdit = useMemo(() => {
+    const term = campaignSearchEdit.toLowerCase();
     return campaigns.filter((campaign) =>
       campaign.nombre.toLowerCase().includes(term)
     );
-  }, [campaigns, campaignSearchCreate]);
+  }, [campaigns, campaignSearchEdit]);
 
   const selectedCampaign = useMemo(() => {
-    if (!createFormData.campaignId) return null;
+    if (!editFormData.campaignId) return null;
     return campaigns.find(
-      (campaign) => campaign.id.toString() === createFormData.campaignId
+      (campaign) => campaign.id.toString() === editFormData.campaignId
     );
-  }, [campaigns, createFormData.campaignId]);
+  }, [campaigns, editFormData.campaignId]);
 
   const selectedCampaignType = selectedCampaign?.tipo?.toString().toUpperCase();
   const isOnboardingCampaign =
@@ -167,17 +188,19 @@ export function CreateTicketModal({
     ? Object.values(ArOption)
     : [];
 
+  if (!ticket) return null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] p-0 overflow-hidden flex flex-col gap-0">
         {/* HEADER */}
         <DialogHeader className="px-6 py-4 border-b bg-muted/20">
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
-            <FileText className="w-5 h-5 text-primary" />
-            Create Manual Ticket
+            <Pencil className="w-5 h-5 text-primary" />
+            Edit Ticket #{ticket.id}
           </DialogTitle>
           <DialogDescription>
-            Fill in the details below to generate a new support ticket.
+            Update the ticket information below
           </DialogDescription>
         </DialogHeader>
 
@@ -194,13 +217,13 @@ export function CreateTicketModal({
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">Campaign</Label>
                   <Select
-                    value={createFormData.campaignId}
+                    value={editFormData.campaignId}
                     onValueChange={(value) => {
                       const campaign = campaigns.find(
                         (c) => c.id.toString() === value
                       );
-                      setCreateFormData({
-                        ...createFormData,
+                      setEditFormData({
+                        ...editFormData,
                         campaignId: value === "none" ? "" : value,
                         yardId: campaign?.yardaId
                           ? campaign.yardaId.toString()
@@ -208,7 +231,7 @@ export function CreateTicketModal({
                         campaignOption:
                           campaign?.tipo === ManagementType.ONBOARDING ||
                           campaign?.tipo === ManagementType.AR
-                            ? createFormData.campaignOption
+                            ? editFormData.campaignOption
                             : "",
                       });
                     }}
@@ -223,9 +246,9 @@ export function CreateTicketModal({
                           <Input
                             placeholder="Search campaigns..."
                             className="pl-8 h-8 text-sm"
-                            value={campaignSearchCreate}
+                            value={campaignSearchEdit}
                             onChange={(e) =>
-                              setCampaignSearchCreate(e.target.value)
+                              setCampaignSearchEdit(e.target.value)
                             }
                             onClick={(e) => e.stopPropagation()}
                           />
@@ -238,7 +261,7 @@ export function CreateTicketModal({
                         >
                           No campaign
                         </SelectItem>
-                        {filteredCampaignsCreate.map((c) => (
+                        {filteredCampaignsEdit.map((c) => (
                           <SelectItem key={c.id} value={c.id.toString()}>
                             {c.nombre}
                           </SelectItem>
@@ -255,10 +278,10 @@ export function CreateTicketModal({
                     Yard
                   </Label>
                   <Select
-                    value={createFormData.yardId}
+                    value={editFormData.yardId}
                     onValueChange={(value) =>
-                      setCreateFormData({
-                        ...createFormData,
+                      setEditFormData({
+                        ...editFormData,
                         yardId: value === "none" ? "" : value,
                       })
                     }
@@ -273,10 +296,8 @@ export function CreateTicketModal({
                           <Input
                             placeholder="Search yards..."
                             className="pl-8 h-8 text-sm"
-                            value={yardSearchCreate}
-                            onChange={(e) =>
-                              setYardSearchCreate(e.target.value)
-                            }
+                            value={yardSearchEdit}
+                            onChange={(e) => setYardSearchEdit(e.target.value)}
                             onClick={(e) => e.stopPropagation()}
                           />
                         </div>
@@ -288,7 +309,7 @@ export function CreateTicketModal({
                         >
                           No yard
                         </SelectItem>
-                        {filteredYardsCreate.map((y) => (
+                        {filteredYardsEdit.map((y) => (
                           <SelectItem key={y.id} value={y.id.toString()}>
                             {y.commonName || y.name}
                           </SelectItem>
@@ -305,10 +326,10 @@ export function CreateTicketModal({
                       Campaign Option
                     </Label>
                     <Select
-                      value={createFormData.campaignOption}
+                      value={editFormData.campaignOption}
                       onValueChange={(value) =>
-                        setCreateFormData({
-                          ...createFormData,
+                        setEditFormData({
+                          ...editFormData,
                           campaignOption: value === "none" ? "" : value,
                         })
                       }
@@ -344,28 +365,19 @@ export function CreateTicketModal({
                     Customer Name <span className="text-red-500">*</span>
                   </Label>
                   <Select
-                    value={createFormData.customerId}
+                    value={editFormData.customerId}
                     onValueChange={(value) => {
                       const customer = customers.find(
                         (c) => c.id.toString() === value
                       );
-                      setCreateFormData({
-                        ...createFormData,
+                      setEditFormData({
+                        ...editFormData,
                         customerId: value,
                         customerPhone: customer?.phone || "",
                       });
-                      setCreateValidationErrors({
-                        ...createValidationErrors,
-                        customerId: "",
-                      });
                     }}
                   >
-                    <SelectTrigger
-                      className={cn(
-                        createValidationErrors.customerId &&
-                          "border-red-500 ring-red-500/20"
-                      )}
-                    >
+                    <SelectTrigger>
                       <SelectValue placeholder="Select customer" />
                     </SelectTrigger>
                     <SelectContent>
@@ -375,21 +387,21 @@ export function CreateTicketModal({
                           <Input
                             placeholder="Search..."
                             className="pl-8 h-8 text-sm"
-                            value={customerSearchCreate}
+                            value={customerSearchEdit}
                             onChange={(e) =>
-                              setCustomerSearchCreate(e.target.value)
+                              setCustomerSearchEdit(e.target.value)
                             }
                             onClick={(e) => e.stopPropagation()}
                           />
                         </div>
                       </div>
                       <ScrollArea className="h-[200px]">
-                        {filteredCustomersCreate.length === 0 ? (
+                        {filteredCustomersEdit.length === 0 ? (
                           <div className="p-2 text-sm text-muted-foreground text-center">
                             No results
                           </div>
                         ) : (
-                          filteredCustomersCreate.map((c) => (
+                          filteredCustomersEdit.map((c) => (
                             <SelectItem key={c.id} value={c.id.toString()}>
                               {c.name}
                             </SelectItem>
@@ -398,11 +410,6 @@ export function CreateTicketModal({
                       </ScrollArea>
                     </SelectContent>
                   </Select>
-                  {createValidationErrors.customerId && (
-                    <p className="text-[11px] font-medium text-red-500 animate-in slide-in-from-top-1">
-                      {createValidationErrors.customerId}
-                    </p>
-                  )}
                 </div>
 
                 {/* Phone Readonly */}
@@ -412,7 +419,7 @@ export function CreateTicketModal({
                     Phone
                   </Label>
                   <Input
-                    value={createFormData.customerPhone}
+                    value={editFormData.customerPhone}
                     readOnly
                     placeholder="Auto-filled"
                     className="bg-muted/40 border-dashed text-muted-foreground focus-visible:ring-0 cursor-not-allowed"
@@ -427,10 +434,10 @@ export function CreateTicketModal({
                     Assign Agent
                   </Label>
                   <Select
-                    value={createFormData.agentId}
+                    value={editFormData.agentId}
                     onValueChange={(value) =>
-                      setCreateFormData({
-                        ...createFormData,
+                      setEditFormData({
+                        ...editFormData,
                         agentId: value === "none" ? "" : value,
                       })
                     }
@@ -445,10 +452,8 @@ export function CreateTicketModal({
                           <Input
                             placeholder="Search agents..."
                             className="pl-8 h-8 text-sm"
-                            value={agentSearchCreate}
-                            onChange={(e) =>
-                              setAgentSearchCreate(e.target.value)
-                            }
+                            value={agentSearchEdit}
+                            onChange={(e) => setAgentSearchEdit(e.target.value)}
                             onClick={(e) => e.stopPropagation()}
                           />
                         </div>
@@ -460,7 +465,7 @@ export function CreateTicketModal({
                         >
                           Unassigned
                         </SelectItem>
-                        {filteredAgentsCreate.map((a) => (
+                        {filteredAgentsEdit.map((a) => (
                           <SelectItem key={a.id} value={a.id.toString()}>
                             {a.name}
                           </SelectItem>
@@ -474,7 +479,7 @@ export function CreateTicketModal({
 
             <Separator />
 
-            {/* SECTION 3: TICKET CLASSIFICATION */}
+            {/* SECTION 3: TICKET DETAILS */}
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                 <Activity className="w-4 h-4" /> Ticket Details
@@ -487,23 +492,15 @@ export function CreateTicketModal({
                     Direction <span className="text-red-500">*</span>
                   </Label>
                   <Select
-                    value={createFormData.direction}
-                    onValueChange={(value) => {
-                      setCreateFormData({
-                        ...createFormData,
+                    value={editFormData.direction}
+                    onValueChange={(value) =>
+                      setEditFormData({
+                        ...editFormData,
                         direction: value as CallDirection,
-                      });
-                      setCreateValidationErrors({
-                        ...createValidationErrors,
-                        direction: "",
-                      });
-                    }}
+                      })
+                    }
                   >
-                    <SelectTrigger
-                      className={cn(
-                        createValidationErrors.direction && "border-red-500"
-                      )}
-                    >
+                    <SelectTrigger>
                       <SelectValue placeholder="Select direction" />
                     </SelectTrigger>
                     <SelectContent>
@@ -523,10 +520,10 @@ export function CreateTicketModal({
                     Status
                   </Label>
                   <Select
-                    value={createFormData.status}
+                    value={editFormData.status}
                     onValueChange={(value) =>
-                      setCreateFormData({
-                        ...createFormData,
+                      setEditFormData({
+                        ...editFormData,
                         status: value as TicketStatus,
                       })
                     }
@@ -553,10 +550,10 @@ export function CreateTicketModal({
                   <Input
                     type="date"
                     className="block w-full"
-                    value={createFormData.callDate}
+                    value={editFormData.callDate}
                     onChange={(e) =>
-                      setCreateFormData({
-                        ...createFormData,
+                      setEditFormData({
+                        ...editFormData,
                         callDate: e.target.value,
                       })
                     }
@@ -576,10 +573,10 @@ export function CreateTicketModal({
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">Priority</Label>
                   <Select
-                    value={createFormData.priority}
+                    value={editFormData.priority}
                     onValueChange={(value) =>
-                      setCreateFormData({
-                        ...createFormData,
+                      setEditFormData({
+                        ...editFormData,
                         priority: value as TicketPriority,
                       })
                     }
@@ -603,10 +600,10 @@ export function CreateTicketModal({
                     Disposition
                   </Label>
                   <Select
-                    value={createFormData.disposition}
+                    value={editFormData.disposition}
                     onValueChange={(value) =>
-                      setCreateFormData({
-                        ...createFormData,
+                      setEditFormData({
+                        ...editFormData,
                         disposition: value === "none" ? "" : value,
                       })
                     }
@@ -634,79 +631,114 @@ export function CreateTicketModal({
                   Issue Description
                 </Label>
                 <Textarea
-                  placeholder="Describe the issue in detail..."
-                  value={createFormData.issueDetail}
+                  placeholder="Describe the issue..."
+                  value={editFormData.issueDetail}
                   onChange={(e) =>
-                    setCreateFormData({
-                      ...createFormData,
+                    setEditFormData({
+                      ...editFormData,
                       issueDetail: e.target.value,
                     })
                   }
-                  className="min-h-[120px] resize-y bg-background"
+                  className="min-h-[120px] resize-y"
                 />
               </div>
             </div>
 
             {/* SECTION 4: ATTACHMENTS */}
-            <div className="space-y-4">
-              <Label className="text-xs font-semibold flex items-center gap-1.5">
-                <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />{" "}
-                Attachments
-              </Label>
+            <div className="space-y-6">
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                <Paperclip className="w-4 h-4" /> Attachments
+              </h3>
 
-              <div className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 bg-muted/30 hover:bg-muted/50 transition-all rounded-lg p-6 flex flex-col items-center justify-center gap-3 text-center cursor-pointer relative">
-                <Input
-                  id="create-ticket-files"
-                  type="file"
-                  multiple
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || []);
-                    if (files.length === 0) return;
-                    setAttachmentFiles([...attachmentFiles, ...files]);
-                    e.currentTarget.value = "";
-                  }}
-                />
-                <div className="p-3 bg-background rounded-full shadow-sm">
-                  <UploadCloud className="w-6 h-6 text-primary" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">
-                    Click or drag files to upload
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Support for documents, images (Max 10MB)
-                  </p>
-                </div>
-              </div>
-
-              {attachmentFiles.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-                  {attachmentFiles.map((file, idx) => (
-                    <div
-                      key={`${file.name}-${idx}`}
-                      className="flex items-center justify-between p-2.5 bg-muted/40 border rounded-md group"
-                    >
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <FileText className="w-4 h-4 text-primary shrink-0" />
-                        <span className="text-sm truncate">{file.name}</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-red-500"
+              {/* Saved Attachments */}
+              {savedAttachments.length > 0 && (
+                <div className="space-y-3">
+                  <Label className="text-xs font-semibold">
+                    Existing Files
+                  </Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {savedAttachments.map((att, idx) => (
+                      <div
+                        key={`${att}-${idx}`}
+                        className="flex items-center justify-between p-3 bg-muted/20 border rounded-lg hover:bg-muted/40 transition-colors group cursor-pointer"
                         onClick={() =>
-                          setAttachmentFiles(
-                            attachmentFiles.filter((_, i) => i !== idx)
-                          )
+                          window.open(getAttachmentUrl(att), "_blank")
                         }
                       >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <FileText className="w-4 h-4 text-primary" />
+                          </div>
+                          <span className="text-sm truncate font-medium">
+                            {getAttachmentLabel(att)}
+                          </span>
+                        </div>
+                        <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
+
+              {/* New Uploads */}
+              <div className="space-y-3">
+                <Label className="text-xs font-semibold">
+                  Upload New Files
+                </Label>
+                <div className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 bg-muted/30 hover:bg-muted/50 transition-all rounded-lg p-6 flex flex-col items-center justify-center gap-3 text-center cursor-pointer relative">
+                  <Input
+                    id="edit-ticket-files"
+                    type="file"
+                    multiple
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (files.length === 0) return;
+                      setAttachmentFiles([...attachmentFiles, ...files]);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                  <div className="p-3 bg-background rounded-full shadow-sm">
+                    <UploadCloud className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">
+                      Click or drag files to upload
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Additional files for this ticket
+                    </p>
+                  </div>
+                </div>
+
+                {attachmentFiles.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                    {attachmentFiles.map((file, idx) => (
+                      <div
+                        key={`${file.name}-${idx}`}
+                        className="flex items-center justify-between p-2.5 bg-muted/40 border rounded-md group"
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <Download className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span className="text-sm truncate">{file.name}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-red-500"
+                          onClick={() =>
+                            setAttachmentFiles(
+                              attachmentFiles.filter((_, i) => i !== idx)
+                            )
+                          }
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </ScrollArea>
@@ -716,12 +748,12 @@ export function CreateTicketModal({
           <Button
             variant="ghost"
             onClick={() => onOpenChange(false)}
-            disabled={isCreating}
+            disabled={isUpdating}
           >
             Cancel
           </Button>
-          <Button onClick={onSubmit} disabled={isCreating} className="px-8">
-            {isCreating ? <>Creating...</> : <>Create Ticket</>}
+          <Button onClick={onSubmit} disabled={isUpdating} className="px-8">
+            {isUpdating ? "Updating..." : "Update Ticket"}
           </Button>
         </DialogFooter>
       </DialogContent>

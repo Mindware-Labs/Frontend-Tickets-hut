@@ -91,7 +91,7 @@ import {
   YardOption,
 } from "./types";
 import { CreateTicketModal } from "./components/CreateTicketModal";
-import { TicketDetailsFields } from "./components/TicketDetailsFields";
+import { EditTicketModal } from "./components/EditTicketModal";
 import { ViewTicketModal } from "./components/ViewTicketModal";
 import { auth } from "@/lib/auth";
 
@@ -102,13 +102,16 @@ declare module "@/lib/mock-data" {
     yardId?: string;
     yardType?: string;
     campaignId?: number;
-    customer?: { name: string; phone?: string; email?: string }; // Added email property
+    customerId?: number | string;
+    customer?: { name: string; phone?: string; email?: string; id?: number };
     customerPhone?: string;
     disposition?: string;
     campaignOption?: string;
     onboardingOption?: string;
     attachments?: string[];
     updatedAt?: string;
+    callDate?: string;
+    agentId?: number | string;
   }
 }
 
@@ -153,7 +156,7 @@ export default function TicketsPage() {
     role?: string;
   } | null>(null);
   const [showViewModal, setShowViewModal] = useState(false);
-
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [createValidationErrors, setCreateValidationErrors] = useState<
@@ -169,7 +172,25 @@ export default function TicketsPage() {
   const [campaignSearchCreate, setCampaignSearchCreate] = useState("");
   const [campaignSearchEdit, setCampaignSearchEdit] = useState("");
   const [agentSearchEdit, setAgentSearchEdit] = useState("");
+  const [customerSearchEdit, setCustomerSearchEdit] = useState("");
+  const [yardSearchEdit, setYardSearchEdit] = useState("");
   const [createFormData, setCreateFormData] = useState<CreateTicketFormData>({
+    customerId: "",
+    customerPhone: "",
+    yardId: "",
+    campaignId: "",
+    campaignOption: "",
+    agentId: "",
+    status: TicketStatus.IN_PROGRESS,
+    priority: TicketPriority.LOW,
+    direction: CallDirection.INBOUND,
+    callDate: "",
+    disposition: "",
+    issueDetail: "",
+    attachments: [] as string[],
+  });
+
+  const [editFormData, setEditFormData] = useState<CreateTicketFormData>({
     customerId: "",
     customerPhone: "",
     yardId: "",
@@ -606,12 +627,10 @@ export default function TicketsPage() {
 
   const filteredTickets = useMemo(() => {
     const filtered = tickets.filter((ticket) => {
-      // If filtering by specific ticket ID from URL, only show that ticket
       if (urlTicketId) {
         return ticket.id.toString() === urlTicketId;
       }
 
-      // If filtering by customer ID from URL, only show tickets from that customer
       if (urlCustomerId) {
         return (
           ticket.customerId && ticket.customerId.toString() === urlCustomerId
@@ -773,6 +792,30 @@ export default function TicketsPage() {
         ? ((ticket.assignedTo as { id?: number }).id || "").toString()
         : "");
 
+    const ticketCustomerId = ticket.customerId
+      ? ticket.customerId.toString()
+      : ticket.customer &&
+        typeof ticket.customer === "object" &&
+        "id" in ticket.customer
+      ? (ticket.customer as { id: string | number }).id.toString()
+      : "";
+
+    const ticketCustomerPhone =
+      ticket.customerPhone ||
+      (ticket.customer &&
+      typeof ticket.customer === "object" &&
+      "phone" in ticket.customer
+        ? (ticket.customer as { phone?: string }).phone || ""
+        : "");
+
+    const ticketCampaignId = ticket.campaignId
+      ? ticket.campaignId.toString()
+      : ticket.campaign &&
+        typeof ticket.campaign === "object" &&
+        "id" in ticket.campaign
+      ? (ticket.campaign as { id: string | number }).id.toString()
+      : "";
+
     setEditData({
       disposition: ticket.disposition || "",
       issueDetail: ticket.issueDetail || "",
@@ -784,31 +827,49 @@ export default function TicketsPage() {
       priority: ticket.priority?.toString().toUpperCase() || "",
       attachments: ticket.attachments || [],
       agentId: ticketAgentId,
-      // Load campaign, or leave empty if none
-      campaignId: ticket.campaignId
-        ? ticket.campaignId.toString()
-        : ticket.campaign &&
-          typeof ticket.campaign === "object" &&
-          "id" in ticket.campaign
-        ? (ticket.campaign as { id: string | number }).id.toString()
-        : "",
+      campaignId: ticketCampaignId,
     });
 
-    const hasYardAssignedForView =
-      Boolean(ticket.yardId) ||
-      (typeof ticket.yard === "string"
-        ? ticket.yard.trim() !== ""
-        : Boolean(ticket.yard));
+    // Cargar datos en el formulario de edición
+    setEditFormData({
+      customerId: ticketCustomerId,
+      customerPhone: ticketCustomerPhone,
+      yardId: ticket.yardId ? ticket.yardId.toString() : "",
+      campaignId: ticketCampaignId,
+      campaignOption:
+        (ticket as any).campaignOption ||
+        (ticket as any).onboardingOption ||
+        "",
+      agentId: ticketAgentId,
+      status: (ticket.status?.toString().toUpperCase().replace(" ", "_") ||
+        TicketStatus.IN_PROGRESS) as TicketStatus,
+      priority: (ticket.priority?.toString().toUpperCase() ||
+        TicketPriority.LOW) as TicketPriority,
+      direction: (ticket.direction || CallDirection.INBOUND) as CallDirection,
+      callDate:
+        ticket.callDate || ticket.createdAt
+          ? new Date(ticket.callDate || ticket.createdAt)
+              .toISOString()
+              .split("T")[0]
+          : "",
+      disposition: ticket.disposition || "",
+      issueDetail: ticket.issueDetail || "",
+      attachments: ticket.attachments || [],
+    });
 
-    if (hasYardAssignedForView) {
+    // Si el ticket tiene campaña, abre ViewTicketModal; si no, abre EditTicketModal
+    if (ticket.campaignId || ticket.campaign) {
       setShowViewModal(true);
     } else {
-      setShowDetails(true);
+      setShowEditModal(true);
     }
+
     setYardSearch("");
     setYardCategory("all");
     setCampaignSearchEdit("");
     setAgentSearchEdit("");
+    setCustomerSearchEdit("");
+    setYardSearchEdit("");
   };
 
   const handleUpdateTicket = async () => {
@@ -869,6 +930,102 @@ export default function TicketsPage() {
         });
 
         setShowDetails(false);
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to update ticket",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error("Update error:", err);
+      toast({
+        title: "Error",
+        description: "An error occurred while updating the ticket",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleUpdateTicketFromModal = async () => {
+    if (!selectedTicket) return;
+
+    try {
+      setIsUpdating(true);
+
+      const updatePayload: any = {
+        customerId: editFormData.customerId
+          ? Number(editFormData.customerId)
+          : undefined,
+        yardId: editFormData.yardId ? parseInt(editFormData.yardId) : null,
+        campaignId:
+          editFormData.campaignId && editFormData.campaignId !== "none"
+            ? Number(editFormData.campaignId)
+            : undefined,
+        campaignOption: editFormData.campaignOption || null,
+        agentId:
+          editFormData.agentId && editFormData.agentId !== "none"
+            ? Number(editFormData.agentId)
+            : undefined,
+        status: editFormData.status?.toUpperCase().replace(" ", "_"),
+        priority: editFormData.priority?.toUpperCase(),
+        direction: editFormData.direction?.toUpperCase(),
+        disposition: editFormData.disposition || null,
+        issueDetail: editFormData.issueDetail || null,
+        callDate: editFormData.callDate || null,
+      };
+
+      const response = await fetch(`/api/tickets/${selectedTicket.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatePayload),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        let updatedTicket = { ...selectedTicket, ...result.data };
+
+        if (attachmentFiles.length > 0) {
+          const formData = new FormData();
+          attachmentFiles.forEach((file) => formData.append("files", file));
+
+          const uploadResponse = await fetch(
+            `/api/tickets/${updatedTicket.id}/attachments`,
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+          const uploadResult = await uploadResponse.json();
+
+          if (uploadResult?.success) {
+            updatedTicket = { ...updatedTicket, ...uploadResult.data };
+          }
+        }
+
+        setTickets((prev) =>
+          prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t))
+        );
+
+        setSelectedTicket(updatedTicket);
+        setAttachmentFiles([]);
+
+        toast({
+          title: "Success",
+          description: (
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span>Ticket updated successfully</span>
+            </div>
+          ),
+        });
+
+        setShowEditModal(false);
       } else {
         toast({
           title: "Error",
@@ -2393,7 +2550,7 @@ export default function TicketsPage() {
         savedAttachments={savedAttachments}
         onEdit={() => {
           setShowViewModal(false);
-          setShowDetails(true);
+          setShowEditModal(true);
         }}
         formatEnumLabel={formatEnumLabel}
         getStatusBadgeColor={getStatusBadgeColor}
@@ -2408,130 +2565,32 @@ export default function TicketsPage() {
         getYardDisplayName={getYardDisplayName}
       />
 
-      {/* Central dialog for ticket details */}
-      <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogTitle className="sr-only">Ticket Details</DialogTitle>
-          {selectedTicket && (
-            <>
-              <div className="space-y-6">
-                {/* Ticket Details Fields */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">
-                      Ticket Information
-                    </h3>
-                    <TicketDetailsFields
-                      filledMetadataFields={filledMetadataFields}
-                      filledFullFields={filledFullFields}
-                      missingMetadataFields={missingMetadataFields}
-                      missingFullFields={missingFullFields}
-                    />
-                  </div>
-                </div>
-
-                {/* Attachments Section */}
-                {(hasSavedAttachments ||
-                  hasPendingAttachments ||
-                  attachmentFiles.length > 0) && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
-                        Attachments
-                        {hasSavedAttachments && (
-                          <Badge variant="secondary" className="ml-2">
-                            {savedAttachments.length}
-                          </Badge>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {hasSavedAttachments && (
-                          <div>
-                            <p className="text-sm font-medium mb-2">
-                              Saved Attachments:
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {savedAttachments.map((att, idx) => (
-                                <Badge
-                                  key={idx}
-                                  variant="outline"
-                                  className="gap-1"
-                                >
-                                  <FileText className="h-3 w-3" />
-                                  {att}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {attachmentFiles.length > 0 && (
-                          <div>
-                            <p className="text-sm font-medium mb-2">
-                              Pending Upload:
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {attachmentFiles.map((file, idx) => (
-                                <Badge
-                                  key={idx}
-                                  variant="secondary"
-                                  className="gap-1"
-                                >
-                                  <FileText className="h-3 w-3" />
-                                  {file.name}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              <DialogFooter className="mt-8 pt-6 border-t">
-                <div className="flex items-center justify-between w-full">
-                  <div className="text-xs text-muted-foreground">
-                    Last updated:{" "}
-                    {selectedTicket.updatedAt
-                      ? new Date(selectedTicket.updatedAt).toLocaleString()
-                      : "N/A"}
-                  </div>
-                  <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowDetails(false)}
-                      disabled={isUpdating}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleUpdateTicket}
-                      disabled={isUpdating}
-                      className="min-w-[120px]"
-                    >
-                      {isUpdating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="mr-2 h-4 w-4" />
-                          Save Changes
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <EditTicketModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        ticket={selectedTicket}
+        customers={customers}
+        yards={yards}
+        agents={agents}
+        campaigns={campaigns}
+        editFormData={editFormData}
+        setEditFormData={setEditFormData}
+        customerSearchEdit={customerSearchEdit}
+        setCustomerSearchEdit={setCustomerSearchEdit}
+        yardSearchEdit={yardSearchEdit}
+        setYardSearchEdit={setYardSearchEdit}
+        agentSearchEdit={agentSearchEdit}
+        setAgentSearchEdit={setAgentSearchEdit}
+        campaignSearchEdit={campaignSearchEdit}
+        setCampaignSearchEdit={setCampaignSearchEdit}
+        attachmentFiles={attachmentFiles}
+        setAttachmentFiles={setAttachmentFiles}
+        savedAttachments={savedAttachments}
+        isUpdating={isUpdating}
+        onSubmit={handleUpdateTicketFromModal}
+        getAttachmentLabel={getAttachmentLabel}
+        getAttachmentUrl={getAttachmentUrl}
+      />
     </div>
   );
 }
