@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useRole } from "@/components/providers/role-provider";
 import { fetchFromBackend } from "@/lib/api-client";
 import { toast } from "@/hooks/use-toast";
@@ -140,6 +141,15 @@ export default function CampaignsPage() {
     fetchCampaigns();
     fetchYards();
   }, []);
+
+  // Close all modals when route changes
+  const pathname = usePathname();
+  useEffect(() => {
+    setShowCreateModal(false);
+    setShowEditModal(false);
+    setShowDeleteModal(false);
+    setShowDetailsModal(false);
+  }, [pathname]);
 
   const filteredCampaigns = useMemo(() => {
     return campaigns.filter((campaign) => {

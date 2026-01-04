@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   BarChart,
   Bar,
@@ -117,6 +118,12 @@ export default function PerformancePage() {
     fetchReport();
   }, [startDate, endDate]);
 
+  // Cleanup on route change to prevent overlay issues
+  const pathname = usePathname();
+  useEffect(() => {
+    // Add cleanup logic here if modals are added in the future
+  }, [pathname]);
+
   const formattedDuration = (seconds: number) => {
     if (!seconds) return "0s";
     const mins = Math.floor(seconds / 60);
@@ -146,9 +153,9 @@ export default function PerformancePage() {
         end: endDate,
       });
       const blob = await fetchBlobFromBackend(
-          `/reports/performance/pdf?${params.toString()}&logoUrl=${encodeURIComponent(
-            getLogoUrl()
-          )}`,
+        `/reports/performance/pdf?${params.toString()}&logoUrl=${encodeURIComponent(
+          getLogoUrl()
+        )}`,
         { method: "GET" }
       );
       const url = window.URL.createObjectURL(blob);

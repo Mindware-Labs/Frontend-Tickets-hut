@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useRole } from "@/components/providers/role-provider";
 import {
   BookOpen,
@@ -102,6 +103,13 @@ export default function GuidesPage() {
   useEffect(() => {
     fetchGuides();
   }, []);
+
+  // Close all modals when route changes
+  const pathname = usePathname();
+  useEffect(() => {
+    setShowForm(false);
+    setShowDeleteDialog(false);
+  }, [pathname]);
 
   const resetForm = () => {
     setFormState(initialForm);

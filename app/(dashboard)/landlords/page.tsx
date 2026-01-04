@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useRole } from "@/components/providers/role-provider";
 import { fetchFromBackend } from "@/lib/api-client";
 import { toast } from "@/hooks/use-toast";
@@ -78,14 +79,22 @@ export default function LandlordsPage() {
     fetchYards();
   }, []);
 
+  // Close all modals when route changes
+  const pathname = usePathname();
+  useEffect(() => {
+    setShowCreateModal(false);
+    setShowEditModal(false);
+    setShowDeleteModal(false);
+    setShowDetailsModal(false);
+  }, [pathname]);
+
   const filteredLandlords = useMemo(() => {
     const term = search.toLowerCase();
     return landlords.filter((landlord) => {
       const name = landlord.name.toLowerCase();
       const email = landlord.email.toLowerCase();
       const phone = landlord.phone.toLowerCase();
-      const yardNames =
-        landlord.yards?.map((yard) => yard.name) || [];
+      const yardNames = landlord.yards?.map((yard) => yard.name) || [];
       const fallbackYards = yards
         .filter((yard) => yard.landlord?.id === landlord.id)
         .map((yard) => yard.name);
@@ -159,7 +168,8 @@ export default function LandlordsPage() {
     if (!formData.name.trim()) errors.name = "Name is required";
     if (!formData.phone.trim()) errors.phone = "Phone is required";
     if (!formData.email.trim()) errors.email = "Email is required";
-    if (formData.yardIds.length === 0) errors.yardIds = "Select at least one yard";
+    if (formData.yardIds.length === 0)
+      errors.yardIds = "Select at least one yard";
     return errors;
   };
 
@@ -289,7 +299,6 @@ export default function LandlordsPage() {
     }
   };
 
-
   return (
     <>
       <div className="flex flex-col gap-4">
@@ -302,12 +311,12 @@ export default function LandlordsPage() {
 
         <LandlordsToolbar
           search={search}
-        onSearchChange={setSearch}
-        onRefresh={fetchLandlords}
-        onCreate={canManage ? handleCreate : undefined}
-        canCreate={canManage}
-        totalCount={filteredLandlords.length}
-      />
+          onSearchChange={setSearch}
+          onRefresh={fetchLandlords}
+          onCreate={canManage ? handleCreate : undefined}
+          canCreate={canManage}
+          totalCount={filteredLandlords.length}
+        />
 
         <LandlordsTable
           loading={loading}

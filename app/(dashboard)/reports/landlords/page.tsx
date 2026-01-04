@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -130,6 +130,12 @@ export default function LandlordReportsPage() {
       setSelectedLandlordId(landlordIdParam);
     }
   }, [landlordIdParam]);
+
+  // Close all modals when route changes
+  const pathname = usePathname();
+  useEffect(() => {
+    setConfirmOpen(false);
+  }, [pathname]);
 
   if (isAgent) {
     return null;
@@ -475,11 +481,14 @@ export default function LandlordReportsPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Send report by email?</AlertDialogTitle>
               <AlertDialogDescription>
-                We will send the landlord activity report to {selectedLandlord?.email || "the configured address"}.
+                We will send the landlord activity report to{" "}
+                {selectedLandlord?.email || "the configured address"}.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={reportSending}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={reportSending}>
+                Cancel
+              </AlertDialogCancel>
               <AlertDialogAction
                 disabled={reportSending}
                 onClick={async () => {
@@ -688,9 +697,7 @@ export default function LandlordReportsPage() {
                         const label = status
                           .toLowerCase()
                           .split("_")
-                          .map(
-                            (w) => w.charAt(0).toUpperCase() + w.slice(1)
-                          )
+                          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
                           .join(" ");
                         return (
                           <Badge

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, JSX } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -547,6 +547,14 @@ export default function TicketsPage() {
     fetchAgents();
     fetchCampaigns();
   }, []);
+
+  // Close all modals when route changes
+  const pathname = usePathname();
+  useEffect(() => {
+    setShowCreateModal(false);
+    setShowEditModal(false);
+    setShowViewModal(false);
+  }, [pathname]);
 
   // Handle URL parameters for filtering
   useEffect(() => {

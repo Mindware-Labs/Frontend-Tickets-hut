@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { fetchFromBackend } from "@/lib/api-client";
 import { useRole } from "@/components/providers/role-provider";
 import { toast } from "@/hooks/use-toast";
@@ -32,7 +33,9 @@ export default function CustomersPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -77,6 +80,15 @@ export default function CustomersPage() {
     fetchCampaigns();
   }, []);
 
+  // Close all modals when route changes
+  const pathname = usePathname();
+  useEffect(() => {
+    setShowCreateModal(false);
+    setShowEditModal(false);
+    setShowDeleteModal(false);
+    setShowDetailsModal(false);
+  }, [pathname]);
+
   const filteredCustomers = useMemo(() => {
     const term = search.toLowerCase();
     return customers.filter((customer) => {
@@ -116,7 +128,8 @@ export default function CustomersPage() {
     setFormData({
       name: customer.name || "",
       phone: customer.phone || "",
-      campaignIds: customer.campaigns?.map((campaign) => campaign.id.toString()) || [],
+      campaignIds:
+        customer.campaigns?.map((campaign) => campaign.id.toString()) || [],
     });
     clearValidationErrors();
     setShowEditModal(true);

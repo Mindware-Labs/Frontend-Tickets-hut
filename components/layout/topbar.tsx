@@ -1,10 +1,10 @@
 "use client";
 
-import { Search, Bell, Sun, Moon } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
+import { Search, Bell, Sun, Moon } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -12,16 +12,16 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+} from "@/components/ui/breadcrumb";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,100 +31,104 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { User, ChevronDown } from "lucide-react"
+} from "@/components/ui/alert-dialog";
+import { User, ChevronDown } from "lucide-react";
 
-import Link from "next/link"
+import Link from "next/link";
 
-import { auth } from "@/lib/auth"
-import { useTheme } from "next-themes"
+import { auth } from "@/lib/auth";
+import { useTheme } from "next-themes";
 
 export default function Topbar() {
-  const { isMobile } = useSidebar()
-  const pathname = usePathname()
-  const pathSegments = pathname.split('/').filter(Boolean)
-  const rawPage = pathSegments[pathSegments.length - 1] || "dashboard"
+  const { isMobile } = useSidebar();
+  const pathname = usePathname();
+  const pathSegments = pathname.split("/").filter(Boolean);
+  const rawPage = pathSegments[pathSegments.length - 1] || "dashboard";
   const pageTitleMap: Record<string, string> = {
     "agent-dashboard": "Dashboard",
     dashboard: "Dashboard",
-  }
+  };
   const currentPage =
     pageTitleMap[rawPage.toLowerCase()] ||
     rawPage
       .replace(/-/g, " ")
       .split(" ")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ")
+      .join(" ");
 
-  const [showLogoutDialog, setShowLogoutDialog] = useState(false)
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [currentUser, setCurrentUser] = useState({ name: "User", email: "" })
-  const { theme, setTheme, resolvedTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentUser, setCurrentUser] = useState({ name: "User", email: "" });
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   const refreshUser = () => {
-    const storedUser = auth.getUser()
+    const storedUser = auth.getUser();
     if (storedUser) {
       const fullName = [storedUser.name, storedUser.lastName]
         .filter(Boolean)
-        .join(" ")
+        .join(" ");
       setCurrentUser({
         name: fullName || storedUser.email || "User",
         email: storedUser.email || "",
-      })
+      });
     }
-  }
+  };
 
   useEffect(() => {
-    refreshUser()
+    refreshUser();
 
-    const handleProfileUpdate = () => refreshUser()
+    const handleProfileUpdate = () => refreshUser();
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === 'user_data' || event.key === 'user_profile') {
-        refreshUser()
+      if (event.key === "user_data" || event.key === "user_profile") {
+        refreshUser();
       }
-    }
+    };
 
-    window.addEventListener('user-profile-updated', handleProfileUpdate)
-    window.addEventListener('storage', handleStorage)
+    window.addEventListener("user-profile-updated", handleProfileUpdate);
+    window.addEventListener("storage", handleStorage);
 
     return () => {
-      window.removeEventListener('user-profile-updated', handleProfileUpdate)
-      window.removeEventListener('storage', handleStorage)
-    }
-  }, [])
+      window.removeEventListener("user-profile-updated", handleProfileUpdate);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
+
+  // Close logout dialog when route changes
+  useEffect(() => {
+    setShowLogoutDialog(false);
+  }, [pathname]);
 
   const handleLogout = async () => {
     try {
-      setIsLoggingOut(true)
+      setIsLoggingOut(true);
       // Import auth dynamically to avoid SSR issues
-      const { auth } = await import('@/lib/auth')
-      await auth.logout()
-      window.location.href = '/login'
+      const { auth } = await import("@/lib/auth");
+      await auth.logout();
+      window.location.href = "/login";
     } catch (error) {
-      console.error('Logout failed:', error)
-      setIsLoggingOut(false)
-      setShowLogoutDialog(false)
+      console.error("Logout failed:", error);
+      setIsLoggingOut(false);
+      setShowLogoutDialog(false);
     }
-  }
+  };
 
   const getUserInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
       .toUpperCase()
-      .slice(0, 2)
-  }
+      .slice(0, 2);
+  };
 
-  const userInitials = getUserInitials(currentUser.name)
-  const currentTheme = resolvedTheme || theme
+  const userInitials = getUserInitials(currentUser.name);
+  const currentTheme = resolvedTheme || theme;
 
   return (
     <>
@@ -139,21 +143,20 @@ export default function Topbar() {
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
-                <BreadcrumbPage className="capitalize font-bold">{currentPage}</BreadcrumbPage>
+                <BreadcrumbPage className="capitalize font-bold">
+                  {currentPage}
+                </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
         </div>
 
         <div className="flex items-center gap-4">
-
           <Separator orientation="vertical" className="h-4" />
 
           <button
             type="button"
-            onClick={() =>
-              setTheme(currentTheme === "dark" ? "light" : "dark")
-            }
+            onClick={() => setTheme(currentTheme === "dark" ? "light" : "dark")}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/60 text-foreground/80 shadow-sm transition-colors hover:bg-accent/60"
             aria-label="Toggle light and dark mode"
           >
@@ -176,7 +179,6 @@ export default function Topbar() {
 
                 <div className="hidden lg:block text-left">
                   <p className="text-sm font-medium">{currentUser.name}</p>
-                 
                 </div>
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </button>
@@ -191,7 +193,9 @@ export default function Topbar() {
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{currentUser.name}</p>
+                  <p className="text-sm font-medium truncate">
+                    {currentUser.name}
+                  </p>
                   <p className="text-xs text-muted-foreground truncate">
                     {currentUser.email}
                   </p>
@@ -204,8 +208,19 @@ export default function Topbar() {
                 className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
                 onClick={() => setShowLogoutDialog(true)}
               >
-                <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                <svg
+                  className="mr-2 h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
                 </svg>
                 <span>Sign Out</span>
               </DropdownMenuItem>
@@ -234,9 +249,25 @@ export default function Topbar() {
             >
               {isLoggingOut ? (
                 <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                   Signing out...
                 </span>
@@ -248,5 +279,5 @@ export default function Topbar() {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  )
+  );
 }

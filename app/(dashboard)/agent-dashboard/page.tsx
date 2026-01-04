@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { usePathname } from "next/navigation";
 import KPICard from "@/components/dashboard/kpi-card";
 import { TicketActions } from "@/components/dashboard/ticket-actions";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
@@ -363,8 +364,9 @@ export default function AgentDashboardPage() {
         ([name, count]) => ({ name, count })
       );
 
-      const recentTickets: DashboardTicket[] = myTickets.slice(0, 5).map(
-        (ticket) => ({
+      const recentTickets: DashboardTicket[] = myTickets
+        .slice(0, 5)
+        .map((ticket) => ({
           id: Number(ticket.id || 0),
           clientName:
             (ticket as any).clientName ||
@@ -377,8 +379,7 @@ export default function AgentDashboardPage() {
             "Unspecified",
           status: normalizeLabel(ticket.status || "Unspecified"),
           createdAt: ticket.createdAt || new Date().toISOString(),
-        })
-      );
+        }));
 
       setAgentKpis(kpis);
       setPersonalData({
@@ -409,6 +410,12 @@ export default function AgentDashboardPage() {
     loadDashboard();
     loadAgentKpis();
   }, [loadDashboard, loadAgentKpis]);
+
+  // Cleanup on route change to prevent overlay issues
+  const pathname = usePathname();
+  useEffect(() => {
+    // Add cleanup logic here if modals are added in the future
+  }, [pathname]);
 
   // ... (Configuración de datos de gráficas se mantiene igual, solo ajustes visuales)
   const callsData = useMemo(
@@ -500,7 +507,8 @@ export default function AgentDashboardPage() {
     return "Good evening";
   };
 
-  if (isLoading && !dashboardData && !personalData) return <DashboardSkeleton />;
+  if (isLoading && !dashboardData && !personalData)
+    return <DashboardSkeleton />;
 
   if (!dashboardData && !personalData) {
     return (

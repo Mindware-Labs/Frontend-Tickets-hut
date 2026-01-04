@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   Search,
   Download,
@@ -105,6 +106,12 @@ export default function AgentStatsPage() {
     fetchReport();
   }, [startDate, endDate]);
 
+  // Cleanup on route change to prevent overlay issues
+  const pathname = usePathname();
+  useEffect(() => {
+    // Add cleanup logic here if modals are added in the future
+  }, [pathname]);
+
   const formattedDuration = (seconds: number) => {
     if (!seconds) return "0s";
     const mins = Math.floor(seconds / 60);
@@ -120,7 +127,10 @@ export default function AgentStatsPage() {
     );
   }, [report, searchTerm]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredAgents.length / itemsPerPage));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredAgents.length / itemsPerPage)
+  );
   const paginatedAgents = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredAgents.slice(startIndex, startIndex + itemsPerPage);
@@ -406,7 +416,9 @@ export default function AgentStatsPage() {
               </div>
 
               <div className="p-4 border-t flex flex-col sm:flex-row gap-3 sm:gap-6 sm:items-center sm:justify-between text-sm text-muted-foreground">
-                <span className="hidden sm:inline">Total tickets: {report.kpis.totalTickets}</span>
+                <span className="hidden sm:inline">
+                  Total tickets: {report.kpis.totalTickets}
+                </span>
                 <PaginationFooter
                   totalCount={filteredAgents.length}
                   currentPage={currentPage}

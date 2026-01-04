@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { usePathname } from "next/navigation";
 import KPICard from "@/components/dashboard/kpi-card";
 import { TicketActions } from "@/components/dashboard/ticket-actions";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
@@ -76,7 +77,7 @@ type DashboardData = {
   charts: {
     callsByDay: { day: string; calls: number }[];
     // Usamos 'any' aquí temporalmente en la lógica para ser flexibles con lo que llega del backend
-    ticketsByCampaign: any[]; 
+    ticketsByCampaign: any[];
     ticketsByDisposition: { name: string; count: number }[];
   };
   recentTickets: DashboardTicket[];
@@ -151,6 +152,12 @@ export default function DashboardPage() {
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  // Cleanup on route change to prevent overlay issues
+  const pathname = usePathname();
+  useEffect(() => {
+    // Add cleanup logic here if modals are added in the future
+  }, [pathname]);
 
   // --- PREPARACIÓN DE DATOS ---
 
@@ -559,7 +566,6 @@ export default function DashboardPage() {
                   </ChartContainer>
                 </CardContent>
                 <CardFooter className="flex-col items-start gap-2 text-sm">
-              
                   <div className="text-muted-foreground leading-none">
                     Showing top active campaigns
                   </div>
@@ -578,9 +584,7 @@ export default function DashboardPage() {
                   Agents Overview
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {agentsError
-                    ? agentsError
-                    : `Total agents: ${agents.length}`}
+                  {agentsError ? agentsError : `Total agents: ${agents.length}`}
                 </p>
               </div>
               <Button

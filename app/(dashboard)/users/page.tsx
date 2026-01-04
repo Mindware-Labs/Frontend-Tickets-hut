@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -121,6 +122,13 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // Close all modals when route changes
+  const pathname = usePathname();
+  useEffect(() => {
+    setShowCreate(false);
+    setShowEdit(false);
+  }, [pathname]);
 
   const filteredUsers = useMemo(() => {
     const term = search.toLowerCase();

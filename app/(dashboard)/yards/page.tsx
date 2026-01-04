@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import { useRole } from "@/components/providers/role-provider";
 import { fetchFromBackend } from "@/lib/api-client";
 import { toast } from "@/hooks/use-toast";
@@ -88,6 +88,15 @@ export default function YardsPage() {
     fetchYards();
   }, []);
 
+  // Close all modals when route changes
+  const pathname = usePathname();
+  useEffect(() => {
+    setShowCreateModal(false);
+    setShowEditModal(false);
+    setShowDeleteModal(false);
+    setShowDetailsModal(false);
+  }, [pathname]);
+
   // Filter yards
   const filteredYards = useMemo(() => {
     return yards.filter((yard) => {
@@ -96,7 +105,9 @@ export default function YardsPage() {
         yard.commonName.toLowerCase().includes(search.toLowerCase()) ||
         yard.propertyAddress.toLowerCase().includes(search.toLowerCase()) ||
         yard.contactInfo.toLowerCase().includes(search.toLowerCase()) ||
-        (yard.landlord?.name || "").toLowerCase().includes(search.toLowerCase());
+        (yard.landlord?.name || "")
+          .toLowerCase()
+          .includes(search.toLowerCase());
 
       const matchesType = typeFilter === "all" || yard.yardType === typeFilter;
       const matchesStatus =
