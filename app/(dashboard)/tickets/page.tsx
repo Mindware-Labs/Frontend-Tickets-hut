@@ -825,8 +825,14 @@ export default function TicketsPage() {
         disposition: editData.disposition || null,
         campaignOption: editData.campaignOption || null,
         issueDetail: editData.issueDetail || null,
-        campaignId: editData.campaignId ? parseInt(editData.campaignId) : null,
-        agentId: editData.agentId ? parseInt(editData.agentId) : null,
+        campaignId:
+          editData.campaignId && editData.campaignId !== "none"
+            ? Number(editData.campaignId)
+            : undefined,
+        agentId:
+          editData.agentId && editData.agentId !== "none"
+            ? Number(editData.agentId)
+            : undefined,
       };
 
       const response = await fetch(`/api/tickets/${selectedTicket.id}`, {
@@ -1226,7 +1232,7 @@ export default function TicketsPage() {
     },
     {
       key: "campaign",
-      filled: Boolean(editData.campaignId),
+      filled: Boolean(editData.campaignId && editData.campaignId !== "none"),
       node: (
         <div className="space-y-1">
           <p className="text-sm font-medium text-muted-foreground">Campaign</p>
@@ -1242,7 +1248,7 @@ export default function TicketsPage() {
               const selectedType = selected?.tipo?.toString().toUpperCase();
               setEditData((prev) => ({
                 ...prev,
-                campaignId: value === "none" ? "" : value,
+                campaignId: value === "none" ? "none" : value,
                 campaignOption:
                   selectedType === ManagementType.ONBOARDING ||
                   selectedType === ManagementType.AR
