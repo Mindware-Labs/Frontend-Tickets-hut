@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   Loader2,
@@ -10,42 +10,58 @@ import {
   Lock,
   Eye,
   EyeOff,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+  RefreshCw,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSlot,
-} from '@/components/ui/input-otp';
-import Image from 'next/image';
-import { auth } from '@/lib/auth';
+} from "@/components/ui/input-otp";
+import Image from "next/image";
+import { auth } from "@/lib/auth";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
-  const [step, setStep] = useState<'request' | 'code' | 'reset' | 'done'>('request');
+  const [step, setStep] = useState<"request" | "code" | "reset" | "done">(
+    "request"
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState("");
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [resendTimer, setResendTimer] = useState(0);
+  const [isResending, setIsResending] = useState(false);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   const handleRequestCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
       await auth.requestPasswordReset(email.trim().toLowerCase());
-      setStep('code');
+      setStep("code");
+      setResendTimer(120); // 2 minutes
     } catch (err: any) {
-      const message = err?.message || 'Failed to request reset code.';
-      if (message.toLowerCase().includes('email not found')) {
-        setError('Email not registered. Please check and try again.');
+      const message = err?.message || "Failed to request reset code.";
+      if (message.toLowerCase().includes("email not found")) {
+        setError("Email not registered. Please check and try again.");
       } else {
         setError(message);
       }
@@ -54,12 +70,27 @@ export default function ForgotPasswordPage() {
     }
   };
 
+  const handleResendCode = async () => {
+    setError("");
+    setIsResending(true);
+
+    try {
+      await auth.requestPasswordReset(email.trim().toLowerCase());
+      setResendTimer(120); // 2 minutes
+      setCode(""); // Clear previous code
+    } catch (err: any) {
+      setError(err?.message || "Failed to resend code.");
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   const handleContinueWithCode = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!code.trim() || code.trim().length !== 6) {
-      setError('Please enter the 6-digit code.');
+      setError("Please enter the 6-digit code.");
       return;
     }
 
@@ -67,10 +98,10 @@ export default function ForgotPasswordPage() {
     auth
       .verifyResetCode(email.trim().toLowerCase(), code.trim())
       .then(() => {
-        setStep('reset');
+        setStep("reset");
       })
       .catch((err: any) => {
-        setError(err.message || 'Invalid or expired code.');
+        setError(err.message || "Invalid or expired code.");
       })
       .finally(() => {
         setIsLoading(false);
@@ -79,25 +110,29 @@ export default function ForgotPasswordPage() {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
+      setError("Password must be at least 6 characters long.");
       return;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError("Passwords do not match.");
       return;
     }
     setIsLoading(true);
     try {
-      await auth.resetPasswordWithCode(email.trim().toLowerCase(), code.trim(), password);
-      setStep('done');
+      await auth.resetPasswordWithCode(
+        email.trim().toLowerCase(),
+        code.trim(),
+        password
+      );
+      setStep("done");
       setTimeout(() => {
-        router.push('/login');
+        router.push("/login");
       }, 2000);
     } catch (err: any) {
-      setError(err.message || 'Failed to reset password.');
+      setError(err.message || "Failed to reset password.");
     } finally {
       setIsLoading(false);
     }
@@ -118,10 +153,13 @@ export default function ForgotPasswordPage() {
       </div>
 
       <div className="p-8 pt-6">
-        {step === 'request' && (
+        {step === "request" && (
           <form onSubmit={handleRequestCode} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
+              <Label
+                htmlFor="email"
+                className="text-slate-300 text-xs font-semibold uppercase tracking-wider"
+              >
                 Email
               </Label>
               <div className="relative group">
@@ -164,10 +202,11 @@ export default function ForgotPasswordPage() {
           </form>
         )}
 
-        {step === 'code' && (
+        {step === "code" && (
           <form onSubmit={handleContinueWithCode} className="space-y-4">
             <p className="text-xs text-slate-400 text-center">
-              We sent a 6-digit code to <span className="text-blue-400 font-semibold">{email}</span>
+              We sent a 6-digit code to{" "}
+              <span className="text-blue-400 font-semibold">{email}</span>
             </p>
 
             <div className="space-y-3">
@@ -219,24 +258,59 @@ export default function ForgotPasswordPage() {
                 </>
               )}
             </Button>
+
+            <div className="pt-2">
+              {resendTimer > 0 ? (
+                <p className="text-xs text-slate-500 text-center">
+                  Resend code in{" "}
+                  <span className="text-slate-400 font-semibold">
+                    {Math.floor(resendTimer / 60)}:
+                    {(resendTimer % 60).toString().padStart(2, "0")}
+                  </span>
+                </p>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full h-9 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                  onClick={handleResendCode}
+                  disabled={isResending}
+                >
+                  {isResending ? (
+                    <>
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      Resending...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-3 w-3" />
+                      Resend Code
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </form>
         )}
 
-        {step === 'reset' && (
+        {step === "reset" && (
           <form onSubmit={handleResetPassword} className="space-y-4">
             <p className="text-xs text-slate-400 text-center">
               Enter your new password to finish the reset.
             </p>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
+              <Label
+                htmlFor="password"
+                className="text-slate-300 text-xs font-semibold uppercase tracking-wider"
+              >
                 New Password
               </Label>
               <div className="relative group">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
                 <Input
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   className="pl-10 pr-10 bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-600 focus:border-blue-500 focus:ring-blue-500/20 transition-all h-11"
                   required
@@ -248,20 +322,27 @@ export default function ForgotPasswordPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
+              <Label
+                htmlFor="confirmPassword"
+                className="text-slate-300 text-xs font-semibold uppercase tracking-wider"
+              >
                 Confirm Password
               </Label>
               <div className="relative group">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
                 <Input
                   id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
+                  type={showConfirmPassword ? "text" : "password"}
                   placeholder="••••••••"
                   className="pl-10 pr-10 bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-600 focus:border-blue-500 focus:ring-blue-500/20 transition-all h-11"
                   required
@@ -273,7 +354,11 @@ export default function ForgotPasswordPage() {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
                 >
-                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>
@@ -304,14 +389,14 @@ export default function ForgotPasswordPage() {
           </form>
         )}
 
-        {step === 'done' && (
+        {step === "done" && (
           <div className="space-y-4 text-center">
             <p className="text-sm text-green-400 font-medium">
               Password updated successfully. Redirecting to login...
             </p>
             <Button
               type="button"
-              onClick={() => router.push('/login')}
+              onClick={() => router.push("/login")}
               className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium shadow-lg shadow-blue-900/20 transition-all duration-200"
             >
               Go to Login
@@ -322,8 +407,11 @@ export default function ForgotPasswordPage() {
 
         <div className="mt-6 text-center">
           <p className="text-sm text-slate-400">
-            Remembered your password?{' '}
-            <Link href="/login" className="text-blue-400 hover:text-blue-300 font-medium hover:underline transition-colors">
+            Remembered your password?{" "}
+            <Link
+              href="/login"
+              className="text-blue-400 hover:text-blue-300 font-medium hover:underline transition-colors"
+            >
               Sign In
             </Link>
           </p>

@@ -93,7 +93,7 @@ export function LandlordDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl p-0 gap-0 overflow-hidden bg-card/50 backdrop-blur-sm border-muted/50">
+      <DialogContent className="sm:max-w-4xl p-0 gap-0 overflow-hidden bg-background border-border shadow-xl">
         <DialogHeader className="p-6 pb-4 bg-muted/20 border-b border-border/50">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="flex items-start gap-4">

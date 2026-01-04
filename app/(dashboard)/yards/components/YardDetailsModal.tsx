@@ -89,7 +89,7 @@ export function YardDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl p-0 gap-0 overflow-hidden bg-card/50 backdrop-blur-sm border-muted/50">
+      <DialogContent className="sm:max-w-3xl p-0 gap-0 overflow-hidden bg-background border-border shadow-xl">
         <DialogHeader className="p-6 pb-4 bg-muted/20 border-b border-border/50">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="flex items-start gap-4">
@@ -213,7 +213,9 @@ export function YardDetailsModal({
                   <div
                     className={cn(
                       "rounded-lg border bg-card transition-all duration-300 shadow-sm overflow-hidden flex flex-col",
-                      showLandlordPanel ? "border-primary/40" : "opacity-80 grayscale-[0.5]"
+                      showLandlordPanel
+                        ? "border-primary/40"
+                        : "opacity-80 grayscale-[0.5]"
                     )}
                   >
                     <div className="p-4 flex items-center gap-3 bg-muted/30 shrink-0">

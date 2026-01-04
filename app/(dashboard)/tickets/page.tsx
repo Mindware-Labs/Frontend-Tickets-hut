@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, JSX } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -112,10 +113,13 @@ declare module "@/lib/mock-data" {
 }
 
 export default function TicketsPage() {
+  const searchParams = useSearchParams();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [urlTicketId, setUrlTicketId] = useState<string | null>(null);
+  const [urlCustomerId, setUrlCustomerId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -523,6 +527,27 @@ export default function TicketsPage() {
     fetchCampaigns();
   }, []);
 
+  // Handle URL parameters for filtering
+  useEffect(() => {
+    if (!tickets.length) return;
+
+    const ticketId = searchParams.get("id");
+    const customerId = searchParams.get("customerId");
+
+    if (ticketId) {
+      // Filter and open specific ticket
+      const ticket = tickets.find((t) => t.id.toString() === ticketId);
+      if (ticket) {
+        setUrlTicketId(ticketId);
+        setSelectedTicket(ticket);
+        setShowDetails(true);
+      }
+    } else if (customerId) {
+      // Filter by customer ID
+      setUrlCustomerId(customerId);
+    }
+  }, [tickets, searchParams]);
+
   const selectedYard = useMemo(() => {
     return yards.find((y) => y.id.toString() === selectedYardId);
   }, [selectedYardId, yards]);
@@ -581,6 +606,18 @@ export default function TicketsPage() {
 
   const filteredTickets = useMemo(() => {
     const filtered = tickets.filter((ticket) => {
+      // If filtering by specific ticket ID from URL, only show that ticket
+      if (urlTicketId) {
+        return ticket.id.toString() === urlTicketId;
+      }
+
+      // If filtering by customer ID from URL, only show tickets from that customer
+      if (urlCustomerId) {
+        return (
+          ticket.customerId && ticket.customerId.toString() === urlCustomerId
+        );
+      }
+
       const yardName =
         typeof ticket.yard === "string"
           ? ticket.yard
@@ -699,6 +736,8 @@ export default function TicketsPage() {
     currentUser,
     currentUserFullName,
     campaigns,
+    urlTicketId,
+    urlCustomerId,
   ]);
 
   const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);

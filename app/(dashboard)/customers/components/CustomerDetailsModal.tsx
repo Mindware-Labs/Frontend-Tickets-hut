@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,8 @@ import {
   Timer,
   XCircle,
   HelpCircle,
+  ExternalLink,
+  List,
 } from "lucide-react";
 import type { Customer } from "../types";
 import { cn } from "@/lib/utils";
@@ -127,6 +130,7 @@ export function CustomerDetailsModal({
   ticketsLoading = false,
 }: CustomerDetailsModalProps) {
   const [copied, setCopied] = useState(false);
+  const router = useRouter();
 
   if (!customer) return null;
 
@@ -148,7 +152,7 @@ export function CustomerDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl p-0 gap-0 overflow-hidden bg-card/50 backdrop-blur-sm border-muted/50">
+      <DialogContent className="sm:max-w-3xl p-0 gap-0 overflow-hidden bg-background border-border shadow-xl">
         {/* Header */}
         <DialogHeader className="p-6 pb-4 bg-muted/20 border-b border-border/50">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -306,7 +310,11 @@ export function CustomerDetailsModal({
                           return (
                             <div
                               key={ticket.id}
-                              className="group p-4 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors"
+                              className="group p-4 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors cursor-pointer"
+                              onClick={() => {
+                                router.push(`/tickets?id=${ticket.id}`);
+                                onOpenChange(false);
+                              }}
                             >
                               <div className="flex items-start gap-3 min-w-0">
                                 <div className="mt-0.5 h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0 text-primary">
@@ -315,6 +323,7 @@ export function CustomerDetailsModal({
                                 <div className="min-w-0 space-y-0.5">
                                   <p className="text-sm font-semibold truncate flex items-center gap-2">
                                     Ticket #{ticket.id}
+                                    <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                                   </p>
                                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                     <span className="flex items-center gap-1">
@@ -367,7 +376,18 @@ export function CustomerDetailsModal({
           </div>
         </ScrollArea>
 
-        <DialogFooter className="p-4 bg-muted/20 border-t border-border/50">
+        <DialogFooter className="p-4 bg-muted/20 border-t border-border/50 flex justify-between">
+          <Button
+            variant="default"
+            onClick={() => {
+              router.push(`/tickets?customerId=${customer.id}`);
+              onOpenChange(false);
+            }}
+            className="gap-2"
+          >
+            <List className="h-4 w-4" />
+            View All Tickets
+          </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
