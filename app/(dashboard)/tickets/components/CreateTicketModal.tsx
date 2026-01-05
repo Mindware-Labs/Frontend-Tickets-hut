@@ -129,7 +129,6 @@ export function CreateTicketModal({
     return yards.filter(
       (yard) =>
         yard.name.toLowerCase().includes(term) ||
-        yard.commonName.toLowerCase().includes(term) ||
         yard.propertyAddress.toLowerCase().includes(term)
     );
   }, [yards, yardSearchCreate]);
@@ -290,7 +289,7 @@ export function CreateTicketModal({
                         </SelectItem>
                         {filteredYardsCreate.map((y) => (
                           <SelectItem key={y.id} value={y.id.toString()}>
-                            {y.commonName || y.name}
+                            {y.name}
                           </SelectItem>
                         ))}
                       </ScrollArea>

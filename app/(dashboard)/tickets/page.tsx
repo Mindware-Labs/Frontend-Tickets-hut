@@ -593,7 +593,6 @@ export default function TicketsPage() {
       const matchesSearch =
         yardSearch === "" ||
         yard.name.toLowerCase().includes(yardSearch.toLowerCase()) ||
-        yard.commonName.toLowerCase().includes(yardSearch.toLowerCase()) ||
         yard.propertyAddress.toLowerCase().includes(yardSearch.toLowerCase());
 
       const matchesCategory =
@@ -626,11 +625,7 @@ export default function TicketsPage() {
 
   const filteredYardFilterOptions = useMemo(() => {
     const term = yardFilterSearch.toLowerCase();
-    return yards.filter(
-      (y) =>
-        y.name.toLowerCase().includes(term) ||
-        (y.commonName || "").toLowerCase().includes(term)
-    );
+    return yards.filter((y) => y.name.toLowerCase().includes(term));
   }, [yards, yardFilterSearch]);
 
   const filteredTickets = useMemo(() => {
@@ -1119,7 +1114,7 @@ export default function TicketsPage() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       if (selectedTicket && selectedYard) {
-        const updatedYard = `${selectedYard.name} - ${selectedYard.commonName}`;
+        const updatedYard = selectedYard.name;
 
         setTickets((prev) =>
           prev.map((t) =>
@@ -1737,7 +1732,7 @@ export default function TicketsPage() {
                         <SelectItem key={yard.id} value={yard.id.toString()}>
                           <div className="flex flex-col">
                             <span className="text-sm font-medium">
-                              {yard.commonName || yard.name}
+                              {yard.name}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               {yard.propertyAddress}
@@ -2248,7 +2243,7 @@ export default function TicketsPage() {
                 <SelectItem value="all">All Yards</SelectItem>
                 {filteredYardFilterOptions.map((y) => (
                   <SelectItem key={y.id} value={y.id.toString()}>
-                    {y.commonName || y.name}
+                    {y.name}
                   </SelectItem>
                 ))}
               </SelectContent>

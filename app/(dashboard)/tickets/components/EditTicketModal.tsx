@@ -150,7 +150,6 @@ export function EditTicketModal({
     return yards.filter(
       (yard) =>
         yard.name.toLowerCase().includes(term) ||
-        yard.commonName.toLowerCase().includes(term) ||
         yard.propertyAddress.toLowerCase().includes(term)
     );
   }, [yards, yardSearchEdit]);
@@ -311,7 +310,7 @@ export function EditTicketModal({
                         </SelectItem>
                         {filteredYardsEdit.map((y) => (
                           <SelectItem key={y.id} value={y.id.toString()}>
-                            {y.commonName || y.name}
+                            {y.name}
                           </SelectItem>
                         ))}
                       </ScrollArea>
