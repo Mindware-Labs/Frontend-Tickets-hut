@@ -61,7 +61,7 @@ type CustomerRow = {
   name: string;
   phone: string;
   status: string;
-  specialCase: string;
+  note: string;
 };
 
 type ReportMetric = {
@@ -258,7 +258,7 @@ const CustomerTable = ({
                     </span>
                   </div>
                   <div className="col-span-4 px-6 py-3 text-muted-foreground wrap-break-word text-xs">
-                    {row.specialCase || "—"}
+                    {row.note || "—"}
                   </div>
                 </div>
               ))
