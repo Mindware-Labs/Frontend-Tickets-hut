@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Call Center Dashboard",
+  title: "Rig Hut Support Center",
   description: "Call Center Ticket Management System",
   generator: "v0.app",
 };

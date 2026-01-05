@@ -140,7 +140,7 @@ const data = {
       icon: BookOpen,
       items: [
         {
-          title: "Rig Hut policies",
+          title: "Rig Hut Policies",
           url: "/Knowledge/policies",
         },
         {
