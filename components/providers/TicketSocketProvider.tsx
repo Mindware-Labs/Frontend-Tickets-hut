@@ -54,7 +54,7 @@ export function TicketSocketProvider() {
             onClick={() => router.push(`/tickets?view=assigned_me&id=${data.ticketId}`)}
             className="text-blue-200 hover:text-white border-blue-200 hover:border-white"
           >
-            Ver Ticket
+            View Ticket
           </ToastAction>
         ),
       });
