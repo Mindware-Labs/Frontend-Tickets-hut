@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react"; // 1. Importar useState para controlar el popover
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,6 +19,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+// 2. Importar componentes para el Combobox (Buscador)
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react"; // Iconos necesarios
+import { cn } from "@/lib/utils"; // Utilidad para combinar clases
 import { CampaignFormData, CampaignType, YardSummary } from "../types";
 
 interface CampaignFormModalProps {
@@ -57,15 +74,20 @@ export function CampaignFormModal({
   idPrefix,
   yards,
 }: CampaignFormModalProps) {
+  // 3. Estado local para controlar si el buscador de yards está abierto o cerrado
+  const [openYardCombobox, setOpenYardCombobox] = useState(false);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl overflow-y-visible"> 
+        {/* Nota: overflow-y-visible ayuda a que el popover no se corte si el modal es pequeño */}
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* --- NAME INPUT --- */}
           <div className="space-y-2">
             <Label htmlFor={`${idPrefix}-nombre`}>Name *</Label>
             <Input
@@ -78,15 +100,16 @@ export function CampaignFormModal({
                   nombre: "",
                 });
               }}
-              // AGREGADO: "w-full" asegura que ocupe el ancho disponible
-              // "truncate" agrega los puntos suspensivos (...) si el texto es muy largo
-              className={`w-full truncate ${validationErrors.nombre ? "border-red-500" : ""}`}
+              className={`w-full truncate ${
+                validationErrors.nombre ? "border-red-500" : ""
+              }`}
             />
             {validationErrors.nombre && (
               <p className="text-xs text-red-500">{validationErrors.nombre}</p>
             )}
           </div>
 
+          {/* --- TYPE SELECT & STATUS SELECT --- */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor={`${idPrefix}-tipo`}>Type *</Label>
@@ -135,35 +158,86 @@ export function CampaignFormModal({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+            
+            {/* --- YARD COMBOBOX (SEARCHABLE) --- */}
+            <div className="space-y-2 flex flex-col">
               <Label htmlFor={`${idPrefix}-yardaId`}>Yard</Label>
-              <Select
-                value={formData.yardaId ? String(formData.yardaId) : "none"}
-                onValueChange={(value) =>
-                  onFormChange({
-                    ...formData,
-                    yardaId: value === "none" ? undefined : Number(value),
-                  })
-                }
-              >
-                {/* AQUÍ ESTÁ EL CAMBIO:
-                   Agregamos 'w-full' y '[&>span]:truncate' para que corte el texto largo 
-                */}
-                <SelectTrigger 
-                  id={`${idPrefix}-yardaId`} 
-                  className="w-full [&>span]:truncate"
-                >
-                  <SelectValue placeholder="Select a yard" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No yard</SelectItem>
-                  {yards.map((yard) => (
-                    <SelectItem key={yard.id} value={String(yard.id)}>
-                      {yard.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={openYardCombobox} onOpenChange={setOpenYardCombobox}>
+                <PopoverTrigger asChild>
+                  <Button
+                    id={`${idPrefix}-yardaId`}
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openYardCombobox}
+                    className={cn(
+                      "w-full justify-between font-normal", // font-normal para que parezca un input
+                      !formData.yardaId && "text-muted-foreground",
+                      validationErrors.yardaId && "border-red-500"
+                    )}
+                  >
+                    {formData.yardaId
+                      ? yards.find((yard) => yard.id === formData.yardaId)?.name
+                      : "Select a yard..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search yard..." />
+                    <CommandList>
+                      <CommandEmpty>No yard found.</CommandEmpty>
+                      <CommandGroup>
+                        {/* Opción para "No yard" / Limpiar selección */}
+                        <CommandItem
+                          value="none"
+                          onSelect={() => {
+                            onFormChange({ ...formData, yardaId: undefined });
+                            setOpenYardCombobox(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              !formData.yardaId ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          No yard
+                        </CommandItem>
+                        
+                        {/* Lista de Yards */}
+                        {yards.map((yard) => (
+                          <CommandItem
+                            key={yard.id}
+                            value={yard.name} // Importante para que el filtro funcione por nombre
+                            onSelect={() => {
+                              onFormChange({ ...formData, yardaId: yard.id });
+                              setOpenYardCombobox(false);
+                              // Limpiar error si existe
+                              if (validationErrors.yardaId) {
+                                onValidationErrorChange({
+                                    ...validationErrors,
+                                    yardaId: "",
+                                });
+                              }
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.yardaId === yard.id
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            {yard.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
               {validationErrors.yardaId && (
                 <p className="text-xs text-red-500">
                   {validationErrors.yardaId}
@@ -171,6 +245,7 @@ export function CampaignFormModal({
               )}
             </div>
 
+            {/* --- DURATION INPUT --- */}
             <div className="space-y-2">
               <Label htmlFor={`${idPrefix}-duracion`}>
                 Duration (Optional)
