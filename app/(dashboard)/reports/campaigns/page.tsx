@@ -61,6 +61,7 @@ type Ticket = {
 type CustomerRow = {
   name: string;
   phone: string;
+  direction?: string;
   status: string;
   note: string;
 };
@@ -228,9 +229,10 @@ const CustomerTable = ({
         <div className="min-w-200 align-middle">
           <div className="grid grid-cols-12 bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-y">
             <div className="col-span-3 px-6 py-3">Customer</div>
-            <div className="col-span-3 px-6 py-3">Phone</div>
+            <div className="col-span-2 px-6 py-3">Phone</div>
+            <div className="col-span-2 px-6 py-3">Direction</div>
             <div className="col-span-2 px-6 py-3">Status</div>
-            <div className="col-span-4 px-6 py-3">Notes / Special Case</div>
+            <div className="col-span-3 px-6 py-3">Notes / Special Case</div>
           </div>
           <div className="divide-y">
             {rows.length === 0 ? (
@@ -250,15 +252,20 @@ const CustomerTable = ({
                   >
                     {row.name}
                   </div>
-                  <div className="col-span-3 px-6 py-3 text-muted-foreground truncate">
+                  <div className="col-span-2 px-6 py-3 text-muted-foreground truncate">
                     {row.phone || "—"}
+                  </div>
+                  <div className="col-span-2 px-6 py-3">
+                    <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary/10 text-primary">
+                      {row.direction || "Unknown"}
+                    </span>
                   </div>
                   <div className="col-span-2 px-6 py-3">
                     <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
                       {row.status}
                     </span>
                   </div>
-                  <div className="col-span-4 px-6 py-3 text-muted-foreground wrap-break-word text-xs">
+                  <div className="col-span-3 px-6 py-3 text-muted-foreground wrap-break-word text-xs">
                     {row.note || "—"}
                   </div>
                 </div>
