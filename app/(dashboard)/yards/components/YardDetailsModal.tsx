@@ -22,6 +22,7 @@ import {
   Check,
   Mail,
   Info,
+  StickyNote, // <--- 1. Importamos el icono para las notas
 } from "lucide-react";
 import type { Yard } from "../types";
 import { cn } from "@/lib/utils";
@@ -41,7 +42,6 @@ type YardDetailsModalProps = {
 const getTypeLabel = (type: Yard["yardType"]) =>
   type === "SAAS" ? "SaaS" : "Full Service";
 
-// FIX 1: Actualizamos InfoItem para que soporte truncado automático
 const InfoItem = ({
   icon: Icon,
   label,
@@ -57,13 +57,11 @@ const InfoItem = ({
 }) => {
   if (!value && !children) return null;
   return (
-    // Agregamos min-w-0 para que el flex item pueda encogerse
     <div className={cn("flex flex-col space-y-1.5 min-w-0", className)}>
       <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
         <Icon className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{label}</span>
       </div>
-      {/* Agregamos 'truncate' al contenedor del valor */}
       <div className="text-sm font-medium text-foreground pl-1 truncate">
         {children || value || "N/A"}
       </div>
@@ -95,22 +93,20 @@ export function YardDetailsModal({
       <DialogContent className="sm:max-w-3xl p-0 gap-0 overflow-hidden bg-background border-border shadow-xl">
         <DialogHeader className="p-6 pb-4 bg-muted/20 border-b border-border/50">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-            {/* FIX 2: Estructura del Header con min-w-0 para evitar desborde del título */}
             <div className="flex items-start gap-4 flex-1 min-w-0">
               <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 shadow-sm shrink-0">
                 <Building className="h-6 w-6 text-primary" />
               </div>
               <div className="space-y-2 flex-1 min-w-0">
                 <div>
-                  {/* Agregamos truncate al título */}
                   <DialogTitle className="text-2xl font-bold tracking-tight truncate">
-                    {yard.commonName || yard.name || "Yard Details"}
+                    {yard.name || "Yard Details"}
                   </DialogTitle>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1 min-w-0">
                     {yard.name !== yard.commonName && yard.name && (
-                      <span className="font-medium truncate">{yard.name}</span>
+                      <span className="font-medium truncate">{yard.commonName}</span>
                     )}
-                    {yard.name && yard.id && (
+                    {yard.commonName && yard.id && (
                       <span className="text-muted-foreground/50 shrink-0">•</span>
                     )}
                     <div
@@ -145,8 +141,8 @@ export function YardDetailsModal({
         </DialogHeader>
 
         <div className="p-6 overflow-y-auto max-h-[70vh]">
-          {/* FIX 3: Agregamos min-w-0 a las columnas del grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Columna Izquierda: Info Básica y Contacto */}
             <div className="space-y-6 min-w-0">
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -197,6 +193,7 @@ export function YardDetailsModal({
               </div>
             </div>
 
+            {/* Columna Derecha: Landlord */}
             <div className="flex flex-col h-full gap-6 min-w-0">
               <div className="flex items-center justify-between shrink-0">
                 <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -288,6 +285,22 @@ export function YardDetailsModal({
               </div>
             </div>
           </div>
+
+          {/* ------------------------------------------------
+            2. NUEVA SECCIÓN: NOTES
+            Se agrega debajo de la grilla de dos columnas.
+            ------------------------------------------------
+          */}
+          {yard.notes && (
+            <div className="mt-8 space-y-4 animate-in fade-in slide-in-from-bottom-2">
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <StickyNote className="h-4 w-4" /> Notes
+              </h4>
+              <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm text-sm leading-relaxed whitespace-pre-wrap">
+                {yard.notes}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="p-4 bg-muted/20 border-t border-border/50">
