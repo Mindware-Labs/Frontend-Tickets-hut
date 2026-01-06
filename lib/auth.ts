@@ -46,12 +46,14 @@ export const auth = {
      */
     async login(email: string, password: string): Promise<LoginResponse> {
         try {
+            // Normalize email: trim and lowercase
+            const normalizedEmail = email?.trim().toLowerCase();
             const response = await fetch(`${API_URL}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ email: normalizedEmail, password }),
             });
 
             // Read response as text first to avoid parsing issues
