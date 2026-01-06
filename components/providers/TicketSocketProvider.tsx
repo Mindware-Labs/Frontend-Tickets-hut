@@ -50,7 +50,7 @@ export function TicketSocketProvider() {
         action: (
           <ToastAction
             altText="Ver"
-            // 👇 Aquí está la actualización de la URL
+            // URL
             onClick={() => router.push(`/tickets?view=assigned_me&id=${data.ticketId}`)}
             className="text-blue-200 hover:text-white border-blue-200 hover:border-white"
           >

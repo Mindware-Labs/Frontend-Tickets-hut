@@ -476,7 +476,7 @@ export default function TicketsPage() {
     isLoading,
     mutate,
   } = useSWR("/api/tickets", ticketsFetcher, {
-    refreshInterval: isTabActive ? 1000000000000000 : 0, // 1s para actualizaciones casi instantáneas
+    refreshInterval: isTabActive ? 1000: 0, // 1s para actualizaciones casi instantáneas
     revalidateOnFocus: true,
     refreshWhenHidden: false,
     dedupingInterval: 2000,
@@ -616,13 +616,6 @@ export default function TicketsPage() {
 
   // Handle URL parameters for filtering
   useEffect(() => {
-    // START MODIFICATION: Handle 'view' parameter for notifications
-    const viewParam = searchParams.get("view");
-    if (viewParam) {
-      setActiveView(viewParam);
-    }
-    // END MODIFICATION
-
     if (!tickets.length) return;
 
     const ticketId = searchParams.get("id");
@@ -2523,7 +2516,6 @@ export default function TicketsPage() {
                             {
                               month: "short",
                               day: "numeric",
-                              year: "numeric",
                             }
                           )}
                         </TableCell>
