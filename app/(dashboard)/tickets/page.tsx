@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, JSX } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
+import useSWR from "swr";
 import {
   Table,
   TableBody,
@@ -117,9 +118,9 @@ declare module "@/lib/mock-data" {
 
 export default function TicketsPage() {
   const searchParams = useSearchParams();
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isTabActive, setIsTabActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [previousTicketCount, setPreviousTicketCount] = useState(0);
   const [search, setSearch] = useState("");
   const [urlTicketId, setUrlTicketId] = useState<string | null>(null);
   const [urlCustomerId, setUrlCustomerId] = useState<string | null>(null);
@@ -454,27 +455,51 @@ export default function TicketsPage() {
     );
   };
 
+  // Fetcher para SWR
+  const ticketsFetcher = async (url: string) => {
+    const response = await fetch(url);
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || "Failed to load tickets");
+    }
+    return result.data;
+  };
+
+  const {
+    data: tickets = [],
+    error: swrError,
+    isLoading,
+    mutate,
+  } = useSWR("/api/tickets", ticketsFetcher, {
+    refreshInterval: isTabActive ? 1000000000000000 : 0, // 1s para actualizaciones casi instantáneas
+    revalidateOnFocus: true,
+    refreshWhenHidden: false,
+    dedupingInterval: 2000,
+    revalidateOnReconnect: true,
+    shouldRetryOnError: false,
+    compare: (a, b) => {
+      return JSON.stringify(a) === JSON.stringify(b);
+    },
+  });
+
   const myTicketsCount = useMemo(
-    () => tickets.filter((t) => isTicketAssignedToCurrentUser(t)).length,
+    () =>
+      tickets.filter((t: Ticket) => isTicketAssignedToCurrentUser(t)).length,
     [tickets, currentAgent, currentUser, currentUserFullName]
   );
 
   const fetchTickets = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch("/api/tickets");
-      const result = await response.json();
-      if (result.success) {
-        setTickets(result.data);
-      } else {
-        setError(result.message);
-      }
-    } catch (err) {
-      setError("Failed to load tickets");
-    } finally {
-      setIsLoading(false);
-    }
+    await mutate();
   };
+
+  // Sincronizar error de SWR
+  useEffect(() => {
+    if (swrError) {
+      setError(swrError.message || "Failed to load tickets");
+    } else {
+      setError(null);
+    }
+  }, [swrError]);
 
   const fetchYards = async () => {
     try {
@@ -533,6 +558,35 @@ export default function TicketsPage() {
     }
   };
 
+  // Detectar si el tab está activo para optimizar polling
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsTabActive(!document.hidden);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  // Detectar nuevos tickets y mostrar notificación
+  useEffect(() => {
+    if (tickets.length > 0) {
+      if (previousTicketCount > 0 && tickets.length > previousTicketCount) {
+        const newCount = tickets.length - previousTicketCount;
+        toast({
+          title: "New Ticket" + (newCount > 1 ? "s" : ""),
+          description: `${newCount} new ticket${
+            newCount > 1 ? "s" : ""
+          } created`,
+          duration: 3000,
+        });
+      }
+      setPreviousTicketCount(tickets.length);
+    }
+  }, [tickets.length, previousTicketCount]);
+
   useEffect(() => {
     const user = auth.getUser();
     if (user) {
@@ -541,7 +595,6 @@ export default function TicketsPage() {
   }, []);
 
   useEffect(() => {
-    fetchTickets();
     fetchYards();
     fetchCustomers();
     fetchAgents();
@@ -565,7 +618,7 @@ export default function TicketsPage() {
 
     if (ticketId) {
       // Filter and open specific ticket
-      const ticket = tickets.find((t) => t.id.toString() === ticketId);
+      const ticket = tickets.find((t: Ticket) => t.id.toString() === ticketId);
       if (ticket) {
         setUrlTicketId(ticketId);
         setSelectedTicket(ticket);
@@ -629,7 +682,7 @@ export default function TicketsPage() {
   }, [yards, yardFilterSearch]);
 
   const filteredTickets = useMemo(() => {
-    const filtered = tickets.filter((ticket) => {
+    const filtered = tickets.filter((ticket: Ticket) => {
       if (urlTicketId) {
         return ticket.id.toString() === urlTicketId;
       }
@@ -736,7 +789,7 @@ export default function TicketsPage() {
       );
     });
     if (activeView === "high_priority") {
-      return filtered.sort((a, b) => {
+      return filtered.sort((a: Ticket, b: Ticket) => {
         const statusA = normalizeEnumValue(a.status);
         const statusB = normalizeEnumValue(b.status);
         if (statusA === "CLOSED" && statusB !== "CLOSED") return 1;
@@ -912,8 +965,12 @@ export default function TicketsPage() {
       if (result.success) {
         const updatedTicket = { ...selectedTicket, ...result.data };
 
-        setTickets((prev) =>
-          prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t))
+        mutate(
+          (currentTickets: Ticket[]) =>
+            currentTickets.map((t) =>
+              t.id === updatedTicket.id ? updatedTicket : t
+            ),
+          false
         );
 
         setSelectedTicket(updatedTicket);
@@ -1011,8 +1068,12 @@ export default function TicketsPage() {
           }
         }
 
-        setTickets((prev) =>
-          prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t))
+        mutate(
+          (currentTickets: Ticket[]) =>
+            currentTickets.map((t) =>
+              t.id === updatedTicket.id ? updatedTicket : t
+            ),
+          false
         );
 
         setSelectedTicket(updatedTicket);
@@ -1075,8 +1136,12 @@ export default function TicketsPage() {
         };
 
         setSelectedTicket(mergedTicket);
-        setTickets((prev) =>
-          prev.map((t) => (t.id === targetTicket.id ? mergedTicket : t))
+        mutate(
+          (currentTickets: Ticket[]) =>
+            currentTickets.map((t) =>
+              t.id === targetTicket.id ? mergedTicket : t
+            ),
+          false
         );
         setEditData((prev) => ({
           ...prev,
@@ -1116,17 +1181,19 @@ export default function TicketsPage() {
       if (selectedTicket && selectedYard) {
         const updatedYard = selectedYard.name;
 
-        setTickets((prev) =>
-          prev.map((t) =>
-            t.id === selectedTicket.id
-              ? {
-                  ...t,
-                  yardId: selectedYardId,
-                  yard: updatedYard,
-                  yardType: selectedYard.yardType,
-                }
-              : t
-          )
+        mutate(
+          (currentTickets: Ticket[]) =>
+            currentTickets.map((t) =>
+              t.id === selectedTicket.id
+                ? {
+                    ...t,
+                    yardId: selectedYardId,
+                    yard: updatedYard,
+                    yardType: selectedYard.yardType,
+                  }
+                : t
+            ),
+          false
         );
 
         setSelectedTicket((prev) =>
@@ -1271,7 +1338,7 @@ export default function TicketsPage() {
         });
         setShowCreateModal(false);
         resetCreateForm();
-        fetchTickets();
+        await mutate(); // Actualizar caché de SWR inmediatamente
       } else {
         toast({
           title: "Error",
@@ -2033,7 +2100,7 @@ export default function TicketsPage() {
             />
             All Tickets
             <span className="ml-auto text-xs">
-              {tickets.filter((t) => !isMissedCall(t)).length}
+              {tickets.filter((t: Ticket) => !isMissedCall(t)).length}
             </span>
           </Button>
           <Button
@@ -2045,7 +2112,7 @@ export default function TicketsPage() {
             Open
             <span className="ml-auto text-xs">
               {
-                tickets.filter((t) => {
+                tickets.filter((t: Ticket) => {
                   if (isMissedCall(t)) return false;
                   const status = (t.status || "")
                     .toString()
@@ -2064,7 +2131,11 @@ export default function TicketsPage() {
             <User className="mr-2 h-4 w-4" />
             Assigned
             <span className="ml-auto text-xs">
-              {tickets.filter((t) => !isMissedCall(t) && !!t.assignedTo).length}
+              {
+                tickets.filter(
+                  (t: Ticket) => !isMissedCall(t) && !!t.assignedTo
+                ).length
+              }
             </span>
           </Button>
           <Button
@@ -2077,7 +2148,8 @@ export default function TicketsPage() {
             <span className="ml-auto text-xs">
               {
                 tickets.filter(
-                  (t) => !isMissedCall(t) && isTicketAssignedToCurrentUser(t)
+                  (t: Ticket) =>
+                    !isMissedCall(t) && isTicketAssignedToCurrentUser(t)
                 ).length
               }
             </span>
@@ -2090,7 +2162,10 @@ export default function TicketsPage() {
             <Hash className="mr-2 h-4 w-4" />
             Unassigned
             <span className="ml-auto text-xs">
-              {tickets.filter((t) => !isMissedCall(t) && !t.assignedTo).length}
+              {
+                tickets.filter((t: Ticket) => !isMissedCall(t) && !t.assignedTo)
+                  .length
+              }
             </span>
           </Button>
           <Button
@@ -2101,7 +2176,7 @@ export default function TicketsPage() {
             <AlertTriangle className="mr-2 h-4 w-4" />
             Missed Calls
             <span className="ml-auto text-xs">
-              {tickets.filter((t) => isMissedCall(t)).length}
+              {tickets.filter((t: Ticket) => isMissedCall(t)).length}
             </span>
           </Button>
           <Button
@@ -2112,7 +2187,7 @@ export default function TicketsPage() {
             <Star className="mr-2 h-4 w-4" />
             High Priority
             {(() => {
-              const hasHighOpen = tickets.some((t) => {
+              const hasHighOpen = tickets.some((t: Ticket) => {
                 if (isMissedCall(t)) return false;
                 const priority = (t.priority || "").toString().toUpperCase();
                 const status = (t.status || "")
@@ -2138,7 +2213,7 @@ export default function TicketsPage() {
             })()}
             <span className="ml-auto text-xs">
               {
-                tickets.filter((t) => {
+                tickets.filter((t: Ticket) => {
                   if (isMissedCall(t)) return false;
                   const priority = (t.priority || "").toString().toUpperCase();
                   const status = (t.status || "")
@@ -2265,11 +2340,22 @@ export default function TicketsPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Button variant="outline" size="icon">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => mutate()}
+            title="Refresh tickets"
+          >
             <RefreshCw
               className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
             />
           </Button>
+          {isTabActive && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground px-3 py-1.5 rounded-md bg-green-500/10 border border-green-500/20">
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              <span>Live updates</span>
+            </div>
+          )}
         </div>
 
         <div className="rounded-lg border overflow-hidden">
@@ -2309,7 +2395,7 @@ export default function TicketsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedTickets.map((ticket) => {
+                  paginatedTickets.map((ticket: Ticket) => {
                     const yardDisplayName = getYardDisplayName(ticket);
                     let yardType = ticket.yardType;
 
