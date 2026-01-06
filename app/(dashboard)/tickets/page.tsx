@@ -298,9 +298,14 @@ export default function TicketsPage() {
     }
   };
 
-  const getDirectionText = (direction: string) => {
+  const getDirectionText = (direction: string, originalDirection?: string) => {
     const d = direction?.toString().toLowerCase();
-    if (d === "missed") return "Missed";
+    if (d === "missed") {
+      const orig = originalDirection?.toString().toLowerCase();
+      if (orig === "outbound") return "Missed (Outbound)";
+      if (orig === "inbound") return "Missed (Inbound)";
+      return "Missed";
+    }
     return d === "outbound" ? "Outbound" : "Inbound";
   };
 
@@ -1593,7 +1598,10 @@ export default function TicketsPage() {
           <div className="flex items-center gap-2 h-8">
             {getDirectionIcon(selectedTicket?.direction || "inbound")}
             <span className="text-sm">
-              {getDirectionText(selectedTicket?.direction || "inbound")}
+              {getDirectionText(
+                selectedTicket?.direction || "inbound",
+                (selectedTicket as any)?.originalDirection
+              )}
             </span>
           </div>
         </div>
@@ -2515,7 +2523,10 @@ export default function TicketsPage() {
                           <div className="flex items-center gap-1">
                             {getDirectionIcon(ticket.direction || "inbound")}
                             <span className="text-xs">
-                              {getDirectionText(ticket.direction || "inbound")}
+                              {getDirectionText(
+                                ticket.direction || "inbound",
+                                (ticket as any).originalDirection
+                              )}
                             </span>
                           </div>
                         </TableCell>
