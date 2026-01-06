@@ -28,6 +28,7 @@ import {
   CalendarDays,
   Search,
   Activity,
+  FileSpreadsheet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -338,6 +339,37 @@ export default function LandlordReportsPage() {
     }
   };
 
+  const handleDownloadExcel = async () => {
+    if (!reportData || !selectedLandlord) return;
+    try {
+      const query = new URLSearchParams({
+        startDate: reportStartDate,
+        endDate: reportEndDate,
+      });
+      if (reportYardId !== "all") {
+        query.set("yardId", reportYardId);
+      }
+      const blob = await fetchBlobFromBackend(
+        `/landlords/${selectedLandlordId}/report/excel?${query.toString()}`,
+        { method: "GET" }
+      );
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `landlord_report_${selectedLandlordId}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to download Excel report.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 p-4 md:p-8 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 animate-in fade-in duration-500">
       <div className="mx-auto max-w-7xl space-y-8">
@@ -359,6 +391,15 @@ export default function LandlordReportsPage() {
             >
               <Download className="h-4 w-4" />
               <span className="hidden sm:inline">PDF</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleDownloadExcel}
+              disabled={!reportData}
+              className="gap-2"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              <span className="hidden sm:inline">Excel</span>
             </Button>
             <Button
               variant="outline"

@@ -11,6 +11,7 @@ import {
   Loader2,
   CheckCircle,
   Timer,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -180,6 +181,42 @@ export default function AgentStatsPage() {
     }
   };
 
+  const handleExportExcel = async () => {
+    if (!report) return;
+    if (!startDate || !endDate) {
+      toast({
+        title: "Select dates",
+        description: "Start and end date are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const params = new URLSearchParams({
+        start: startDate,
+        end: endDate,
+      });
+      const blob = await fetchBlobFromBackend(
+        `/reports/agents/excel?${params.toString()}`,
+        { method: "GET" }
+      );
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `agents_report_${startDate}_to_${endDate}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to download Excel",
+        variant: "destructive",
+      });
+    }
+  };
+
   const topByVolume = report?.topPerformers.byVolume;
   const topByResolution = report?.topPerformers.byResolution;
   const topByDuration = report?.topPerformers.byDuration;
@@ -234,6 +271,14 @@ export default function AgentStatsPage() {
               className="gap-2"
             >
               <Download className="w-4 h-4" /> PDF
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleExportExcel}
+              disabled={!report}
+              className="gap-2"
+            >
+              <FileSpreadsheet className="w-4 h-4" /> Excel
             </Button>
           </div>
         </div>
