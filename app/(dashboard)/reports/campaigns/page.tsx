@@ -30,6 +30,7 @@ import {
   BadgeDollarSign,
   ReceiptText,
   MoveRight,
+  FileSpreadsheet, // <--- 1. Importación agregada
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -423,6 +424,51 @@ export default function CampaignReportsPage() {
     }
   };
 
+  // --- 2. Función Export Excel agregada ---
+  const exportExcelBackend = async () => {
+    if (!report) return;
+    if (!startDate || !endDate) {
+      toast({
+        title: "Select dates",
+        description: "Start and end date are required to export the Excel.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const params = new URLSearchParams({
+        startDate,
+        endDate,
+      });
+
+      const blob = await fetchBlobFromBackend(
+        `/campaign/${selectedCampaignId}/report/excel?${params.toString()}`,
+        { method: "GET" }
+      );
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `campaign_report_${selectedCampaignId}_${startDate}_to_${endDate}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Excel file downloaded successfully",
+      });
+    } catch (error: any) {
+      console.error("Excel export error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to download Excel file",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-slate-100 p-4 md:p-8 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 animate-in fade-in duration-500">
       <div className="mx-auto max-w-7xl space-y-10">
@@ -437,6 +483,7 @@ export default function CampaignReportsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {/* Botón PDF */}
             <Button
               variant="outline"
               onClick={exportPdfBackend}
@@ -446,6 +493,19 @@ export default function CampaignReportsPage() {
               <Download className="h-4 w-4" />
               <span className="hidden sm:inline">Export PDF</span>
             </Button>
+
+            {/* --- 3. NUEVO BOTÓN EXCEL --- */}
+            <Button
+              variant="outline"
+              onClick={exportExcelBackend}
+              disabled={!report}
+              className="gap-2 bg-green-50 hover:bg-green-100 border-green-200 "
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              <span className="hidden sm:inline">Export Excel</span>
+            </Button>
+
+            {/* Botón Generar */}
             <Button
               onClick={buildReport}
               disabled={loading}

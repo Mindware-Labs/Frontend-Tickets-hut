@@ -44,7 +44,9 @@ interface ViewTicketModalProps {
   getStatusBadgeColor: HelperFn<(status: string) => string>;
   getPriorityColor: HelperFn<(priority?: string) => string>;
   getDirectionIcon: HelperFn<(direction: string) => JSX.Element>;
-  getDirectionText: HelperFn<(direction: string) => string>;
+  getDirectionText: HelperFn<
+    (direction: string, originalDirection?: string) => string
+  >;
   getCampaign: HelperFn<(ticket: Ticket) => string | null>;
   getAttachmentUrl: HelperFn<(value: string) => string>;
   getAttachmentLabel: HelperFn<(value: string) => string>;
@@ -220,7 +222,10 @@ export function ViewTicketModal({
                           <div className="flex items-center gap-1.5 mt-1">
                             {getDirectionIcon(ticket.direction || "inbound")}
                             <span>
-                              {getDirectionText(ticket.direction || "inbound")}
+                              {getDirectionText(
+                                ticket.direction || "inbound",
+                                (ticket as any).originalDirection
+                              )}
                             </span>
                           </div>
                         }

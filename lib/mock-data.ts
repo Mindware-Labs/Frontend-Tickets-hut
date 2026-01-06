@@ -1,36 +1,37 @@
 export interface Ticket {
-  id: string
-  clientName: string
-  yard?: any
-  phone: string
-  type: "Onboarding" | "AR"
-  campaign: string
-  status: "Open" | "In Progress" | "Closed"
-  createdAt: string
-  assignedTo?: string
-  priority?: "Low" | "Medium" | "High"
-  description?: string
-  callDuration?: string
-  aircallId?: string
-  direction?: "inbound" | "outbound" | "missed"
+  id: string;
+  clientName: string;
+  yard?: any;
+  phone: string;
+  type: "Onboarding" | "AR";
+  campaign: string;
+  status: "Open" | "In Progress" | "Closed";
+  createdAt: string;
+  assignedTo?: string;
+  priority?: "Low" | "Medium" | "High";
+  description?: string;
+  callDuration?: string;
+  aircallId?: string;
+  direction?: "inbound" | "outbound" | "missed";
+  originalDirection?: "inbound" | "outbound";
 }
 
 export interface Campaign {
-  id: string
-  name: string
-  ticketCount: number
-  status: "Active" | "Paused" | "Completed"
-  startDate: string
+  id: string;
+  name: string;
+  ticketCount: number;
+  status: "Active" | "Paused" | "Completed";
+  startDate: string;
 }
 
 export interface User {
-  id: string
-  name: string
-  email: string
-  role: "Admin" | "Supervisor" | "Agent"
-  avatar?: string
-  ticketsAssigned: number
-  status: "Active" | "Inactive"
+  id: string;
+  name: string;
+  email: string;
+  role: "Admin" | "Supervisor" | "Agent";
+  avatar?: string;
+  ticketsAssigned: number;
+  status: "Active" | "Inactive";
 }
 
 export const mockTickets: Ticket[] = [
@@ -101,7 +102,7 @@ export const mockTickets: Ticket[] = [
     callDuration: "6:10",
     aircallId: "CALL-12349",
   },
-]
+];
 
 export const mockCampaigns: Campaign[] = [
   {
@@ -132,7 +133,7 @@ export const mockCampaigns: Campaign[] = [
     status: "Completed",
     startDate: "2023-12-01",
   },
-]
+];
 
 export const mockUsers: User[] = [
   {
@@ -167,15 +168,19 @@ export const mockUsers: User[] = [
     ticketsAssigned: 0,
     status: "Active",
   },
-]
+];
 
 export const getDashboardStats = () => {
-  const totalCalls = 342
-  const ticketsCreated = mockTickets.length
-  const onboardingCompleted = mockTickets.filter((t) => t.type === "Onboarding" && t.status === "Closed").length
-  const arPayments = mockTickets.filter((t) => t.type === "AR" && t.status === "Closed").length
-  const openTickets = mockTickets.filter((t) => t.status === "Open").length
-  const closedTickets = mockTickets.filter((t) => t.status === "Closed").length
+  const totalCalls = 342;
+  const ticketsCreated = mockTickets.length;
+  const onboardingCompleted = mockTickets.filter(
+    (t) => t.type === "Onboarding" && t.status === "Closed"
+  ).length;
+  const arPayments = mockTickets.filter(
+    (t) => t.type === "AR" && t.status === "Closed"
+  ).length;
+  const openTickets = mockTickets.filter((t) => t.status === "Open").length;
+  const closedTickets = mockTickets.filter((t) => t.status === "Closed").length;
 
   return {
     totalCalls,
@@ -184,24 +189,24 @@ export const getDashboardStats = () => {
     arPayments,
     openTickets,
     closedTickets,
-  }
-}
+  };
+};
 
 export const getTicketsByCampaign = () => {
-  const campaignData: Record<string, number> = {}
+  const campaignData: Record<string, number> = {};
   mockTickets.forEach((ticket) => {
-    campaignData[ticket.campaign] = (campaignData[ticket.campaign] || 0) + 1
-  })
-  return Object.entries(campaignData).map(([name, count]) => ({ name, count }))
-}
+    campaignData[ticket.campaign] = (campaignData[ticket.campaign] || 0) + 1;
+  });
+  return Object.entries(campaignData).map(([name, count]) => ({ name, count }));
+};
 
 export const getTicketsByType = () => {
-  const typeData: Record<string, number> = {}
+  const typeData: Record<string, number> = {};
   mockTickets.forEach((ticket) => {
-    typeData[ticket.type] = (typeData[ticket.type] || 0) + 1
-  })
-  return Object.entries(typeData).map(([name, count]) => ({ name, count }))
-}
+    typeData[ticket.type] = (typeData[ticket.type] || 0) + 1;
+  });
+  return Object.entries(typeData).map(([name, count]) => ({ name, count }));
+};
 
 export const getCallsPerDay = () => {
   return [
@@ -212,5 +217,5 @@ export const getCallsPerDay = () => {
     { day: "Fri", calls: 55 },
     { day: "Sat", calls: 38 },
     { day: "Sun", calls: 43 },
-  ]
-}
+  ];
+};
