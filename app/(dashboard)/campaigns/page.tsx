@@ -478,7 +478,7 @@ export default function CampaignsPage() {
               value={yardFilter}
               onValueChange={(value) => setYardFilter(value)}
             >
-              <SelectTrigger className="h-10 w-[200px] bg-card border-border/60">
+              <SelectTrigger className="h-10 w-[200px] bg-card border-border/60 [&>span]:truncate">
                 <SelectValue placeholder="Yard" />
               </SelectTrigger>
               <SelectContent>
@@ -544,9 +544,11 @@ export default function CampaignsPage() {
                 )}
 
                 <CardHeader className="pb-4 pt-5 pl-7">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1.5 flex-1 min-w-0">
-                      {/* Title & Status Pulse */}
+                  {/* FIX: Usamos GRID en lugar de FLEX para forzar el truncamiento correcto del texto */}
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
+                    
+                    {/* Left side: Text content (constrained width) */}
+                    <div className="space-y-1.5 min-w-0">
                       <div className="flex items-center gap-2">
                         <CardTitle className="truncate text-lg font-bold tracking-tight text-foreground/90">
                           {campaign.nombre}
@@ -567,7 +569,6 @@ export default function CampaignsPage() {
                         )}
                       </div>
 
-                      {/* ID & Date */}
                       <CardDescription className="flex items-center gap-2 text-xs font-medium">
                         <span className="font-mono text-primary/70 bg-primary/5 px-1.5 rounded-sm">
                           #{campaign.id}
@@ -587,46 +588,48 @@ export default function CampaignsPage() {
                       </CardDescription>
                     </div>
 
-                    {/* Actions Menu */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground transition-colors hover:text-foreground data-[state=open]:bg-muted"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel>Manage Campaign</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleDetails(campaign)}
-                        >
-                          <ArrowUpRight className="mr-2 h-4 w-4 text-muted-foreground" />
-                          View Details
-                        </DropdownMenuItem>
-                        {canManage && (
-                          <>
-                            <DropdownMenuItem
-                              onClick={() => handleEdit(campaign)}
-                            >
-                              <CheckCircle2 className="mr-2 h-4 w-4 text-muted-foreground" />
-                              Edit Configuration
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                              onClick={() => handleDelete(campaign)}
-                            >
-                              <ShieldAlert className="mr-2 h-4 w-4" />
-                              Delete Campaign
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {/* Right side: Menu (auto width) */}
+                    <div className="flex shrink-0">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground transition-colors hover:text-foreground data-[state=open]:bg-muted"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuLabel>Manage Campaign</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleDetails(campaign)}
+                          >
+                            <ArrowUpRight className="mr-2 h-4 w-4 text-muted-foreground" />
+                            View Details
+                          </DropdownMenuItem>
+                          {canManage && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => handleEdit(campaign)}
+                              >
+                                <CheckCircle2 className="mr-2 h-4 w-4 text-muted-foreground" />
+                                Edit Configuration
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                onClick={() => handleDelete(campaign)}
+                              >
+                                <ShieldAlert className="mr-2 h-4 w-4" />
+                                Delete Campaign
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 </CardHeader>
 

@@ -78,7 +78,9 @@ export function CampaignFormModal({
                   nombre: "",
                 });
               }}
-              className={validationErrors.nombre ? "border-red-500" : ""}
+              // AGREGADO: "w-full" asegura que ocupe el ancho disponible
+              // "truncate" agrega los puntos suspensivos (...) si el texto es muy largo
+              className={`w-full truncate ${validationErrors.nombre ? "border-red-500" : ""}`}
             />
             {validationErrors.nombre && (
               <p className="text-xs text-red-500">{validationErrors.nombre}</p>
@@ -144,7 +146,13 @@ export function CampaignFormModal({
                   })
                 }
               >
-                <SelectTrigger id={`${idPrefix}-yardaId`}>
+                {/* AQUÍ ESTÁ EL CAMBIO:
+                   Agregamos 'w-full' y '[&>span]:truncate' para que corte el texto largo 
+                */}
+                <SelectTrigger 
+                  id={`${idPrefix}-yardaId`} 
+                  className="w-full [&>span]:truncate"
+                >
                   <SelectValue placeholder="Select a yard" />
                 </SelectTrigger>
                 <SelectContent>

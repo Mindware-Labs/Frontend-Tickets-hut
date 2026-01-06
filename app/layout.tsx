@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { RoleProvider } from "@/components/providers/role-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
+// 1. IMPORTAR EL COMPONENTE
+import { TicketSocketProvider } from "@/components/providers/TicketSocketProvider"; 
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,6 +28,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            {/* 2. AGREGARLO AQUÍ (antes de children) */}
+            <TicketSocketProvider />
+            
             {children}
             <Toaster />
           </ThemeProvider>
