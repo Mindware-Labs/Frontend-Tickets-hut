@@ -1,6 +1,6 @@
 "use client";
 
-import { JSX } from "react";
+import { JSX, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -106,6 +106,47 @@ export function ViewTicketModal({
   getClientPhone,
   getYardDisplayName,
 }: ViewTicketModalProps) {
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when modal opens
+  useEffect(() => {
+    if (open && ticket) {
+      // Multiple attempts with increasing delays to ensure content is rendered
+      const attemptScroll = (delay: number) => {
+        setTimeout(() => {
+          // Try to find the Radix ScrollArea viewport
+          if (scrollAreaRef.current) {
+            const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+            if (viewport) {
+              viewport.scrollTo({
+                top: viewport.scrollHeight,
+                behavior: 'smooth'
+              });
+              return;
+            }
+          }
+          
+          // Fallback: try scrolling the content div directly
+          if (contentRef.current) {
+            const parent = contentRef.current.parentElement;
+            if (parent) {
+              parent.scrollTo({
+                top: parent.scrollHeight,
+                behavior: 'smooth'
+              });
+            }
+          }
+        }, delay);
+      };
+
+      // Try multiple times with different delays
+      attemptScroll(100);
+      attemptScroll(300);
+      attemptScroll(500);
+    }
+  }, [open, ticket]);
+
   if (!ticket) return null;
 
   return (
@@ -147,8 +188,8 @@ export function ViewTicketModal({
         </DialogHeader>
 
         {/* Scrollable Content */}
-        <ScrollArea className="max-h-[70vh]">
-          <div className="p-6 space-y-8">
+        <ScrollArea className="max-h-[70vh]" ref={scrollAreaRef}>
+          <div className="p-6 space-y-8" ref={contentRef}>
             {/* Main Info Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Left Column: Customer & Location */}
@@ -402,16 +443,18 @@ export function ViewTicketModal({
                                   
                                   {(call.issueDetail || call.campaignOption) && (
                                     <div className="space-y-1 pl-2 border-l-2 border-muted">
-                                      {call.issueDetail && (
-                                        <p className="text-sm text-foreground">
-                                          {call.issueDetail}
-                                        </p>
-                                      )}
                                       {call.campaignOption && (
-                                        <p className="text-xs text-muted-foreground">
-                                          Opción de Campaña: {formatEnumLabel(call.campaignOption)}
-                                        </p>
+                                        <div className="text-xs">
+                                          <span className="font-medium text-muted-foreground">Campaign Option: </span>
+                                          <span className="text-foreground">{formatEnumLabel(call.campaignOption)}</span>
+                                        </div>
                                       )}
+                                      {call.issueDetail && (
+                                        <div className="text-xs text-foreground whitespace-pre-wrap">
+                                          {call.issueDetail}
+                                        </div>
+                                      )}
+                                    </div>
                                     </div>
                                   )}
                                 </div>
