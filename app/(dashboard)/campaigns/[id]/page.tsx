@@ -1,200 +1,350 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { fetchFromBackend } from "@/lib/api-client";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Campaign, CampaignType } from "../types";
+import { toast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 import {
-  Calendar,
-  CalendarClock,
-  CheckCircle2,
-  MapPin,
-  Tag,
-  Timer,
+  Calendar as CalendarIcon,
+  FileDown,
+  FileText,
+  Loader2,
+  Search,
+  ArrowLeft,
+  LayoutDashboard,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
-const campaignTypeLabels: Record<CampaignType, string> = {
-  ONBOARDING: "Onboarding",
-  AR: "AR",
-  OTHER: "Other",
-};
+interface ReportMetric {
+  title: string;
+  value: number;
+  color: string;
+}
 
-export default function CampaignDetailPage() {
-  const params = useParams<{ id: string }>();
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [loading, setLoading] = useState(true);
+interface ReportRow {
+  name: string;
+  phone: string;
+  status: string;
+  note: string;
+  direction: string;
+  createdAt: string;
+  agentName: string;
+}
+
+interface ReportTable {
+  title: string;
+  rows: ReportRow[];
+}
+
+interface CampaignReportData {
+  metrics: ReportMetric[];
+  tables: ReportTable[];
+  totals: { total: number; missed: number };
+}
+
+export default function CampaignReportPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = params.id as string;
+
+  const [loadingCampaign, setLoadingCampaign] = useState(true);
+  const [campaignName, setCampaignName] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
+  const [reportData, setReportData] = useState<CampaignReportData | null>(null);
 
   useEffect(() => {
-    const fetchCampaign = async () => {
+    const load = async () => {
       try {
-        setLoading(true);
-        const data = await fetchFromBackend(`/campaign/${params.id}`);
-        setCampaign(data);
-      } catch (error) {
-        console.error("Error loading campaign:", error);
-        setCampaign(null);
+        setLoadingCampaign(true);
+        const d = await fetchFromBackend(`/campaign/${id}`);
+        if (d) setCampaignName(d.nombre);
+      } catch (e) {
+        console.error(e);
+        toast({
+          title: "Error",
+          description: "Failed to load campaign details.",
+          variant: "destructive",
+        });
       } finally {
-        setLoading(false);
+        setLoadingCampaign(false);
       }
     };
+    if (id) load();
+  }, [id]);
 
-    if (params?.id) {
-      fetchCampaign();
+  const handleGenerate = async () => {
+    if (!startDate || !endDate) return;
+    setGenerating(true);
+    try {
+      const q = new URLSearchParams({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
+      const data = await fetchFromBackend(`/campaign/${id}/report/data?${q}`);
+      setReportData(data);
+      toast({ title: "Generated", description: "Report data updated." });
+    } catch (e) {
+      console.error(e);
+      toast({
+        title: "Error",
+        description: "Failed to generate report.",
+        variant: "destructive",
+      });
+    } finally {
+      setGenerating(false);
     }
-  }, [params]);
+  };
 
-  if (loading) {
-    return <div className="text-sm text-muted-foreground">Loading campaign...</div>;
-  }
-
-  if (!campaign) {
-    return (
-      <div className="space-y-4">
-        <p className="text-sm text-muted-foreground">Campaign not found.</p>
-        <Link href="/campaigns">
-          <Button variant="outline">Back to Campaigns</Button>
-        </Link>
-      </div>
-    );
-  }
+  const handleExport = (fmt: "pdf" | "excel") => {
+    if (!startDate || !endDate) return;
+    const q = new URLSearchParams({
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    });
+    // Ajusta la URL base según tu entorno (o usa una variable de entorno)
+    const baseUrl =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+    window.open(`${baseUrl}/campaign/${id}/report/${fmt}?${q}`, "_blank");
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6 animate-in fade-in duration-500 p-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-1">
-          <Link href="/campaigns" className="text-sm text-muted-foreground">
-            Back to Campaigns
-          </Link>
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Tag className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold">{campaign.nombre}</h2>
-              <p className="text-xs text-muted-foreground">ID #{campaign.id}</p>
-            </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => router.back()}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-2xl font-bold">Campaign Reports</h1>
+          </div>
+          <p className="text-muted-foreground ml-10">
+            Analyze performance and generate customer lists for campaigns.
+          </p>
+        </div>
+        {reportData && (
+          <div className="flex gap-2 ml-10 sm:ml-0">
+            <Button variant="outline" onClick={() => handleExport("pdf")}>
+              <FileDown className="mr-2 h-4 w-4 text-red-600" /> PDF
+            </Button>
+            <Button variant="outline" onClick={() => handleExport("excel")}>
+              <FileDown className="mr-2 h-4 w-4 text-green-600" /> Excel
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Configuration Card */}
+      <div className="rounded-xl border bg-card p-6 space-y-6 shadow-sm">
+        <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase">
+          <Search className="h-4 w-4" /> Report Configuration
+        </div>
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Campaign</label>
+            <Select disabled value={id}>
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={loadingCampaign ? "Loading..." : campaignName}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={id}>{campaignName}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Start Date</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !startDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {startDate ? format(startDate, "PPP") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={startDate}
+                  onSelect={setStartDate}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">End Date</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !endDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {endDate ? format(endDate, "PPP") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={endDate}
+                  onSelect={setEndDate}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
-        <Badge
-          variant="secondary"
-          className={
-            campaign.isActive
-              ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
-              : "border border-amber-500/20 bg-amber-500/10 text-amber-700"
-          }
-        >
-          {campaign.isActive ? "Active" : "Inactive"}
-        </Badge>
+        <div className="flex justify-end pt-2">
+          <Button
+            onClick={handleGenerate}
+            disabled={generating || !startDate || !endDate}
+            className="bg-primary"
+          >
+            {generating ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FileText className="mr-2 h-4 w-4" />
+            )}
+            Generate Report
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <Card className="overflow-hidden">
-          <CardHeader className="border-b bg-muted/40">
-            <CardTitle>Campaign Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6 p-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-lg border bg-background p-4">
-                <p className="text-xs text-muted-foreground">Type</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <Badge variant="outline">
-                    {campaignTypeLabels[campaign.tipo]}
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {campaign.tipo}
-                  </span>
-                </div>
-              </div>
-              <div className="rounded-lg border bg-background p-4">
-                <p className="text-xs text-muted-foreground">Yard</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <p className="font-medium">
-                    {campaign.yarda?.name || "No yard"}
-                  </p>
-                </div>
-              </div>
-            </div>
+      {/* Report Content */}
+      {!reportData ? (
+        <div className="rounded-xl border border-dashed p-12 flex flex-col items-center justify-center text-center bg-muted/5 min-h-[300px]">
+          <div className="h-12 w-12 rounded-full bg-muted/20 flex items-center justify-center mb-4">
+            <LayoutDashboard className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold">No report generated</h3>
+          <p className="text-muted-foreground mt-1">
+            Select a date range above and click &quot;Generate Report&quot; to view the
+            data.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-8 animate-in slide-in-from-bottom-4">
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {reportData.metrics.map((m, i) => (
+              <Card key={i} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="p-0">
+                  <div
+                    className="h-1 w-full"
+                    style={{ backgroundColor: m.color }}
+                  />
+                  <div className="p-4">
+                    <p className="text-xs font-medium text-muted-foreground uppercase truncate" title={m.title}>
+                      {m.title}
+                    </p>
+                    <p className="text-2xl font-bold mt-1 text-primary">{m.value}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-            <div className="rounded-lg border bg-background p-4">
-              <p className="text-xs text-muted-foreground">Duration</p>
-              <div className="mt-2 flex items-center gap-2">
-                <Timer className="h-4 w-4 text-muted-foreground" />
-                <p className="font-medium">{campaign.duracion || "N/A"}</p>
+          {/* Tables */}
+          {reportData.tables.map((table, i) => (
+            <div key={i} className="space-y-3">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-primary" />{" "}
+                {table.title}{" "}
+                <Badge variant="secondary" className="ml-1">
+                  {table.rows.length}
+                </Badge>
+              </h3>
+              <div className="rounded-xl border bg-card shadow-sm overflow-hidden overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-muted/50 text-xs uppercase font-semibold text-muted-foreground border-b">
+                    <tr>
+                      <th className="px-6 py-3 whitespace-nowrap">Customer</th>
+                      <th className="px-6 py-3 whitespace-nowrap">Phone</th>
+                      <th className="px-6 py-3 whitespace-nowrap">Status</th>
+                      <th className="px-6 py-3 min-w-[200px]">Notes</th>
+                      <th className="px-6 py-3 whitespace-nowrap">Date</th>
+                      <th className="px-6 py-3 whitespace-nowrap">Agent</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {table.rows.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="px-6 py-8 text-center italic text-muted-foreground"
+                        >
+                          No records found for this category.
+                        </td>
+                      </tr>
+                    ) : (
+                      table.rows.map((row, idx) => (
+                        <tr
+                          key={idx}
+                          className="hover:bg-muted/30 transition-colors"
+                        >
+                          <td className="px-6 py-3 font-medium text-foreground">
+                            {row.name}
+                          </td>
+                          <td className="px-6 py-3 text-muted-foreground font-mono text-xs">
+                            {row.phone}
+                          </td>
+                          <td className="px-6 py-3">
+                            <Badge
+                              variant="outline"
+                              className="font-normal text-[10px] uppercase tracking-wide"
+                            >
+                              {row.status}
+                            </Badge>
+                          </td>
+                          <td
+                            className="px-6 py-3 max-w-[300px] truncate text-muted-foreground"
+                            title={row.note}
+                          >
+                            {row.note || "-"}
+                          </td>
+                          <td className="px-6 py-3 text-muted-foreground whitespace-nowrap">
+                            {new Date(row.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-3 text-muted-foreground">
+                            {row.agentName}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
-
-            <Separator />
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-lg border bg-background p-4">
-                <p className="text-xs text-muted-foreground">Created</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <p className="font-medium">
-                    {new Date(campaign.createdAt).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div className="rounded-lg border bg-background p-4">
-                <p className="text-xs text-muted-foreground">Updated</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <CalendarClock className="h-4 w-4 text-muted-foreground" />
-                  <p className="font-medium">
-                    {new Date(campaign.updatedAt).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="h-fit">
-          <CardHeader className="border-b">
-            <CardTitle>Status</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 p-6">
-            <div className="rounded-lg border bg-background p-4">
-              <div className="flex items-center gap-3">
-                <div
-                  className={
-                    campaign.isActive
-                      ? "flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600"
-                      : "flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10 text-amber-600"
-                  }
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Campaign status
-                  </p>
-                  <p className="font-medium">
-                    {campaign.isActive ? "Active" : "Inactive"}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-lg border bg-background p-4">
-              <p className="text-xs text-muted-foreground">Total Tickets</p>
-              <p className="mt-2 text-2xl font-bold">
-                {campaign.ticketCount ?? 0}
-              </p>
-            </div>
-            <div className="rounded-lg border bg-background p-4">
-              <p className="text-xs text-muted-foreground">Yard ID</p>
-              <p className="mt-2 font-medium">
-                {campaign.yardaId ?? "Not assigned"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { useRole } from "@/components/providers/role-provider";
 import { fetchFromBackend } from "@/lib/api-client";
 import { toast } from "@/hooks/use-toast";
-import { Campaign, CampaignFormData, CampaignType, YardSummary } from "./types";
+import { ManagementType } from "../tickets/types";
+import { Campaign, CampaignFormData, YardSummary } from "./types";
 import { CampaignFormModal } from "./components/CampaignFormModal";
 import { DeleteCampaignModal } from "./components/DeleteCampaignModal";
 import { CampaignsPagination } from "./components/CampaignsPagination";
@@ -49,6 +50,9 @@ import {
   Tag,
   Ticket,
   Megaphone,
+  XCircle,
+  DollarSign,
+  Ban,
 } from "lucide-react";
 
 type CampaignTicket = {
@@ -65,14 +69,14 @@ const DEFAULT_FORM: CampaignFormData = {
   nombre: "",
   yardaId: undefined,
   duracion: "",
-  tipo: "ONBOARDING",
+  tipo: ManagementType.ONBOARDING,
   isActive: true,
 };
 
-const campaignTypeLabels: Record<CampaignType, string> = {
-  ONBOARDING: "Onboarding",
-  AR: "AR",
-  OTHER: "Other",
+const campaignTypeLabels: Record<ManagementType, string> = {
+  [ManagementType.ONBOARDING]: "Onboarding",
+  [ManagementType.AR]: "AR",
+  [ManagementType.OTHER]: "Other",
 };
 
 export default function CampaignsPage() {
@@ -85,28 +89,25 @@ export default function CampaignsPage() {
   const [yards, setYards] = useState<YardSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [typeFilter, setTypeFilter] = useState<CampaignType | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "inactive"
-  >("all");
+  const [typeFilter, setTypeFilter] = useState<ManagementType | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [yardFilter, setYardFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
+  
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
-    null
-  );
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [campaignTickets, setCampaignTickets] = useState<CampaignTicket[]>([]);
   const [showTicketsPanel, setShowTicketsPanel] = useState(false);
   const [ticketSearch, setTicketSearch] = useState("");
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<
-    Record<string, string>
-  >({});
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState<CampaignFormData>(DEFAULT_FORM);
 
   const fetchCampaigns = async () => {
@@ -142,7 +143,6 @@ export default function CampaignsPage() {
     fetchYards();
   }, []);
 
-  // Close all modals when route changes
   const pathname = usePathname();
   useEffect(() => {
     setShowCreateModal(false);
@@ -274,47 +274,24 @@ export default function CampaignsPage() {
   const handleSubmitCreate = async () => {
     setValidationErrors({});
     const errors: Record<string, string> = {};
-    if (!formData.nombre.trim())
-      errors.nombre = "Please enter the campaign name.";
+    if (!formData.nombre.trim()) errors.nombre = "Please enter the campaign name.";
     if (!formData.tipo) errors.tipo = "Please select a campaign type.";
 
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
-      toast({
-        title: "Missing fields",
-        description: "Please review the highlighted fields and try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Missing fields", description: "Please review fields.", variant: "destructive" });
       return;
     }
 
     try {
       setIsSubmitting(true);
-      await fetchFromBackend("/campaign", {
-        method: "POST",
-        body: JSON.stringify(buildPayload(formData)),
-      });
-
-      toast({
-        title: "Saved",
-        description: (
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <span>Campaign created successfully</span>
-          </div>
-        ),
-      });
-
+      await fetchFromBackend("/campaign", { method: "POST", body: JSON.stringify(buildPayload(formData)) });
+      toast({ title: "Saved", description: <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /><span>Campaign created successfully</span></div> });
       setShowCreateModal(false);
       fetchCampaigns();
       resetForm();
     } catch (error: any) {
-      console.error("Error creating campaign:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create the campaign.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to create.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -324,48 +301,25 @@ export default function CampaignsPage() {
     if (!selectedCampaign) return;
     setValidationErrors({});
     const errors: Record<string, string> = {};
-    if (!formData.nombre.trim())
-      errors.nombre = "Please enter the campaign name.";
+    if (!formData.nombre.trim()) errors.nombre = "Please enter the campaign name.";
     if (!formData.tipo) errors.tipo = "Please select a campaign type.";
 
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
-      toast({
-        title: "Missing fields",
-        description: "Please review the highlighted fields and try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Missing fields", description: "Please review fields.", variant: "destructive" });
       return;
     }
 
     try {
       setIsSubmitting(true);
-      await fetchFromBackend(`/campaign/${selectedCampaign.id}`, {
-        method: "PATCH",
-        body: JSON.stringify(buildPayload(formData)),
-      });
-
-      toast({
-        title: "Saved",
-        description: (
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <span>Campaign updated successfully</span>
-          </div>
-        ),
-      });
-
+      await fetchFromBackend(`/campaign/${selectedCampaign.id}`, { method: "PATCH", body: JSON.stringify(buildPayload(formData)) });
+      toast({ title: "Saved", description: <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /><span>Campaign updated successfully</span></div> });
       setShowEditModal(false);
       fetchCampaigns();
       resetForm();
       setSelectedCampaign(null);
     } catch (error: any) {
-      console.error("Error updating campaign:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update the campaign.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to update.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -373,424 +327,103 @@ export default function CampaignsPage() {
 
   const handleSubmitDelete = async () => {
     if (!selectedCampaign) return;
-
     try {
       setIsSubmitting(true);
-      await fetchFromBackend(`/campaign/${selectedCampaign.id}`, {
-        method: "DELETE",
-      });
-
-      toast({
-        title: "Deleted",
-        description: (
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <span>Campaign deleted successfully</span>
-          </div>
-        ),
-      });
-
+      await fetchFromBackend(`/campaign/${selectedCampaign.id}`, { method: "DELETE" });
+      toast({ title: "Deleted", description: <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /><span>Campaign deleted successfully</span></div> });
       setShowDeleteModal(false);
       fetchCampaigns();
       setSelectedCampaign(null);
     } catch (error: any) {
-      console.error("Error deleting campaign:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete the campaign.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to delete.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <>
-      <div className="space-y-6 animate-in fade-in duration-500">
-        {/* Header Section */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-              <Megaphone className="h-8 w-8 text-primary" /> Campaigns
-            </h1>
-            <p className="text-muted-foreground">
-              Manage and monitor your communication initiatives.
-            </p>
-          </div>
-          {canManage && (
-            <Button
-              className="bg-primary hover:bg-primary/90 shadow-sm gap-2"
-              onClick={handleCreate}
-            >
-              <Plus className="h-4 w-4" />
-              New Campaign
-            </Button>
-          )}
-        </div>
-
-        {/* Filters Section */}
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search by name or yard..."
-              className="pl-9 bg-card border-border/60 focus-visible:ring-primary"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Select
-              value={typeFilter}
-              onValueChange={(value: CampaignType | "all") =>
-                setTypeFilter(value)
-              }
-            >
-              <SelectTrigger className="h-10 w-[160px] bg-card border-border/60">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="ONBOARDING">Onboarding</SelectItem>
-                <SelectItem value="AR">AR</SelectItem>
-                <SelectItem value="OTHER">Other</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={statusFilter}
-              onValueChange={(value: "all" | "active" | "inactive") =>
-                setStatusFilter(value)
-              }
-            >
-              <SelectTrigger className="h-10 w-[150px] bg-card border-border/60">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={yardFilter}
-              onValueChange={(value) => setYardFilter(value)}
-            >
-              <SelectTrigger className="h-10 w-[200px] bg-card border-border/60 [&>span]:truncate">
-                <SelectValue placeholder="Yard" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Yards</SelectItem>
-                {yards.map((yard) => (
-                  <SelectItem key={yard.id} value={yard.id.toString()}>
-                    {yard.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button
-              variant="outline"
-              className="border-border/60"
-              onClick={() => {
-                setTypeFilter("all");
-                setStatusFilter("all");
-                setYardFilter("all");
-                setSearchTerm("");
-              }}
-            >
-              Clear
-            </Button>
-          </div>
-        </div>
-
-        {/* Content */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
-            {/* Simple visual loader placeholder or real spinner */}
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-            <p>Loading campaigns...</p>
-          </div>
-        ) : filteredCampaigns.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed p-12 bg-muted/5">
-            <div className="p-4 rounded-full bg-muted/50 mb-4">
-              <Megaphone className="h-10 w-10 text-muted-foreground/50" />
-            </div>
-            <h3 className="text-lg font-semibold">No campaigns found</h3>
-            <p className="mt-1 text-sm text-muted-foreground max-w-sm text-center">
-              {searchTerm
-                ? "Try adjusting your search terms or filters."
-                : "Get started by creating your first campaign to track customer interactions."}
-            </p>
-            {!searchTerm && canManage && (
-              <Button className="mt-6" onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Campaign
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {paginatedCampaigns.map((campaign) => (
-              <Card
-                key={campaign.id}
-                className="group relative flex flex-col justify-between overflow-hidden border border-border/60 bg-gradient-to-b from-card to-card/50 text-card-foreground shadow-sm transition-all duration-300 hover:shadow-lg hover:border-primary/20"
-              >
-                {/* Active Indicator Strip */}
-                {campaign.isActive && (
-                  <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-emerald-500 to-emerald-600 opacity-80" />
-                )}
-
-                <CardHeader className="pb-4 pt-5 pl-7">
-                  {/* FIX: Usamos GRID en lugar de FLEX para forzar el truncamiento correcto del texto */}
-                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
-                    
-                    {/* Left side: Text content (constrained width) */}
-                    <div className="space-y-1.5 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="truncate text-lg font-bold tracking-tight text-foreground/90">
-                          {campaign.nombre}
-                        </CardTitle>
-                        {campaign.isActive ? (
-                          <span
-                            className="relative flex h-2.5 w-2.5 shrink-0"
-                            title="Active"
-                          >
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-                          </span>
-                        ) : (
-                          <div
-                            className="h-2.5 w-2.5 shrink-0 rounded-full bg-muted-foreground/30"
-                            title="Inactive"
-                          />
-                        )}
-                      </div>
-
-                      <CardDescription className="flex items-center gap-2 text-xs font-medium">
-                        <span className="font-mono text-primary/70 bg-primary/5 px-1.5 rounded-sm">
-                          #{campaign.id}
-                        </span>
-                        <span className="text-muted-foreground/40">•</span>
-                        <span className="flex items-center gap-1 text-muted-foreground truncate">
-                          <CalendarDays className="h-3 w-3" />
-                          {new Date(campaign.createdAt).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            }
-                          )}
-                        </span>
-                      </CardDescription>
-                    </div>
-
-                    {/* Right side: Menu (auto width) */}
-                    <div className="flex shrink-0">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground transition-colors hover:text-foreground data-[state=open]:bg-muted"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuLabel>Manage Campaign</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleDetails(campaign)}
-                          >
-                            <ArrowUpRight className="mr-2 h-4 w-4 text-muted-foreground" />
-                            View Details
-                          </DropdownMenuItem>
-                          {canManage && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => handleEdit(campaign)}
-                              >
-                                <CheckCircle2 className="mr-2 h-4 w-4 text-muted-foreground" />
-                                Edit Configuration
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                                onClick={() => handleDelete(campaign)}
-                              >
-                                <ShieldAlert className="mr-2 h-4 w-4" />
-                                Delete Campaign
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-6 pb-6 pl-7 pr-6">
-                  {/* Stats Grid */}
-                  <div className="grid grid-cols-2 gap-4 rounded-xl bg-muted/40 p-3 border border-border/30">
-                    {/* Tickets Column */}
-                    <div className="space-y-0.5">
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                        <Ticket className="h-3 w-3" />
-                        Tickets
-                      </span>
-                      <p className="text-2xl font-bold tracking-tight text-foreground">
-                        {campaign.ticketCount ?? 0}
-                      </p>
-                    </div>
-
-                    {/* Duration Column */}
-                    <div className="space-y-0.5 border-l border-border/40 pl-4">
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                        <Clock className="h-3 w-3" />
-                        Duration
-                      </span>
-                      <p className="text-lg font-semibold tracking-tight text-foreground truncate mt-1">
-                        {campaign.duracion || "—"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Metadata Badges */}
-                  <div className="flex flex-wrap gap-2">
-                    <Badge
-                      variant="outline"
-                      className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/5 text-blue-700 border-blue-200/40 hover:bg-blue-500/10 dark:text-blue-400 dark:border-blue-900/40 transition-colors"
-                    >
-                      <Tag className="h-3 w-3" />
-                      {campaignTypeLabels[campaign.tipo]}
-                    </Badge>
-                    <Badge
-                      variant="outline"
-                      className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-500/5 text-orange-700 border-orange-200/40 hover:bg-orange-500/10 dark:text-orange-400 dark:border-orange-900/40 transition-colors"
-                    >
-                      <MapPin className="h-3 w-3" />
-                      <span className="truncate max-w-[120px]">
-                        {getYardLabel(campaign)}
-                      </span>
-                    </Badge>
-                  </div>
-                </CardContent>
-
-                <CardFooter className="border-t bg-muted/30 px-6 py-3">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="group/btn w-full justify-between h-auto py-2 px-2 text-xs font-medium text-muted-foreground hover:text-primary hover:bg-background/80"
-                    onClick={() => handleDetails(campaign)}
-                  >
-                    View Full Report
-                    <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1" />
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {!loading && filteredCampaigns.length > 0 && (
-          <CampaignsPagination
-            totalCount={filteredCampaigns.length}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            itemsPerPage={itemsPerPage}
-            onItemsPerPageChange={(value) => {
-              setItemsPerPage(value);
-              setCurrentPage(1);
-            }}
-            onPageChange={setCurrentPage}
-          />
-        )}
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex justify-between items-center"><div className="space-y-1"><h1 className="text-3xl font-bold flex items-center gap-2"><Megaphone className="h-8 w-8 text-primary"/> Campaigns</h1><p className="text-muted-foreground">Manage initiatives.</p></div>{canManage && <Button className="bg-primary hover:bg-primary/90 gap-2" onClick={handleCreate}><Plus className="h-4 w-4"/> New Campaign</Button>}</div>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+         <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Search..." className="pl-9" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
+         <Select value={typeFilter} onValueChange={(v: any) => setTypeFilter(v)}><SelectTrigger className="w-[160px]"><SelectValue placeholder="Type"/></SelectTrigger><SelectContent><SelectItem value="all">All Types</SelectItem>{Object.entries(campaignTypeLabels).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select>
+         <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}><SelectTrigger className="w-[150px]"><SelectValue placeholder="Status"/></SelectTrigger><SelectContent><SelectItem value="all">All Status</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem></SelectContent></Select>
+         <Select value={yardFilter} onValueChange={(v) => setYardFilter(v)}><SelectTrigger className="w-[200px]"><SelectValue placeholder="Yard"/></SelectTrigger><SelectContent><SelectItem value="all">All Yards</SelectItem>{yards.map((y) => <SelectItem key={y.id} value={y.id.toString()}>{y.name}</SelectItem>)}</SelectContent></Select>
+         <Button variant="outline" onClick={() => { setTypeFilter("all"); setStatusFilter("all"); setYardFilter("all"); setSearchTerm(""); }}>Clear</Button>
       </div>
 
-      {/* MODALS */}
-      {canManage && (
-        <>
-          <CampaignFormModal
-            open={showCreateModal}
-            onOpenChange={(open) => {
-              setShowCreateModal(open);
-              if (!open) clearValidationErrors();
-            }}
-            title="Create New Campaign"
-            description="Fill in the details to create a new campaign"
-            submitLabel="Create Campaign"
-            isSubmitting={isSubmitting}
-            formData={formData}
-            onFormChange={setFormData}
-            validationErrors={validationErrors}
-            onValidationErrorChange={setValidationErrors}
-            onSubmit={handleSubmitCreate}
-            idPrefix="create"
-            yards={yards}
-          />
+      {loading ? <div>Loading...</div> : (
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {paginatedCampaigns.map((campaign) => (
+            <Card key={campaign.id} className="group relative flex flex-col justify-between overflow-hidden border border-border/60 bg-gradient-to-b from-card to-card/50 text-card-foreground shadow-sm transition-all duration-300 hover:shadow-lg hover:border-primary/20">
+              {campaign.isActive && <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-emerald-500 to-emerald-600 opacity-80" />}
+              <CardHeader className="pb-4 pt-5 pl-7">
+                <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      {/* TÍTULO CON PUNTO VERDE */}
+                      <CardTitle className="truncate text-lg font-bold flex items-center gap-2">
+                        {campaign.nombre}
+                        {campaign.isActive && (
+                          <span className="relative flex h-2.5 w-2.5 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                          </span>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-2 text-xs"><span className="font-mono text-primary/70">#{campaign.id}</span><span>{new Date(campaign.createdAt).toLocaleDateString()}</span></CardDescription>
+                    </div>
+                    <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4"/></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleDetails(campaign)}>View Details</DropdownMenuItem>{canManage && <><DropdownMenuItem onClick={() => handleEdit(campaign)}>Edit</DropdownMenuItem><DropdownMenuItem className="text-destructive" onClick={() => handleDelete(campaign)}>Delete</DropdownMenuItem></>}</DropdownMenuContent></DropdownMenu>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="space-y-6 pb-6 pl-7 pr-6">
+                <div className="grid grid-cols-2 gap-4 rounded-xl bg-muted/40 p-3 border border-border/30">
+                  <div className="space-y-0.5"><span className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider"><Ticket className="h-3 w-3"/>Tickets</span><p className="text-2xl font-bold">{campaign.ticketCount ?? 0}</p></div>
+                  <div className="space-y-1 border-l border-border/40 pl-4 flex flex-col justify-center">
+                    
+                    {/* === CONTADORES CON ESTILO DE CHIPS/BADGES === */}
+                    {campaign.tipo === ManagementType.ONBOARDING ? (
+                        <>
+                            <div className="flex items-center justify-between text-xs mb-1.5">
+                                <Badge variant="outline" className="h-5 px-1.5 bg-emerald-500/10 text-emerald-700 border-emerald-500/20 rounded-md font-medium shadow-sm"><CheckCircle2 className="h-3 w-3 mr-1"/> Registered</Badge>
+                                <span className="font-bold text-foreground text-sm">{campaign.registeredCount ?? 0}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                                <Badge variant="outline" className="h-5 px-1.5 bg-red-500/10 text-red-700 border-red-500/20 rounded-md font-medium shadow-sm"><XCircle className="h-3 w-3 mr-1"/> Not Registered</Badge>
+                                <span className="font-bold text-foreground text-sm">{campaign.notRegisteredCount ?? 0}</span>
+                            </div>
+                        </>
+                    ) : campaign.tipo === ManagementType.AR ? (
+                        <>
+                            <div className="flex items-center justify-between text-xs mb-1.5">
+                                <Badge variant="outline" className="h-5 px-1.5 bg-emerald-500/10 text-emerald-700 border-emerald-500/20 rounded-md font-medium shadow-sm"><DollarSign className="h-3 w-3 mr-1"/> Paid</Badge>
+                                <span className="font-bold text-foreground text-sm">{campaign.paidCount ?? 0}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                                <Badge variant="outline" className="h-5 px-1.5 bg-red-500/10 text-red-700 border-red-500/20 rounded-md font-medium shadow-sm"><Ban className="h-3 w-3 mr-1"/> Not Paid</Badge>
+                                <span className="font-bold text-foreground text-sm">{campaign.notPaidCount ?? 0}</span>
+                            </div>
+                        </>
+                    ) : (
+                        <div><span className="text-[10px] font-bold text-muted-foreground uppercase">Duration</span><p className="text-lg font-semibold truncate">{campaign.duracion || "—"}</p></div>
+                    )}
+                    {/* ------------------------------------------------ */}
 
-          <CampaignFormModal
-            open={showEditModal}
-            onOpenChange={(open) => {
-              setShowEditModal(open);
-              if (!open) clearValidationErrors();
-            }}
-            title="Edit Campaign"
-            description="Update campaign details"
-            submitLabel="Save Changes"
-            isSubmitting={isSubmitting}
-            formData={formData}
-            onFormChange={setFormData}
-            validationErrors={validationErrors}
-            onValidationErrorChange={setValidationErrors}
-            onSubmit={handleSubmitEdit}
-            idPrefix="edit"
-            yards={yards}
-          />
-
-          <DeleteCampaignModal
-            open={showDeleteModal}
-            onOpenChange={setShowDeleteModal}
-            campaignName={selectedCampaign?.nombre}
-            ticketCount={selectedCampaign?.ticketCount}
-            isSubmitting={isSubmitting}
-            onConfirm={handleSubmitDelete}
-          />
-        </>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                    <Badge variant="outline" className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/5 text-blue-700 border-blue-200/40 hover:bg-blue-500/10 dark:text-blue-400 dark:border-blue-900/40 transition-colors"><Tag className="h-3 w-3"/> {campaignTypeLabels[campaign.tipo]}</Badge>
+                    <Badge variant="outline" className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-500/5 text-orange-700 border-orange-200/40 hover:bg-orange-500/10 dark:text-orange-400 dark:border-orange-900/40 transition-colors"><MapPin className="h-3 w-3"/> <span className="truncate max-w-[120px]">{getYardLabel(campaign)}</span></Badge>
+                </div>
+              </CardContent>
+              <CardFooter className="border-t bg-muted/30 px-6 py-3"><Button variant="ghost" size="sm" className="w-full justify-between text-xs" onClick={() => handleDetails(campaign)}>View Full Report <ArrowUpRight className="h-3 w-3"/></Button></CardFooter>
+            </Card>
+          ))}
+        </div>
       )}
-
-      <CampaignDetailsModal
-        open={showDetailsModal}
-        onOpenChange={(open) => {
-          setShowDetailsModal(open);
-          if (!open) {
-            setShowTicketsPanel(false);
-            setTicketSearch("");
-            setCampaignTickets([]);
-          }
-        }}
-        campaign={selectedCampaign}
-        campaignTypeLabels={campaignTypeLabels}
-        getStatusColor={getStatusColor}
-        getYardLabel={getYardLabel}
-        showTicketsPanel={showTicketsPanel}
-        ticketsLoading={ticketsLoading}
-        tickets={filteredTickets}
-        ticketSearch={ticketSearch}
-        setTicketSearch={setTicketSearch}
-        onViewTickets={async () => {
-          if (!selectedCampaign) return;
-          if (!showTicketsPanel) {
-            await fetchTicketsForCampaign(selectedCampaign.id);
-          }
-          setShowTicketsPanel(true);
-        }}
-      />
-    </>
+      <CampaignsPagination totalCount={filteredCampaigns.length} currentPage={currentPage} totalPages={totalPages} itemsPerPage={itemsPerPage} onItemsPerPageChange={setItemsPerPage} onPageChange={setCurrentPage} />
+      {canManage && <><CampaignFormModal open={showCreateModal} onOpenChange={setShowCreateModal} title="Create" description="" submitLabel="Create" isSubmitting={isSubmitting} formData={formData} onFormChange={setFormData} validationErrors={validationErrors} onValidationErrorChange={setValidationErrors} onSubmit={handleSubmitCreate} idPrefix="create" yards={yards} /><CampaignFormModal open={showEditModal} onOpenChange={setShowEditModal} title="Edit" description="" submitLabel="Save" isSubmitting={isSubmitting} formData={formData} onFormChange={setFormData} validationErrors={validationErrors} onValidationErrorChange={setValidationErrors} onSubmit={handleSubmitEdit} idPrefix="edit" yards={yards} /><DeleteCampaignModal open={showDeleteModal} onOpenChange={setShowDeleteModal} campaignName={selectedCampaign?.nombre} ticketCount={selectedCampaign?.ticketCount} isSubmitting={isSubmitting} onConfirm={handleSubmitDelete} /></>}
+      <CampaignDetailsModal open={showDetailsModal} onOpenChange={setShowDetailsModal} campaign={selectedCampaign} campaignTypeLabels={campaignTypeLabels} getStatusColor={getStatusColor} getYardLabel={getYardLabel} showTicketsPanel={showTicketsPanel} ticketsLoading={ticketsLoading} tickets={filteredTickets} ticketSearch={ticketSearch} setTicketSearch={setTicketSearch} onViewTickets={async () => { if(selectedCampaign) { if(!showTicketsPanel) await fetchTicketsForCampaign(selectedCampaign.id); setShowTicketsPanel(true); } }} />
+    </div>
   );
 }

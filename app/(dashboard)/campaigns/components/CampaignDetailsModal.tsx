@@ -24,8 +24,14 @@ import {
   Info,
   CalendarDays,
   BarChart3,
+  CheckCircle2, // Nuevo icono
+  XCircle,      // Nuevo icono
+  DollarSign,   // Nuevo icono
+  Ban,          // Nuevo icono
 } from "lucide-react";
 import type { Campaign } from "../types";
+// Importamos el Enum
+import { ManagementType } from "../../tickets/types";
 import { useRole } from "@/components/providers/role-provider";
 import { cn } from "@/lib/utils";
 
@@ -194,7 +200,9 @@ export function CampaignDetailsModal({
                   <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <BarChart3 className="h-4 w-4" /> Metrics
                   </h4>
-                  <div className="p-5 rounded-lg border bg-gradient-to-br from-card to-muted/20 shadow-sm flex items-center justify-between">
+                  
+                  {/* Total Tickets */}
+                  <div className="p-5 rounded-lg border bg-gradient-to-br from-card to-muted/20 shadow-sm flex items-center justify-between mb-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         <Ticket className="h-3.5 w-3.5" />
@@ -208,6 +216,47 @@ export function CampaignDetailsModal({
                       <Ticket className="h-6 w-6 text-primary" />
                     </div>
                   </div>
+
+                  {/* NUEVA LÓGICA DE CONTADORES */}
+                  {campaign.tipo === ManagementType.ONBOARDING ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-4 rounded-lg border bg-emerald-500/5 border-emerald-200/20">
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 uppercase tracking-wider mb-2">
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Registered
+                        </div>
+                        <p className="text-2xl font-bold text-emerald-700">
+                          {campaign.registeredCount ?? 0}
+                        </p>
+                      </div>
+                      <div className="p-4 rounded-lg border bg-card">
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                          <XCircle className="h-3.5 w-3.5" /> Not Registered
+                        </div>
+                        <p className="text-2xl font-bold text-foreground">
+                          {campaign.notRegisteredCount ?? 0}
+                        </p>
+                      </div>
+                    </div>
+                  ) : campaign.tipo === ManagementType.AR ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-4 rounded-lg border bg-emerald-500/5 border-emerald-200/20">
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 uppercase tracking-wider mb-2">
+                          <DollarSign className="h-3.5 w-3.5" /> Paid
+                        </div>
+                        <p className="text-2xl font-bold text-emerald-700">
+                          {campaign.paidCount ?? 0}
+                        </p>
+                      </div>
+                      <div className="p-4 rounded-lg border bg-card">
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                          <Ban className="h-3.5 w-3.5" /> Not Paid
+                        </div>
+                        <p className="text-2xl font-bold text-foreground">
+                          {campaign.notPaidCount ?? 0}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Actions Section */}
@@ -227,7 +276,7 @@ export function CampaignDetailsModal({
                           </p>
                         </div>
                       </div>
-                      <Button asChild className="w-full" variant="secondary">
+                       <Button asChild className="w-full" variant="secondary">
                         <Link
                           href={`/reports/campaigns?campaignId=${campaign.id}`}
                         >

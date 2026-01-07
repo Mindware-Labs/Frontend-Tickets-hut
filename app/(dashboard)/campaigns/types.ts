@@ -1,4 +1,4 @@
-export type CampaignType = "ONBOARDING" | "AR" | "OTHER";
+import { ManagementType } from "../tickets/types"; 
 
 export interface YardSummary {
   id: number;
@@ -11,17 +11,23 @@ export interface Campaign {
   yardaId?: number | null;
   yarda?: YardSummary | null;
   duracion?: string | null;
-  tipo: CampaignType;
+  tipo: ManagementType; // Enum
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
   ticketCount?: number;
+  
+  // CAMPOS NUEVOS
+  registeredCount?: number;
+  notRegisteredCount?: number;
+  paidCount?: number;
+  notPaidCount?: number;
 }
 
 export interface CampaignFormData {
   nombre: string;
   yardaId?: number;
   duracion: string;
-  tipo: CampaignType;
+  tipo: ManagementType;
   isActive: boolean;
 }

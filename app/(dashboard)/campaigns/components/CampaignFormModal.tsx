@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react"; // 1. Importar useState para controlar el popover
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// 2. Importar componentes para el Combobox (Buscador)
 import {
   Command,
   CommandEmpty,
@@ -33,9 +32,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react"; // Iconos necesarios
-import { cn } from "@/lib/utils"; // Utilidad para combinar clases
-import { CampaignFormData, CampaignType, YardSummary } from "../types";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+// 1. IMPORTAR ENUM CORRECTO
+import { ManagementType } from "../../tickets/types";
+import { CampaignFormData, YardSummary } from "../types";
 
 interface CampaignFormModalProps {
   open: boolean;
@@ -53,10 +54,11 @@ interface CampaignFormModalProps {
   yards: YardSummary[];
 }
 
-const campaignTypeLabels: Record<CampaignType, string> = {
-  ONBOARDING: "Onboarding",
-  AR: "AR",
-  OTHER: "Other",
+// 2. ACTUALIZAR ETIQUETAS USANDO EL ENUM
+const campaignTypeLabels: Record<ManagementType, string> = {
+  [ManagementType.ONBOARDING]: "Onboarding",
+  [ManagementType.AR]: "AR",
+  [ManagementType.OTHER]: "Other",
 };
 
 export function CampaignFormModal({
@@ -74,13 +76,11 @@ export function CampaignFormModal({
   idPrefix,
   yards,
 }: CampaignFormModalProps) {
-  // 3. Estado local para controlar si el buscador de yards está abierto o cerrado
   const [openYardCombobox, setOpenYardCombobox] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl overflow-y-visible"> 
-        {/* Nota: overflow-y-visible ayuda a que el popover no se corte si el modal es pequeño */}
+      <DialogContent className="max-w-2xl overflow-y-visible">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -115,7 +115,8 @@ export function CampaignFormModal({
               <Label htmlFor={`${idPrefix}-tipo`}>Type *</Label>
               <Select
                 value={formData.tipo}
-                onValueChange={(value: CampaignType) =>
+                // 3. CASTING CORRECTO AL ENUM
+                onValueChange={(value: ManagementType) =>
                   onFormChange({ ...formData, tipo: value })
                 }
               >
@@ -170,7 +171,7 @@ export function CampaignFormModal({
                     role="combobox"
                     aria-expanded={openYardCombobox}
                     className={cn(
-                      "w-full justify-between font-normal", // font-normal para que parezca un input
+                      "w-full justify-between font-normal",
                       !formData.yardaId && "text-muted-foreground",
                       validationErrors.yardaId && "border-red-500"
                     )}
@@ -187,7 +188,6 @@ export function CampaignFormModal({
                     <CommandList>
                       <CommandEmpty>No yard found.</CommandEmpty>
                       <CommandGroup>
-                        {/* Opción para "No yard" / Limpiar selección */}
                         <CommandItem
                           value="none"
                           onSelect={() => {
@@ -204,15 +204,13 @@ export function CampaignFormModal({
                           No yard
                         </CommandItem>
                         
-                        {/* Lista de Yards */}
                         {yards.map((yard) => (
                           <CommandItem
                             key={yard.id}
-                            value={yard.name} // Importante para que el filtro funcione por nombre
+                            value={yard.name}
                             onSelect={() => {
                               onFormChange({ ...formData, yardaId: yard.id });
                               setOpenYardCombobox(false);
-                              // Limpiar error si existe
                               if (validationErrors.yardaId) {
                                 onValidationErrorChange({
                                     ...validationErrors,
