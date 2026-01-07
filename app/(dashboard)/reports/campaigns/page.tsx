@@ -60,6 +60,15 @@ type Ticket = {
   updatedAt?: string | null;
 };
 
+type CustomerCallHistory = {
+  ticketId: number;
+  status: string;
+  note: string;
+  direction: string;
+  createdAt: string;
+  agentName: string;
+};
+
 type CustomerRow = {
   ticketId?: number;
   name: string;
@@ -67,6 +76,8 @@ type CustomerRow = {
   direction?: string;
   status: string;
   note: string;
+  callCount?: number;
+  callHistory?: CustomerCallHistory[];
 };
 
 type ReportMetric = {
@@ -261,11 +272,12 @@ const CustomerTable = ({
       <div className="w-full overflow-x-auto">
         <div className="min-w-200 align-middle">
           <div className="grid grid-cols-12 bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-y">
-            <div className="col-span-3 px-6 py-3">Customer</div>
+            <div className="col-span-2 px-6 py-3">Customer</div>
             <div className="col-span-2 px-6 py-3">Phone</div>
+            <div className="col-span-1 px-6 py-3">Calls</div>
             <div className="col-span-2 px-6 py-3">Direction</div>
             <div className="col-span-2 px-6 py-3">Status</div>
-            <div className="col-span-3 px-6 py-3">Notes / Special Case</div>
+            <div className="col-span-3 px-6 py-3">Latest Notes / History</div>
           </div>
           <div className="divide-y">
             {rows.length === 0 ? (
@@ -281,6 +293,9 @@ const CustomerTable = ({
                   hasTicketId: !!row.ticketId,
                 });
 
+                const callCount = row.callCount || 1;
+                const hasHistory = row.callHistory && row.callHistory.length > 1;
+                
                 return (
                 <div
                   key={`${title}-${index}`}
@@ -296,13 +311,18 @@ const CustomerTable = ({
                   style={{ cursor: 'pointer' }}
                 >
                   <div
-                    className="col-span-3 px-6 py-3 font-medium truncate"
+                    className="col-span-2 px-6 py-3 font-medium truncate"
                     title={row.name}
                   >
                     {row.name}
                   </div>
                   <div className="col-span-2 px-6 py-3 text-muted-foreground truncate">
                     {row.phone || "—"}
+                  </div>
+                  <div className="col-span-1 px-6 py-3">
+                    <span className="inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 text-xs font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-blue-500/10 text-blue-700 dark:text-blue-400">
+                      {callCount}x
+                    </span>
                   </div>
                   <div className="col-span-2 px-6 py-3">
                     <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary/10 text-primary">
@@ -315,7 +335,33 @@ const CustomerTable = ({
                     </span>
                   </div>
                   <div className="col-span-3 px-6 py-3 text-muted-foreground wrap-break-word text-xs">
-                    {row.note || "—"}
+                    <div className="space-y-1">
+                      <div className="font-medium">{row.note || "—"}</div>
+                      {hasHistory && (
+                        <details className="mt-1">
+                          <summary className="cursor-pointer text-blue-600 dark:text-blue-400 hover:underline text-[10px]">
+                            Ver historial ({row.callHistory!.length} llamadas)
+                          </summary>
+                          <div className="mt-2 space-y-2 pl-2 border-l-2 border-muted">
+                            {row.callHistory!.slice().reverse().map((call, idx) => (
+                              <div key={idx} className="text-[10px] space-y-0.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold">
+                                    {new Date(call.createdAt).toLocaleDateString()}
+                                  </span>
+                                  <span className="text-muted-foreground">
+                                    {call.agentName}
+                                  </span>
+                                </div>
+                                <div className="text-muted-foreground">
+                                  {call.note || "—"}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </div>
                   </div>
                 </div>
                 );

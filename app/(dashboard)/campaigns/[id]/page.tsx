@@ -47,6 +47,15 @@ interface ReportMetric {
   color: string;
 }
 
+interface CustomerCallHistory {
+  ticketId: number;
+  status: string;
+  note: string;
+  direction: string;
+  createdAt: string;
+  agentName: string;
+}
+
 interface ReportRow {
   ticketId: number;
   name: string;
@@ -56,6 +65,8 @@ interface ReportRow {
   direction: string;
   createdAt: string;
   agentName: string;
+  callCount?: number;
+  callHistory?: CustomerCallHistory[];
 }
 
 interface ReportTable {
@@ -479,32 +490,85 @@ export default function CampaignReportPage() {
                           }
                         };
                         
+                        const callCount = row.callCount || 1;
+                        // Ahora siempre mostramos el historial si existe, porque cada fila es un cliente con su historial completo
+                        const hasHistory = row.callHistory && row.callHistory.length > 0;
+                        
+                        // Log para debugging
+                        if (row.callHistory) {
+                          console.log(`📋 Cliente ${row.name} (${row.phone}):`, {
+                            callCount,
+                            historyLength: row.callHistory.length,
+                            history: row.callHistory
+                          });
+                        }
+                        
                         return (
                           <tr
                             key={idx}
-                            className="hover:bg-muted/30 transition-colors cursor-pointer"
-                            onClick={(e) => {
-                              console.log('=== TR ONCLICK FIRED ===', idx);
-                              handleRowClick(e);
-                            }}
-                            onMouseDown={() => console.log('=== MOUSE DOWN ===', idx)}
-                            onMouseUp={() => console.log('=== MOUSE UP ===', idx)}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                handleRowClick(e as any);
-                              }
-                            }}
-                            style={{ cursor: 'pointer' }}
+                            className="hover:bg-muted/30 transition-colors"
                           >
-                            <td className="px-6 py-3 font-medium text-foreground">
+                            <td 
+                              className="px-6 py-3 font-medium text-foreground cursor-pointer"
+                              onClick={(e) => {
+                                // Verificar que el clic NO fue en el historial
+                                const target = e.target as HTMLElement;
+                                if (target.closest('details') || target.closest('summary') || target.closest('[data-history]')) {
+                                  console.log('=== CLICK EN HISTORIAL DETECTADO EN NOMBRE, IGNORANDO ===');
+                                  return;
+                                }
+                                console.log('=== CLICK EN NOMBRE ===', idx);
+                                handleRowClick(e);
+                              }}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  handleRowClick(e as any);
+                                }
+                              }}
+                            >
                               {row.name}
                             </td>
-                            <td className="px-6 py-3 text-muted-foreground font-mono text-xs">
+                            <td 
+                              className="px-6 py-3 text-muted-foreground font-mono text-xs cursor-pointer"
+                              onClick={(e) => {
+                                // Verificar que el clic NO fue en el historial
+                                const target = e.target as HTMLElement;
+                                if (target.closest('details') || target.closest('summary') || target.closest('[data-history]')) {
+                                  console.log('=== CLICK EN HISTORIAL DETECTADO EN TELÉFONO, IGNORANDO ===');
+                                  return;
+                                }
+                                console.log('=== CLICK EN TELÉFONO ===', idx);
+                                handleRowClick(e);
+                              }}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  handleRowClick(e as any);
+                                }
+                              }}
+                            >
                               {row.phone}
                             </td>
-                            <td className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
+                            <td 
+                              className="px-6 py-3"
+                              onClick={(e) => e.stopPropagation()}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
+                              <Badge
+                                variant="outline"
+                                className="font-bold text-[10px] bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20"
+                              >
+                                {callCount}x
+                              </Badge>
+                            </td>
+                            <td 
+                              className="px-6 py-3" 
+                              onClick={(e) => e.stopPropagation()}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
                               <Badge
                                 variant="outline"
                                 className="font-normal text-[10px] uppercase tracking-wide pointer-events-none"
@@ -512,16 +576,110 @@ export default function CampaignReportPage() {
                                 {row.status}
                               </Badge>
                             </td>
-                            <td
-                              className="px-6 py-3 max-w-[300px] truncate text-muted-foreground"
-                              title={row.note}
+                            <td 
+                              className="px-6 py-3 max-w-[300px] text-muted-foreground"
+                              onClick={(e) => {
+                                // Si el clic fue en el historial, detener propagación
+                                const target = e.target as HTMLElement;
+                                if (target.closest('details') || target.closest('summary')) {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                }
+                              }}
+                              onMouseDown={(e) => {
+                                const target = e.target as HTMLElement;
+                                if (target.closest('details') || target.closest('summary')) {
+                                  e.stopPropagation();
+                                }
+                              }}
                             >
-                              {row.note || "-"}
+                              <div className="space-y-1">
+                                <div className="truncate" title={row.note}>
+                                  {row.note || "-"}
+                                </div>
+                                {hasHistory ? (
+                                  <div 
+                                    className="mt-2"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                    }}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                  >
+                                    <details 
+                                      className="group"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        // NO usar preventDefault() aquí porque bloquea el comportamiento nativo
+                                      }}
+                                      onMouseDown={(e) => {
+                                        e.stopPropagation();
+                                      }}
+                                    >
+                                      <summary 
+                                        className="cursor-pointer text-blue-600 dark:text-blue-400 hover:underline text-[10px] select-none flex items-center gap-1 py-1"
+                                        style={{ listStyle: 'none' }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          console.log('📝 Summary clicked - stopped propagation');
+                                          // NO usar preventDefault() aquí porque bloquea el comportamiento nativo del details
+                                        }}
+                                        onMouseDown={(e) => {
+                                          e.stopPropagation();
+                                        }}
+                                      >
+                                        <svg 
+                                          className="w-3 h-3 transition-transform group-open:rotate-90" 
+                                          fill="none" 
+                                          stroke="currentColor" 
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                        Ver historial ({row.callHistory!.length} {(row.callHistory!.length === 1 ? 'llamada' : 'llamadas')})
+                                      </summary>
+                                      <div 
+                                        className="mt-2 space-y-2 pl-2 border-l-2 border-muted max-h-40 overflow-y-auto"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                        }}
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                      >
+                                        {row.callHistory!.slice().reverse().map((call, callIdx) => (
+                                          <div key={callIdx} className="text-[10px] space-y-0.5">
+                                            <div className="flex items-center gap-2">
+                                              <span className="font-semibold">
+                                                {new Date(call.createdAt).toLocaleDateString()}
+                                              </span>
+                                              <span className="text-muted-foreground">
+                                                {call.agentName}
+                                              </span>
+                                              <Badge variant="outline" className="text-[9px] px-1 py-0">
+                                                {call.status}
+                                              </Badge>
+                                            </div>
+                                            <div className="text-muted-foreground">
+                                              {call.note || "—"}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </details>
+                                  </div>
+                                ) : null}
+                              </div>
                             </td>
-                            <td className="px-6 py-3 text-muted-foreground whitespace-nowrap">
+                            <td 
+                              className="px-6 py-3 text-muted-foreground whitespace-nowrap"
+                              onClick={(e) => e.stopPropagation()}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
                               {new Date(row.createdAt).toLocaleDateString()}
                             </td>
-                            <td className="px-6 py-3 text-muted-foreground">
+                            <td 
+                              className="px-6 py-3 text-muted-foreground"
+                              onClick={(e) => e.stopPropagation()}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
                               {row.agentName}
                             </td>
                           </tr>
