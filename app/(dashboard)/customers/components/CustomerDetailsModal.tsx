@@ -35,11 +35,28 @@ import {
 import type { Customer } from "../types";
 import { cn } from "@/lib/utils";
 
+interface CallHistoryItem {
+  aircallId?: string;
+  direction: string;
+  originalDirection?: string;
+  isMissed: boolean;
+  duration?: number;
+  agentId?: number;
+  agentName?: string;
+  createdAt: string;
+  issueDetail?: string;
+  campaignOption?: string;
+  status?: string;
+}
+
 interface TicketSummary {
   id: number;
   status?: string | null;
   createdAt?: string | null;
   campaignOption?: string | null;
+  callHistory?: CallHistoryItem[];
+  direction?: string;
+  originalDirection?: string;
 }
 
 interface CustomerDetailsModalProps {
@@ -306,64 +323,139 @@ export function CustomerDetailsModal({
                         {tickets.map((ticket) => {
                           const statusConfig = getStatusConfig(ticket.status);
                           const StatusIcon = statusConfig.icon;
+                          const callHistory = ticket.callHistory || [];
+                          const hasHistory = callHistory.length > 0;
 
                           return (
                             <div
                               key={ticket.id}
-                              className="group p-4 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors cursor-pointer"
-                              onClick={() => {
-                                router.push(`/tickets?id=${ticket.id}`);
-                                onOpenChange(false);
-                              }}
+                              className="group"
                             >
-                              <div className="flex items-start gap-3 min-w-0">
-                                <div className="mt-0.5 h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0 text-primary">
-                                  <Hash className="h-4 w-4" />
-                                </div>
-                                <div className="min-w-0 space-y-0.5">
-                                  <p className="text-sm font-semibold truncate flex items-center gap-2">
-                                    Ticket #{ticket.id}
-                                    <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                  </p>
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <span className="flex items-center gap-1">
-                                      <Calendar className="h-3 w-3" />
-                                      {ticket.createdAt
-                                        ? new Date(
-                                            ticket.createdAt
-                                          ).toLocaleDateString()
-                                        : "No date"}
-                                    </span>
-                                    {ticket.campaignOption && (
-                                      <>
-                                        <span className="text-muted-foreground/30">
-                                          •
-                                        </span>
-                                        <span
-                                          className="truncate max-w-[150px]"
-                                          title={ticket.campaignOption}
-                                        >
-                                          {ticket.campaignOption}
-                                        </span>
-                                      </>
-                                    )}
+                              <div
+                                className="p-4 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors cursor-pointer"
+                                onClick={() => {
+                                  router.push(`/tickets?id=${ticket.id}`);
+                                  onOpenChange(false);
+                                }}
+                              >
+                                <div className="flex items-start gap-3 min-w-0 flex-1">
+                                  <div className="mt-0.5 h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0 text-primary">
+                                    <Hash className="h-4 w-4" />
+                                  </div>
+                                  <div className="min-w-0 space-y-0.5 flex-1">
+                                    <p className="text-sm font-semibold truncate flex items-center gap-2">
+                                      Ticket #{ticket.id}
+                                      <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </p>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <span className="flex items-center gap-1">
+                                        <Calendar className="h-3 w-3" />
+                                        {ticket.createdAt
+                                          ? new Date(
+                                              ticket.createdAt
+                                            ).toLocaleDateString()
+                                          : "No date"}
+                                      </span>
+                                      {ticket.campaignOption && (
+                                        <>
+                                          <span className="text-muted-foreground/30">
+                                            •
+                                          </span>
+                                          <span
+                                            className="truncate max-w-[150px]"
+                                            title={ticket.campaignOption}
+                                          >
+                                            {ticket.campaignOption}
+                                          </span>
+                                        </>
+                                      )}
+                                      {hasHistory && (
+                                        <>
+                                          <span className="text-muted-foreground/30">
+                                            •
+                                          </span>
+                                          <span className="text-blue-600 dark:text-blue-400">
+                                            {callHistory.length} llamada{callHistory.length !== 1 ? 's' : ''}
+                                          </span>
+                                        </>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
 
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] uppercase tracking-wider font-bold shadow-none shrink-0 transition-colors",
-                                  statusConfig.color
-                                )}
-                              >
-                                <StatusIcon className="h-3 w-3" />
-                                {(statusConfig.label || "Unknown").replace(
-                                  /_/g,
-                                  " "
-                                )}
-                              </Badge>
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] uppercase tracking-wider font-bold shadow-none shrink-0 transition-colors",
+                                    statusConfig.color
+                                  )}
+                                >
+                                  <StatusIcon className="h-3 w-3" />
+                                  {(statusConfig.label || "Unknown").replace(
+                                    /_/g,
+                                    " "
+                                  )}
+                                </Badge>
+                              </div>
+                              
+                              {/* Call History */}
+                              {hasHistory && (
+                                <div className="px-4 pb-4 border-t border-border/50 bg-muted/5">
+                                  <details className="mt-2">
+                                    <summary className="cursor-pointer text-xs text-blue-600 dark:text-blue-400 hover:underline select-none flex items-center gap-1 py-1">
+                                      <svg 
+                                        className="w-3 h-3 transition-transform group-open:rotate-90" 
+                                        fill="none" 
+                                        stroke="currentColor" 
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                      </svg>
+                                      Ver historial de llamadas ({callHistory.length})
+                                    </summary>
+                                    <div className="mt-2 space-y-2 pl-4 border-l-2 border-muted max-h-40 overflow-y-auto">
+                                      {callHistory.slice().reverse().map((call, idx) => {
+                                        const directionText = call.isMissed 
+                                          ? `Missed (${call.originalDirection || call.direction})`
+                                          : call.direction;
+                                        const directionColor = call.isMissed 
+                                          ? 'text-red-600 dark:text-red-400'
+                                          : call.direction === 'INBOUND'
+                                          ? 'text-green-600 dark:text-green-400'
+                                          : 'text-blue-600 dark:text-blue-400';
+                                        
+                                        return (
+                                          <div key={idx} className="text-[10px] space-y-1 py-1">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                              <span className="font-semibold">
+                                                {new Date(call.createdAt).toLocaleString()}
+                                              </span>
+                                              <Badge variant="outline" className={`text-[9px] px-1 py-0 ${directionColor}`}>
+                                                {directionText}
+                                              </Badge>
+                                              {call.agentName && (
+                                                <span className="text-muted-foreground">
+                                                  {call.agentName}
+                                                </span>
+                                              )}
+                                              {call.duration && (
+                                                <span className="text-muted-foreground">
+                                                  {Math.floor(call.duration / 60)}m {call.duration % 60}s
+                                                </span>
+                                              )}
+                                            </div>
+                                            {call.issueDetail && (
+                                              <div className="text-muted-foreground italic">
+                                                {call.issueDetail}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </details>
+                                </div>
+                              )}
                             </div>
                           );
                         })}

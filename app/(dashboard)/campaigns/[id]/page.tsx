@@ -52,8 +52,13 @@ interface CustomerCallHistory {
   status: string;
   note: string;
   direction: string;
+  originalDirection?: string;
+  isMissed?: boolean;
+  duration?: number;
   createdAt: string;
   agentName: string;
+  issueDetail?: string;
+  campaignOption?: string;
 }
 
 interface ReportRow {
@@ -644,24 +649,54 @@ export default function CampaignReportPage() {
                                         }}
                                         onMouseDown={(e) => e.stopPropagation()}
                                       >
-                                        {row.callHistory!.slice().reverse().map((call, callIdx) => (
-                                          <div key={callIdx} className="text-[10px] space-y-0.5">
-                                            <div className="flex items-center gap-2">
-                                              <span className="font-semibold">
-                                                {new Date(call.createdAt).toLocaleDateString()}
-                                              </span>
-                                              <span className="text-muted-foreground">
-                                                {call.agentName}
-                                              </span>
-                                              <Badge variant="outline" className="text-[9px] px-1 py-0">
-                                                {call.status}
-                                              </Badge>
+                                        {row.callHistory!.slice().reverse().map((call, callIdx) => {
+                                          const directionText = call.isMissed 
+                                            ? `${call.originalDirection || call.direction} (Missed)`
+                                            : call.direction;
+                                          const directionColor = call.isMissed 
+                                            ? 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20'
+                                            : call.direction === 'INBOUND'
+                                            ? 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20'
+                                            : 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20';
+                                          
+                                          return (
+                                            <div key={callIdx} className="text-[10px] space-y-1 py-1 border-b border-muted/30 last:border-b-0">
+                                              <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="font-semibold text-foreground">
+                                                  {new Date(call.createdAt).toLocaleDateString('es-ES', {
+                                                    day: '2-digit',
+                                                    month: '2-digit',
+                                                    year: 'numeric',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                  })}
+                                                </span>
+                                                <Badge variant="outline" className={`text-[9px] px-1.5 py-0 font-semibold ${directionColor}`}>
+                                                  {directionText}
+                                                </Badge>
+                                                {call.duration && (
+                                                  <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
+                                                    {call.duration}s
+                                                  </Badge>
+                                                )}
+                                                <span className="text-muted-foreground text-[9px]">
+                                                  {call.agentName}
+                                                </span>
+                                                <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                                                  {call.status}
+                                                </Badge>
+                                              </div>
+                                              <div className="text-muted-foreground pl-1">
+                                                {call.issueDetail || call.note || "—"}
+                                              </div>
+                                              {call.campaignOption && (
+                                                <div className="text-muted-foreground text-[9px] pl-1 italic">
+                                                  Opción: {call.campaignOption}
+                                                </div>
+                                              )}
                                             </div>
-                                            <div className="text-muted-foreground">
-                                              {call.note || "—"}
-                                            </div>
-                                          </div>
-                                        ))}
+                                          );
+                                        })}
                                       </div>
                                     </details>
                                   </div>

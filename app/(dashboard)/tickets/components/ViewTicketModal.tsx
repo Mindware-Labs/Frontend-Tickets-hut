@@ -1,6 +1,6 @@
 "use client";
 
-import { JSX } from "react";
+import { JSX, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,8 @@ import {
   ArrowRightCircle,
   Tag,
   MessageSquare,
+  History,
+  Clock,
 } from "lucide-react";
 import { Ticket } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
@@ -102,6 +104,47 @@ export function ViewTicketModal({
   getClientPhone,
   getYardDisplayName,
 }: ViewTicketModalProps) {
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when modal opens
+  useEffect(() => {
+    if (open && ticket) {
+      // Multiple attempts with increasing delays to ensure content is rendered
+      const attemptScroll = (delay: number) => {
+        setTimeout(() => {
+          // Try to find the Radix ScrollArea viewport
+          if (scrollAreaRef.current) {
+            const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+            if (viewport) {
+              viewport.scrollTo({
+                top: viewport.scrollHeight,
+                behavior: 'smooth'
+              });
+              return;
+            }
+          }
+          
+          // Fallback: try scrolling the content div directly
+          if (contentRef.current) {
+            const parent = contentRef.current.parentElement;
+            if (parent) {
+              parent.scrollTo({
+                top: parent.scrollHeight,
+                behavior: 'smooth'
+              });
+            }
+          }
+        }, delay);
+      };
+
+      // Try multiple times with different delays
+      attemptScroll(100);
+      attemptScroll(300);
+      attemptScroll(500);
+    }
+  }, [open, ticket]);
+
   if (!ticket) return null;
 
   return (
@@ -143,8 +186,8 @@ export function ViewTicketModal({
         </DialogHeader>
 
         {/* Scrollable Content */}
-        <ScrollArea className="max-h-[70vh]">
-          <div className="p-6 space-y-8">
+        <ScrollArea className="max-h-[70vh]" ref={scrollAreaRef}>
+          <div className="p-6 space-y-8" ref={contentRef}>
             {/* Main Info Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Left Column: Customer & Location */}
@@ -313,6 +356,83 @@ export function ViewTicketModal({
                         </Button>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Call History - Ledger Style */}
+              {(ticket as any).callHistory && (ticket as any).callHistory.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <History className="h-4 w-4" /> Historial de Actualizaciones
+                  </h4>
+                  <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
+                    <ScrollArea className="max-h-[400px]">
+                      <div className="divide-y divide-border/50">
+                        {((ticket as any).callHistory || []).slice().reverse().map((call: any, idx: number) => {
+                          const directionText = call.isMissed 
+                            ? `Missed (${call.originalDirection || call.direction})`
+                            : call.direction;
+                          const directionColor = call.isMissed 
+                            ? 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20'
+                            : call.direction === 'INBOUND'
+                            ? 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20'
+                            : 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20';
+                          
+                          return (
+                            <div key={idx} className="p-4 hover:bg-muted/30 transition-colors">
+                              <div className="flex items-start gap-3">
+                                <div className="mt-0.5 p-1.5 bg-muted rounded-md text-muted-foreground shrink-0">
+                                  <Clock className="h-3.5 w-3.5" />
+                                </div>
+                                <div className="flex-1 min-w-0 space-y-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs font-semibold text-foreground">
+                                      {new Date(call.createdAt).toLocaleString('es-ES', {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric'
+                                      })}
+                                    </span>
+                                    <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${directionColor}`}>
+                                      {directionText}
+                                    </Badge>
+                                    {call.agentName && (
+                                      <span className="text-xs text-muted-foreground">
+                                        • {call.agentName}
+                                      </span>
+                                    )}
+                                    {call.duration && (
+                                      <span className="text-xs text-muted-foreground">
+                                        • {Math.floor(call.duration / 60)}m {call.duration % 60}s
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  {(call.issueDetail || call.campaignOption) && (
+                                    <div className="space-y-1 pl-2 border-l-2 border-muted">
+                                      {call.campaignOption && (
+                                        <div className="text-xs">
+                                          <span className="font-medium text-muted-foreground">Campaign Option: </span>
+                                          <span className="text-foreground">{formatEnumLabel(call.campaignOption)}</span>
+                                        </div>
+                                      )}
+                                      {call.issueDetail && (
+                                        <div className="text-xs text-foreground whitespace-pre-wrap">
+                                          {call.issueDetail}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
                   </div>
                 </div>
               )}
