@@ -634,6 +634,12 @@ export default function TicketsPage() {
         setUrlTicketId(ticketId);
         setSelectedTicket(ticket);
         setShowDetails(true);
+        // Open the appropriate modal based on whether ticket has a campaign
+        if (ticket.campaignId || ticket.campaign) {
+          setShowViewModal(true);
+        } else {
+          setShowEditModal(true);
+        }
       }
     } else if (customerId) {
       // Filter by customer ID

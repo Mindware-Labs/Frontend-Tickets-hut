@@ -1,5 +1,14 @@
 "use client";
 
+// LOGS INMEDIATOS AL CARGAR EL ARCHIVO
+if (typeof window !== 'undefined') {
+  console.log('🚀🚀🚀 ARCHIVO CAMPAIGN REPORT PAGE CARGADO 🚀🚀🚀');
+  console.log('Timestamp:', new Date().toISOString());
+  console.log('Window object:', typeof window);
+} else {
+  console.log('📦 Server-side: Campaign Report Page file loaded');
+}
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { fetchFromBackend } from "@/lib/api-client";
@@ -39,6 +48,7 @@ interface ReportMetric {
 }
 
 interface ReportRow {
+  ticketId: number;
   name: string;
   phone: string;
   status: string;
@@ -60,9 +70,31 @@ interface CampaignReportData {
 }
 
 export default function CampaignReportPage() {
+  // LOGS INMEDIATOS AL RENDERIZAR EL COMPONENTE
+  console.log('═══════════════════════════════════════════════════');
+  console.log('🎯 CAMPAIGN REPORT PAGE COMPONENT RENDERING');
+  console.log('═══════════════════════════════════════════════════');
+  console.log('Timestamp:', new Date().toISOString());
+  console.log('Window available:', typeof window !== 'undefined');
+  
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  
+  console.log('📋 Component params:', {
+    campaignId: id,
+    params: params,
+    routerExists: !!router,
+    routerType: typeof router,
+  });
+  
+  // Test log to verify component is rendering
+  if (typeof window !== 'undefined') {
+    console.log('✅ Client-side rendering confirmed');
+    console.log('✅ Window.location:', window.location.href);
+  } else {
+    console.log('⚠️ Server-side rendering');
+  }
 
   const [loadingCampaign, setLoadingCampaign] = useState(true);
   const [campaignName, setCampaignName] = useState("");
@@ -72,13 +104,19 @@ export default function CampaignReportPage() {
   const [reportData, setReportData] = useState<CampaignReportData | null>(null);
 
   useEffect(() => {
+    console.log('🔵 [Campaign Report] useEffect - Loading campaign:', id);
     const load = async () => {
       try {
         setLoadingCampaign(true);
+        console.log('🔵 [Campaign Report] Fetching campaign details for:', id);
         const d = await fetchFromBackend(`/campaign/${id}`);
-        if (d) setCampaignName(d.nombre);
+        console.log('🟢 [Campaign Report] Campaign details received:', d);
+        if (d) {
+          setCampaignName(d.nombre);
+          console.log('🟢 [Campaign Report] Campaign name set to:', d.nombre);
+        }
       } catch (e) {
-        console.error(e);
+        console.error('🔴 [Campaign Report] Error loading campaign:', e);
         toast({
           title: "Error",
           description: "Failed to load campaign details.",
@@ -86,6 +124,7 @@ export default function CampaignReportPage() {
         });
       } finally {
         setLoadingCampaign(false);
+        console.log('🔵 [Campaign Report] Campaign loading finished');
       }
     };
     if (id) load();
@@ -99,11 +138,45 @@ export default function CampaignReportPage() {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
       });
-      const data = await fetchFromBackend(`/campaign/${id}/report/data?${q}`);
+      console.log('🔵 [Campaign Report] Generating report for campaign:', id);
+      console.log('🔵 [Campaign Report] Date range:', { startDate, endDate });
+      console.log('🔵 [Campaign Report] Request URL:', `/campaign/${id}/report?${q}`);
+      
+      const data = await fetchFromBackend(`/campaign/${id}/report?${q}`);
+      
+      console.log('🟢 [Campaign Report] Report data received:', data);
+      console.log('🟢 [Campaign Report] Data type:', typeof data);
+      console.log('🟢 [Campaign Report] Has tables?', !!data?.tables);
+      console.log('🟢 [Campaign Report] Tables count:', data?.tables?.length || 0);
+      
+      if (data?.tables && data.tables.length > 0) {
+        console.log('🟢 [Campaign Report] First table:', data.tables[0]);
+        console.log('🟢 [Campaign Report] First table title:', data.tables[0]?.title);
+        console.log('🟢 [Campaign Report] First table rows count:', data.tables[0]?.rows?.length || 0);
+        
+        if (data.tables[0]?.rows && data.tables[0].rows.length > 0) {
+          console.log('🟢 [Campaign Report] First 3 rows sample:');
+          data.tables[0].rows.slice(0, 3).forEach((row: any, idx: number) => {
+            console.log(`  Row ${idx + 1}:`, {
+              ticketId: row.ticketId,
+              name: row.name,
+              phone: row.phone,
+              status: row.status,
+              hasTicketId: !!row.ticketId,
+              ticketIdType: typeof row.ticketId,
+            });
+          });
+        } else {
+          console.warn('⚠️ [Campaign Report] First table has no rows!');
+        }
+      } else {
+        console.warn('⚠️ [Campaign Report] No tables in response!');
+      }
+      
       setReportData(data);
       toast({ title: "Generated", description: "Report data updated." });
     } catch (e) {
-      console.error(e);
+      console.error('🔴 [Campaign Report] Error generating report:', e);
       toast({
         title: "Error",
         description: "Failed to generate report.",
@@ -125,6 +198,22 @@ export default function CampaignReportPage() {
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
     window.open(`${baseUrl}/campaign/${id}/report/${fmt}?${q}`, "_blank");
   };
+
+  console.log('🎨 RENDERING JSX - About to return component');
+  console.log('Current state:', {
+    loadingCampaign,
+    campaignName,
+    generating,
+    hasStartDate: !!startDate,
+    hasEndDate: !!endDate,
+    hasReportData: !!reportData,
+    reportDataTablesCount: reportData?.tables?.length || 0,
+  });
+
+  // Log antes del return
+  if (typeof window !== 'undefined') {
+    console.log('🎨 JSX RENDERING - Inside return statement');
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 p-6">
@@ -251,6 +340,17 @@ export default function CampaignReportPage() {
         </div>
       ) : (
         <div className="space-y-8 animate-in slide-in-from-bottom-4">
+          {(() => {
+            console.log('=== RENDERING REPORT DATA ===');
+            console.log('Report data:', reportData);
+            console.log('Tables count:', reportData?.tables?.length);
+            if (reportData?.tables) {
+              reportData.tables.forEach((table, i) => {
+                console.log(`Table ${i}:`, table.title, 'Rows:', table.rows.length);
+              });
+            }
+            return null;
+          })()}
           {/* Metrics Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {reportData.metrics.map((m, i) => (
@@ -272,7 +372,14 @@ export default function CampaignReportPage() {
           </div>
 
           {/* Tables */}
-          {reportData.tables.map((table, i) => (
+          {reportData.tables.map((table, i) => {
+            console.log(`🟡 [Campaign Report] Rendering table ${i}:`, {
+              title: table.title,
+              rowsCount: table.rows.length,
+              firstRowSample: table.rows[0],
+            });
+            
+            return (
             <div key={i} className="space-y-3">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-primary" />{" "}
@@ -282,6 +389,9 @@ export default function CampaignReportPage() {
                 </Badge>
               </h3>
               <div className="rounded-xl border bg-card shadow-sm overflow-hidden overflow-x-auto">
+                <div className="px-6 py-2 bg-muted/30 border-b text-xs text-muted-foreground">
+                  💡 Click on any row to view ticket details in All Tickets
+                </div>
                 <table className="w-full text-sm text-left">
                   <thead className="bg-muted/50 text-xs uppercase font-semibold text-muted-foreground border-b">
                     <tr>
@@ -304,45 +414,126 @@ export default function CampaignReportPage() {
                         </td>
                       </tr>
                     ) : (
-                      table.rows.map((row, idx) => (
-                        <tr
-                          key={idx}
-                          className="hover:bg-muted/30 transition-colors"
-                        >
-                          <td className="px-6 py-3 font-medium text-foreground">
-                            {row.name}
-                          </td>
-                          <td className="px-6 py-3 text-muted-foreground font-mono text-xs">
-                            {row.phone}
-                          </td>
-                          <td className="px-6 py-3">
-                            <Badge
-                              variant="outline"
-                              className="font-normal text-[10px] uppercase tracking-wide"
-                            >
-                              {row.status}
-                            </Badge>
-                          </td>
-                          <td
-                            className="px-6 py-3 max-w-[300px] truncate text-muted-foreground"
-                            title={row.note}
+                      table.rows.map((row, idx) => {
+                        console.log(`🟡 [Campaign Report] Rendering row ${idx}:`, {
+                          ticketId: row.ticketId,
+                          name: row.name,
+                          hasTicketId: !!row.ticketId,
+                          ticketIdType: typeof row.ticketId,
+                          fullRow: row,
+                        });
+                        
+                        const handleRowClick = (e: React.MouseEvent) => {
+                          // SIMPLE TEST - This should ALWAYS fire
+                          alert('CLICK DETECTED! Check console for details.');
+                          console.log('=== ROW CLICKED ===');
+                          console.log('🟣 [Campaign Report] Row clicked!', {
+                            rowIndex: idx,
+                            event: e,
+                            target: e.target,
+                            currentTarget: e.currentTarget,
+                            rowData: row,
+                            ticketId: row.ticketId,
+                            hasTicketId: !!row.ticketId,
+                          });
+                          
+                          // Prevent event from bubbling up
+                          e.preventDefault();
+                          e.stopPropagation();
+                          
+                          // Check if click was on a badge or other interactive element
+                          const target = e.target as HTMLElement;
+                          console.log('🟣 [Campaign Report] Click target:', {
+                            tagName: target.tagName,
+                            className: target.className,
+                            isButton: !!target.closest('button'),
+                            isLink: !!target.closest('a'),
+                            isBadge: target.closest('[class*="Badge"]') !== null,
+                          });
+                          
+                          if (target.closest('button') || target.closest('a')) {
+                            console.log('🟣 [Campaign Report] Click was on button/link, ignoring');
+                            return;
+                          }
+                          
+                          if (row.ticketId) {
+                            const ticketUrl = `/tickets?id=${row.ticketId}`;
+                            console.log('🟢 [Campaign Report] Navigating to ticket:', {
+                              ticketId: row.ticketId,
+                              url: ticketUrl,
+                              router: router,
+                              rowData: row,
+                            });
+                            router.push(ticketUrl);
+                          } else {
+                            console.error('🔴 [Campaign Report] Ticket ID is missing!', {
+                              row: row,
+                              rowIndex: idx,
+                              tableTitle: table.title,
+                            });
+                            toast({
+                              title: "Error",
+                              description: "Ticket ID not found. Please refresh the report.",
+                              variant: "destructive",
+                            });
+                          }
+                        };
+                        
+                        return (
+                          <tr
+                            key={idx}
+                            className="hover:bg-muted/30 transition-colors cursor-pointer"
+                            onClick={(e) => {
+                              console.log('=== TR ONCLICK FIRED ===', idx);
+                              handleRowClick(e);
+                            }}
+                            onMouseDown={() => console.log('=== MOUSE DOWN ===', idx)}
+                            onMouseUp={() => console.log('=== MOUSE UP ===', idx)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                handleRowClick(e as any);
+                              }
+                            }}
+                            style={{ cursor: 'pointer' }}
                           >
-                            {row.note || "-"}
-                          </td>
-                          <td className="px-6 py-3 text-muted-foreground whitespace-nowrap">
-                            {new Date(row.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="px-6 py-3 text-muted-foreground">
-                            {row.agentName}
-                          </td>
-                        </tr>
-                      ))
+                            <td className="px-6 py-3 font-medium text-foreground">
+                              {row.name}
+                            </td>
+                            <td className="px-6 py-3 text-muted-foreground font-mono text-xs">
+                              {row.phone}
+                            </td>
+                            <td className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
+                              <Badge
+                                variant="outline"
+                                className="font-normal text-[10px] uppercase tracking-wide pointer-events-none"
+                              >
+                                {row.status}
+                              </Badge>
+                            </td>
+                            <td
+                              className="px-6 py-3 max-w-[300px] truncate text-muted-foreground"
+                              title={row.note}
+                            >
+                              {row.note || "-"}
+                            </td>
+                            <td className="px-6 py-3 text-muted-foreground whitespace-nowrap">
+                              {new Date(row.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-3 text-muted-foreground">
+                              {row.agentName}
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

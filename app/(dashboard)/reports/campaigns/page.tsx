@@ -1,7 +1,9 @@
 "use client";
 
+console.log('🚀🚀🚀 REPORTS CAMPAIGNS PAGE FILE LOADED 🚀🚀🚀');
+
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -59,6 +61,7 @@ type Ticket = {
 };
 
 type CustomerRow = {
+  ticketId?: number;
   name: string;
   phone: string;
   direction?: string;
@@ -215,12 +218,42 @@ const CustomerTable = ({
   title: string;
   rows: CustomerRow[];
 }) => {
+  const router = useRouter();
+  
+  console.log('🟡 [Reports Campaigns] Rendering CustomerTable:', {
+    title,
+    rowsCount: rows.length,
+    firstRowSample: rows[0],
+  });
+
+  const handleRowClick = (row: CustomerRow, index: number) => {
+    console.log('🟣 [Reports Campaigns] Row clicked!', {
+      title,
+      index,
+      row,
+      ticketId: row.ticketId,
+      hasTicketId: !!row.ticketId,
+    });
+
+    if (row.ticketId) {
+      const ticketUrl = `/tickets?id=${row.ticketId}`;
+      console.log('🟢 [Reports Campaigns] Navigating to:', ticketUrl);
+      router.push(ticketUrl);
+    } else {
+      console.warn('⚠️ [Reports Campaigns] No ticketId in row:', row);
+      alert('Ticket ID not found. The backend may not be returning ticketId in the report data.');
+    }
+  };
+
   return (
     <div className="flex flex-col gap-3 rounded-xl border bg-card text-card-foreground shadow-sm">
       <div className="flex flex-col border-b px-6 py-4">
         <h3 className="font-semibold leading-none tracking-tight">{title}</h3>
         <p className="text-sm text-muted-foreground mt-1">
           {rows.length} {rows.length === 1 ? "record" : "records"} found
+        </p>
+        <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 flex items-center gap-1">
+          💡 Click on any row to view ticket details in All Tickets
         </p>
       </div>
 
@@ -241,10 +274,26 @@ const CustomerTable = ({
                 No customer data available for this section.
               </div>
             ) : (
-              rows.map((row, index) => (
+              rows.map((row, index) => {
+                console.log(`🟡 [Reports Campaigns] Rendering row ${index}:`, {
+                  ticketId: row.ticketId,
+                  name: row.name,
+                  hasTicketId: !!row.ticketId,
+                });
+
+                return (
                 <div
                   key={`${title}-${index}`}
-                  className="grid grid-cols-12 text-sm hover:bg-muted/30 transition-colors"
+                  className="grid grid-cols-12 text-sm hover:bg-muted/30 transition-colors cursor-pointer"
+                  onClick={(e) => {
+                    console.log('=== ROW CLICK EVENT ===', index);
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleRowClick(row, index);
+                  }}
+                  onMouseDown={() => console.log('=== MOUSE DOWN ===', index)}
+                  onMouseUp={() => console.log('=== MOUSE UP ===', index)}
+                  style={{ cursor: 'pointer' }}
                 >
                   <div
                     className="col-span-3 px-6 py-3 font-medium truncate"
@@ -269,7 +318,8 @@ const CustomerTable = ({
                     {row.note || "—"}
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -279,8 +329,17 @@ const CustomerTable = ({
 };
 
 export default function CampaignReportsPage() {
+  console.log('═══════════════════════════════════════════════════');
+  console.log('🎯 CAMPAIGN REPORTS PAGE COMPONENT RENDERING');
+  console.log('═══════════════════════════════════════════════════');
+  
   const searchParams = useSearchParams();
   const campaignIdParam = searchParams.get("campaignId");
+  
+  console.log('📋 Component initialized:', {
+    campaignIdParam,
+    timestamp: new Date().toISOString(),
+  });
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
@@ -369,9 +428,24 @@ export default function CampaignReportsPage() {
         startDate,
         endDate,
       });
+      console.log('🔵 [Reports Campaigns] Fetching report data...');
+      console.log('🔵 [Reports Campaigns] URL:', `/campaign/${selectedCampaignId}/report?${params.toString()}`);
+      
       const response = await fetchFromBackend(
         `/campaign/${selectedCampaignId}/report?${params.toString()}`
       );
+      
+      console.log('🟢 [Reports Campaigns] Report data received:', response);
+      console.log('🟢 [Reports Campaigns] Tables count:', response?.tables?.length);
+      
+      if (response?.tables && response.tables.length > 0) {
+        console.log('🟢 [Reports Campaigns] First table sample:', response.tables[0]);
+        if (response.tables[0]?.rows && response.tables[0].rows.length > 0) {
+          console.log('🟢 [Reports Campaigns] First row sample:', response.tables[0].rows[0]);
+          console.log('🟢 [Reports Campaigns] First row has ticketId?', !!response.tables[0].rows[0].ticketId);
+        }
+      }
+      
       if (!response) throw new Error("No data from backend");
       // El backend ya entrega los datos agregados y tablas
       setReport({
