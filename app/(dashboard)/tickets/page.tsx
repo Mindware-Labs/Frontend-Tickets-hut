@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, JSX } from "react";
+import { useState, useMemo, useEffect, JSX, useRef } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
 import useSWR from "swr";
 import {
@@ -167,6 +167,7 @@ export default function TicketsPage() {
   const [createAttachmentFiles, setCreateAttachmentFiles] = useState<File[]>(
     []
   );
+  const processedTicketIdRef = useRef<string | null>(null);
   const [customerSearchCreate, setCustomerSearchCreate] = useState("");
   const [yardSearchCreate, setYardSearchCreate] = useState("");
   const [agentSearchCreate, setAgentSearchCreate] = useState("");
@@ -614,24 +615,100 @@ export default function TicketsPage() {
     setShowViewModal(false);
   }, [pathname]);
 
+  // Handle search parameter from URL - separate effect to ensure it runs immediately
+  useEffect(() => {
+    // Obtener el parámetro de búsqueda de la URL de dos formas para mayor robustez
+    const searchParam = searchParams.get("search");
+    let searchParamValue = searchParam ? decodeURIComponent(searchParam) : null;
+    
+    // También verificar directamente desde window.location como respaldo
+    if (typeof window !== 'undefined' && !searchParamValue) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlSearchParam = urlParams.get("search");
+      if (urlSearchParam) {
+        searchParamValue = decodeURIComponent(urlSearchParam);
+      }
+    }
+    
+    // Get all search params for debugging
+    const allParams: Record<string, string> = {};
+    searchParams.forEach((value, key) => {
+      allParams[key] = value;
+    });
+    
+    console.log('🔍 [Tickets Page] Search effect triggered:', {
+      searchParam,
+      searchParamValue,
+      allParams,
+      searchParamsString: searchParams.toString(),
+      currentSearch: search,
+      windowLocation: typeof window !== 'undefined' ? window.location.href : 'N/A',
+    });
+    
+    // Sincronizar el estado del search con el parámetro de la URL
+    // Solo actualizar si el valor es diferente para evitar renders innecesarios
+    if (searchParamValue !== null && searchParamValue.trim() !== "") {
+      if (searchParamValue !== search) {
+        console.log('🔍 [Tickets Page] Setting search from URL:', {
+          searchParam,
+          searchParamValue,
+          currentSearch: search,
+          willUpdate: true,
+        });
+        setSearch(searchParamValue);
+        console.log('✅ [Tickets Page] Search updated to:', searchParamValue);
+      }
+    } else if (!searchParamValue && search) {
+      // Si no hay parámetro de búsqueda en la URL y el search tiene valor, limpiarlo
+      console.log('ℹ️ [Tickets Page] No search param in URL, clearing search');
+      setSearch("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // Extract URL params as stable values for dependencies
+  const ticketIdParam = searchParams.get("id");
+  const customerIdParam = searchParams.get("customerId");
+  const viewParam = searchParams.get("view");
+  const ticketsLength = tickets.length;
+
   // Handle URL parameters for filtering
   useEffect(() => {
+    console.log('🔵 [Tickets Page] URL params effect triggered:', {
+      ticketIdParam,
+      customerIdParam,
+      viewParam,
+      ticketsLength,
+      processedTicketId: processedTicketIdRef.current,
+    });
+
     // 1. Check for view param first
-    const viewParam = searchParams.get("view");
     if (viewParam) {
       setActiveView(viewParam);
     }
 
-    if (!tickets.length) return;
+    if (!ticketsLength) {
+      console.log('⏳ [Tickets Page] Waiting for tickets to load...');
+      return;
+    }
 
-    const ticketId = searchParams.get("id");
-    const customerId = searchParams.get("customerId");
+    if (ticketIdParam) {
+      // Solo procesar si es un ticketId diferente al que ya procesamos
+      if (processedTicketIdRef.current === ticketIdParam) {
+        console.log('⏭️ [Tickets Page] Ticket already processed, skipping');
+        return; // Ya procesamos este ticketId, no hacer nada
+      }
 
-    if (ticketId) {
+      console.log('🔍 [Tickets Page] Looking for ticket:', ticketIdParam);
       // Filter and open specific ticket
-      const ticket = tickets.find((t: Ticket) => t.id.toString() === ticketId);
+      const ticket = tickets.find((t: Ticket) => t.id.toString() === ticketIdParam);
       if (ticket) {
-        setUrlTicketId(ticketId);
+        console.log('✅ [Tickets Page] Ticket found, opening modal:', {
+          ticketId: ticket.id,
+          hasCampaign: !!(ticket.campaignId || ticket.campaign),
+        });
+        processedTicketIdRef.current = ticketIdParam; // Marcar como procesado
+        setUrlTicketId(ticketIdParam);
         setSelectedTicket(ticket);
         setShowDetails(true);
         // Open the appropriate modal based on whether ticket has a campaign
@@ -640,12 +717,19 @@ export default function TicketsPage() {
         } else {
           setShowEditModal(true);
         }
+      } else {
+        console.log('❌ [Tickets Page] Ticket not found:', ticketIdParam);
       }
-    } else if (customerId) {
+    } else if (customerIdParam) {
       // Filter by customer ID
-      setUrlCustomerId(customerId);
+      setUrlCustomerId(customerIdParam);
+      processedTicketIdRef.current = null; // Reset cuando no hay ticketId
+    } else {
+      // Si no hay ticketId en la URL, resetear
+      processedTicketIdRef.current = null;
     }
-  }, [tickets, searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticketIdParam, customerIdParam, viewParam, ticketsLength]);
 
   const selectedYard = useMemo(() => {
     return yards.find((y) => y.id.toString() === selectedYardId);
@@ -699,6 +783,12 @@ export default function TicketsPage() {
   }, [yards, yardFilterSearch]);
 
   const filteredTickets = useMemo(() => {
+    console.log('🔎 [Tickets Page] Filtering tickets with search:', {
+      search,
+      ticketsCount: tickets.length,
+      searchLength: search.length,
+    });
+    
     const filtered = tickets.filter((ticket: Ticket) => {
       // ⚠️ ELIMINADO EL FILTRO ESTRICTO POR ID AQUÍ
       // if (urlTicketId) { ... } -> Borrado para que se vea la lista completa
@@ -725,11 +815,18 @@ export default function TicketsPage() {
       const assigneeName = getAssigneeName(ticket.assignedTo);
       const isAssignedToMe = isTicketAssignedToCurrentUser(ticket);
 
-      const matchesSearch =
-        clientName.toLowerCase().includes(search.toLowerCase()) ||
-        yardName.toLowerCase().includes(search.toLowerCase()) ||
-        ticket.id.toString().includes(search) ||
-        phone.toLowerCase().includes(search.toLowerCase());
+      const searchLower = search ? search.toLowerCase().trim() : "";
+      const searchTrimmed = search ? search.trim() : "";
+      const phoneDigitsOnly = phone.replace(/[^0-9]/g, "");
+      const searchDigitsOnly = searchTrimmed.replace(/[^0-9]/g, "");
+      
+      const matchesSearch = searchLower
+        ? (clientName.toLowerCase().includes(searchLower) ||
+           yardName.toLowerCase().includes(searchLower) ||
+           ticket.id.toString().includes(searchTrimmed) ||
+           phone.toLowerCase().includes(searchLower) ||
+           (phoneDigitsOnly && searchDigitsOnly && phoneDigitsOnly.includes(searchDigitsOnly)))
+        : true; // Si no hay search, mostrar todos
 
       const matchesStatus =
         statusFilter === "all" || status === normalizeEnumValue(statusFilter);
@@ -804,6 +901,14 @@ export default function TicketsPage() {
         matchesView
       );
     });
+    
+    console.log('✅ [Tickets Page] Filtered tickets result:', {
+      originalCount: tickets.length,
+      filteredCount: filtered.length,
+      search,
+      hasSearch: !!search,
+    });
+    
     if (activeView === "high_priority") {
       return filtered.sort((a: Ticket, b: Ticket) => {
         const statusA = normalizeEnumValue(a.status);
@@ -849,7 +954,21 @@ export default function TicketsPage() {
     yardFilter,
   ]);
 
-  const handleViewDetails = (ticket: Ticket) => {
+  const handleViewDetails = async (ticket: Ticket) => {
+    // Obtener el ticket completo desde el backend para asegurar que tenga callHistory
+    try {
+      const response = await fetch(`/api/tickets/${ticket.id}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          ticket = { ...ticket, ...result.data }; // Actualizar con datos completos del backend
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching full ticket data:', error);
+      // Continuar con el ticket de la lista si falla la petición
+    }
+
     setSelectedTicket(ticket);
     setSelectedYardId(ticket.yardId || "");
     setAttachmentFiles([]);

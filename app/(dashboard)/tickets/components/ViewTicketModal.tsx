@@ -26,6 +26,10 @@ import {
   ArrowRightCircle,
   Tag,
   MessageSquare,
+  History,
+  Clock,
+  PhoneIncoming,
+  PhoneOutgoing,
 } from "lucide-react";
 import { Ticket } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
@@ -335,6 +339,88 @@ export function ViewTicketModal({
                         </Button>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Call History - Ledger Style */}
+              {(ticket as any).callHistory && (ticket as any).callHistory.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <History className="h-4 w-4" /> Historial de Actualizaciones
+                  </h4>
+                  <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
+                    <ScrollArea className="max-h-[400px]">
+                      <div className="divide-y divide-border/50">
+                        {((ticket as any).callHistory || []).slice().reverse().map((call: any, idx: number) => {
+                          const directionText = call.isMissed 
+                            ? `Missed (${call.originalDirection || call.direction})`
+                            : call.direction;
+                          const directionColor = call.isMissed 
+                            ? 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20'
+                            : call.direction === 'INBOUND'
+                            ? 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20'
+                            : 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20';
+                          
+                          const DirectionIcon = call.direction === 'INBOUND' ? PhoneIncoming : PhoneOutgoing;
+                          
+                          return (
+                            <div key={idx} className="p-4 hover:bg-muted/30 transition-colors">
+                              <div className="flex items-start gap-3">
+                                <div className="mt-0.5 p-1.5 bg-muted rounded-md text-muted-foreground shrink-0">
+                                  <Clock className="h-3.5 w-3.5" />
+                                </div>
+                                <div className="flex-1 min-w-0 space-y-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs font-semibold text-foreground">
+                                      {new Date(call.createdAt).toLocaleString('es-ES', {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric'
+                                      })}
+                                    </span>
+                                    <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${directionColor}`}>
+                                      <DirectionIcon className="h-2.5 w-2.5 mr-1" />
+                                      {directionText}
+                                    </Badge>
+                                    {call.agentName && (
+                                      <span className="text-xs text-muted-foreground">
+                                        • {call.agentName}
+                                      </span>
+                                    )}
+                                    {call.duration !== undefined && call.duration !== null && (
+                                      <span className="text-xs text-muted-foreground">
+                                        • {Math.floor(call.duration / 60)}m {call.duration % 60}s
+                                      </span>
+                                    )}
+                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                                      {formatEnumLabel(call.status)}
+                                    </Badge>
+                                  </div>
+                                  
+                                  {(call.issueDetail || call.campaignOption) && (
+                                    <div className="space-y-1 pl-2 border-l-2 border-muted">
+                                      {call.issueDetail && (
+                                        <p className="text-sm text-foreground">
+                                          {call.issueDetail}
+                                        </p>
+                                      )}
+                                      {call.campaignOption && (
+                                        <p className="text-xs text-muted-foreground">
+                                          Opción de Campaña: {formatEnumLabel(call.campaignOption)}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
                   </div>
                 </div>
               )}

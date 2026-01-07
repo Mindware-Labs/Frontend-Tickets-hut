@@ -435,8 +435,6 @@ export default function CampaignReportPage() {
                         });
                         
                         const handleRowClick = (e: React.MouseEvent) => {
-                          // SIMPLE TEST - This should ALWAYS fire
-                          alert('CLICK DETECTED! Check console for details.');
                           console.log('=== ROW CLICKED ===');
                           console.log('🟣 [Campaign Report] Row clicked!', {
                             rowIndex: idx,
@@ -460,7 +458,14 @@ export default function CampaignReportPage() {
                             isButton: !!target.closest('button'),
                             isLink: !!target.closest('a'),
                             isBadge: target.closest('[class*="Badge"]') !== null,
+                            isHistory: !!(target.closest('details') || target.closest('summary') || target.closest('[data-history-section]')),
                           });
+                          
+                          // IMPORTANTE: Verificar si el click fue en el historial
+                          if (target.closest('details') || target.closest('summary') || target.closest('[data-history-section]')) {
+                            console.log('🛑 [Campaign Report] Click was on history section, ignoring handleRowClick');
+                            return;
+                          }
                           
                           if (target.closest('button') || target.closest('a')) {
                             console.log('🟣 [Campaign Report] Click was on button/link, ignoring');
@@ -468,10 +473,17 @@ export default function CampaignReportPage() {
                           }
                           
                           if (row.ticketId) {
-                            const ticketUrl = `/tickets?id=${row.ticketId}`;
+                            // Incluir el nombre o teléfono del cliente en el parámetro search
+                            const searchTerm = row.name || row.phone || '';
+                            const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
+                            const ticketUrl = `/tickets?id=${row.ticketId}${searchParam}`;
                             console.log('🟢 [Campaign Report] Navigating to ticket:', {
                               ticketId: row.ticketId,
                               url: ticketUrl,
+                              searchTerm: searchTerm,
+                              rowName: row.name,
+                              rowPhone: row.phone,
+                              searchParam: searchParam,
                               router: router,
                               rowData: row,
                             });
@@ -506,19 +518,46 @@ export default function CampaignReportPage() {
                         return (
                           <tr
                             key={idx}
-                            className="hover:bg-muted/30 transition-colors"
+                            className="transition-colors [&:has([data-history-section]):hover]:bg-transparent hover:bg-muted/30"
                           >
                             <td 
                               className="px-6 py-3 font-medium text-foreground cursor-pointer"
                               onClick={(e) => {
                                 // Verificar que el clic NO fue en el historial
                                 const target = e.target as HTMLElement;
-                                if (target.closest('details') || target.closest('summary') || target.closest('[data-history]')) {
-                                  console.log('=== CLICK EN HISTORIAL DETECTADO EN NOMBRE, IGNORANDO ===');
+                                const isHistoryClick = target.closest('details') || target.closest('summary') || target.closest('[data-history]') || target.closest('[data-history-section]');
+                                if (isHistoryClick) {
+                                  console.log('=== CLICK EN HISTORIAL DETECTADO EN NOMBRE, IGNORANDO ===', {
+                                    target: target.tagName,
+                                    closestDetails: !!target.closest('details'),
+                                    closestSummary: !!target.closest('summary'),
+                                    closestDataHistory: !!target.closest('[data-history-section]'),
+                                  });
+                                  e.stopPropagation();
+                                  e.preventDefault();
                                   return;
                                 }
                                 console.log('=== CLICK EN NOMBRE ===', idx);
                                 handleRowClick(e);
+                              }}
+                              onClickCapture={(e) => {
+                                // Capturar en fase de captura para detener antes de que llegue a otros handlers
+                                const target = e.target as HTMLElement;
+                                const isHistoryClick = target.closest('details') || target.closest('summary') || target.closest('[data-history]') || target.closest('[data-history-section]');
+                                if (isHistoryClick) {
+                                  console.log('=== CAPTURE: CLICK EN HISTORIAL EN NOMBRE, DETENIENDO ===');
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                }
+                              }}
+                              onMouseDown={(e) => {
+                                // Verificar que el mousedown NO fue en el historial
+                                const target = e.target as HTMLElement;
+                                if (target.closest('details') || target.closest('summary') || target.closest('[data-history]') || target.closest('[data-history-section]')) {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  return;
+                                }
                               }}
                               role="button"
                               tabIndex={0}
@@ -535,12 +574,39 @@ export default function CampaignReportPage() {
                               onClick={(e) => {
                                 // Verificar que el clic NO fue en el historial
                                 const target = e.target as HTMLElement;
-                                if (target.closest('details') || target.closest('summary') || target.closest('[data-history]')) {
-                                  console.log('=== CLICK EN HISTORIAL DETECTADO EN TELÉFONO, IGNORANDO ===');
+                                const isHistoryClick = target.closest('details') || target.closest('summary') || target.closest('[data-history]') || target.closest('[data-history-section]');
+                                if (isHistoryClick) {
+                                  console.log('=== CLICK EN HISTORIAL DETECTADO EN TELÉFONO, IGNORANDO ===', {
+                                    target: target.tagName,
+                                    closestDetails: !!target.closest('details'),
+                                    closestSummary: !!target.closest('summary'),
+                                    closestDataHistory: !!target.closest('[data-history-section]'),
+                                  });
+                                  e.stopPropagation();
+                                  e.preventDefault();
                                   return;
                                 }
                                 console.log('=== CLICK EN TELÉFONO ===', idx);
                                 handleRowClick(e);
+                              }}
+                              onClickCapture={(e) => {
+                                // Capturar en fase de captura para detener antes de que llegue a otros handlers
+                                const target = e.target as HTMLElement;
+                                const isHistoryClick = target.closest('details') || target.closest('summary') || target.closest('[data-history]') || target.closest('[data-history-section]');
+                                if (isHistoryClick) {
+                                  console.log('=== CAPTURE: CLICK EN HISTORIAL EN TELÉFONO, DETENIENDO ===');
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                }
+                              }}
+                              onMouseDown={(e) => {
+                                // Verificar que el mousedown NO fue en el historial
+                                const target = e.target as HTMLElement;
+                                if (target.closest('details') || target.closest('summary') || target.closest('[data-history]') || target.closest('[data-history-section]')) {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  return;
+                                }
                               }}
                               role="button"
                               tabIndex={0}
@@ -579,17 +645,23 @@ export default function CampaignReportPage() {
                             <td 
                               className="px-6 py-3 max-w-[300px] text-muted-foreground"
                               onClick={(e) => {
-                                // Si el clic fue en el historial, detener propagación
+                                // Si el clic fue en el historial, detener propagación completamente
                                 const target = e.target as HTMLElement;
-                                if (target.closest('details') || target.closest('summary')) {
+                                if (target.closest('details') || target.closest('summary') || target.closest('[data-history-section]')) {
                                   e.stopPropagation();
                                   e.preventDefault();
+                                  console.log('🛑 [Campaign Report] Click en historial detectado en TD, bloqueando propagación');
+                                  return;
                                 }
                               }}
                               onMouseDown={(e) => {
+                                // Si el clic fue en el historial, detener propagación completamente
                                 const target = e.target as HTMLElement;
-                                if (target.closest('details') || target.closest('summary')) {
+                                if (target.closest('details') || target.closest('summary') || target.closest('[data-history-section]')) {
                                   e.stopPropagation();
+                                  e.preventDefault();
+                                  console.log('🛑 [Campaign Report] Mousedown en historial detectado en TD, bloqueando propagación');
+                                  return;
                                 }
                               }}
                             >
@@ -599,50 +671,144 @@ export default function CampaignReportPage() {
                                 </div>
                                 {hasHistory ? (
                                   <div 
-                                    className="mt-2"
+                                    className="mt-2 relative z-10"
+                                    data-history-section="true"
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      e.preventDefault();
                                     }}
-                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => {
+                                      e.stopPropagation();
+                                      e.preventDefault();
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      // Prevenir que el hover de la fila se active
+                                      e.stopPropagation();
+                                    }}
                                   >
                                     <details 
                                       className="group"
+                                      data-history-section="true"
                                       onClick={(e) => {
-                                        e.stopPropagation();
-                                        // NO usar preventDefault() aquí porque bloquea el comportamiento nativo
+                                        // Solo detener propagación si el click NO fue en el summary
+                                        const target = e.target as HTMLElement;
+                                        if (!target.closest('summary')) {
+                                          e.stopPropagation();
+                                        }
                                       }}
                                       onMouseDown={(e) => {
-                                        e.stopPropagation();
+                                        // Solo detener propagación si el mousedown NO fue en el summary
+                                        const target = e.target as HTMLElement;
+                                        if (!target.closest('summary')) {
+                                          e.stopPropagation();
+                                        }
                                       }}
                                     >
                                       <summary 
                                         className="cursor-pointer text-blue-600 dark:text-blue-400 hover:underline text-[10px] select-none flex items-center gap-1 py-1"
                                         style={{ listStyle: 'none' }}
+                                        data-history-section="true"
                                         onClick={(e) => {
+                                          console.log('🔍 [Campaign Report] Ver historial clicked!', {
+                                            rowName: row.name,
+                                            rowPhone: row.phone,
+                                            event: e,
+                                            target: e.target,
+                                            currentTarget: e.currentTarget,
+                                            eventPhase: e.eventPhase,
+                                          });
+                                          
+                                          // IMPORTANTE: stopPropagation y preventDefault PRIMERO
                                           e.stopPropagation();
-                                          console.log('📝 Summary clicked - stopped propagation');
-                                          // NO usar preventDefault() aquí porque bloquea el comportamiento nativo del details
+                                          e.preventDefault(); // Prevenir que se expanda el details Y que se propague
+                                          
+                                          // Redirigir a la vista de tickets con el search del cliente
+                                          const searchTerm = row.name || row.phone || '';
+                                          console.log('🔍 [Campaign Report] Search term extracted:', {
+                                            searchTerm,
+                                            rowName: row.name,
+                                            rowPhone: row.phone,
+                                            hasName: !!row.name,
+                                            hasPhone: !!row.phone,
+                                          });
+                                          
+                                          if (searchTerm) {
+                                            const ticketsUrl = `/tickets?search=${encodeURIComponent(searchTerm.trim())}`;
+                                            console.log('🔍 [Campaign Report] Navigating to tickets with search:', {
+                                              searchTerm,
+                                              searchTermTrimmed: searchTerm.trim(),
+                                              url: ticketsUrl,
+                                              rowName: row.name,
+                                              rowPhone: row.phone,
+                                              encodedUrl: ticketsUrl,
+                                            });
+                                            // Usar router.push para navegar con el parámetro de búsqueda
+                                            router.push(ticketsUrl);
+                                          } else {
+                                            console.warn('⚠️ [Campaign Report] No search term available for customer');
+                                            // Si no hay nombre ni teléfono, redirigir sin search
+                                            setTimeout(() => {
+                                              router.push('/tickets');
+                                            }, 0);
+                                          }
+                                          
+                                          // IMPORTANTE: Retornar false también para prevenir cualquier comportamiento por defecto
+                                          return false;
                                         }}
                                         onMouseDown={(e) => {
+                                          console.log('🖱️ [Campaign Report] Ver historial mousedown');
                                           e.stopPropagation();
+                                          e.preventDefault();
+                                          return false;
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          // Prevenir que el hover de la fila se active cuando el mouse está sobre el historial
+                                          e.stopPropagation();
+                                        }}
+                                        onClickCapture={(e) => {
+                                          // Capturar el evento en la fase de captura para asegurar que se ejecute primero
+                                          const target = e.target as HTMLElement;
+                                          const isInSummary = target.closest('summary') || target.closest('[data-history-section]') || e.currentTarget.contains(target);
+                                          console.log('🔍 [Campaign Report] Ver historial clicked (capture phase)!', {
+                                            target: target.tagName,
+                                            isInSummary,
+                                            currentTarget: e.currentTarget,
+                                          });
+                                          if (isInSummary) {
+                                            // Si el click fue en el summary o sus hijos, ejecutar la navegación directamente aquí
+                                            e.stopPropagation();
+                                            e.preventDefault();
+                                            
+                                            const searchTerm = row.name || row.phone || '';
+                                            if (searchTerm) {
+                                              const ticketsUrl = `/tickets?search=${encodeURIComponent(searchTerm.trim())}`;
+                                              console.log('🔍 [Campaign Report] Navigating from capture phase:', ticketsUrl);
+                                              router.push(ticketsUrl);
+                                            }
+                                          }
                                         }}
                                       >
                                         <svg 
-                                          className="w-3 h-3 transition-transform group-open:rotate-90" 
+                                          className="w-3 h-3 transition-transform group-open:rotate-90 pointer-events-none" 
                                           fill="none" 
                                           stroke="currentColor" 
                                           viewBox="0 0 24 24"
                                         >
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                         </svg>
-                                        Ver historial ({row.callHistory!.length} {(row.callHistory!.length === 1 ? 'llamada' : 'llamadas')})
+                                        <span className="pointer-events-none">Ver historial ({row.callHistory!.length} {(row.callHistory!.length === 1 ? 'llamada' : 'llamadas')})</span>
                                       </summary>
                                       <div 
                                         className="mt-2 space-y-2 pl-2 border-l-2 border-muted max-h-40 overflow-y-auto"
+                                        data-history-section="true"
                                         onClick={(e) => {
                                           e.stopPropagation();
+                                          e.preventDefault();
                                         }}
-                                        onMouseDown={(e) => e.stopPropagation()}
+                                        onMouseDown={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                        }}
                                       >
                                         {row.callHistory!.slice().reverse().map((call, callIdx) => (
                                           <div key={callIdx} className="text-[10px] space-y-0.5">
