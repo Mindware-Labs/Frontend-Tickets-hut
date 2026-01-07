@@ -5,12 +5,28 @@ export async function GET(request: NextRequest) {
   try {
     const yards = await fetchFromBackendServer(request, "/yards");
     return NextResponse.json(yards);
-  } catch (error) {
-    console.error("Error fetching yards:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch yards" },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    // Log error details for debugging
+    const errorStatus = error?.status || 500;
+    const errorMessage = error?.message || "Failed to fetch yards";
+    
+    // If it's a 404 or the backend endpoint doesn't exist, return empty array
+    // This makes yards an optional feature
+    if (errorStatus === 404 || errorMessage.includes("Cannot connect") || errorMessage.includes("not found")) {
+      console.warn(`[api/yards] Backend endpoint /yards not found or unavailable. Returning empty array.`);
+      return NextResponse.json([]);
+    }
+    
+    // For other errors, log them but still return empty array to prevent UI breakage
+    console.error("[api/yards] Error fetching yards:", {
+      status: errorStatus,
+      message: errorMessage,
+      details: error?.body,
+    });
+    
+    // Return empty array instead of error to prevent UI breakage
+    // The frontend can handle empty arrays gracefully
+    return NextResponse.json([]);
   }
 }
 

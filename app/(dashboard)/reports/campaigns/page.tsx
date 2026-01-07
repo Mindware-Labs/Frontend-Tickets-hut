@@ -71,6 +71,7 @@ type CustomerCallHistory = {
 
 type CustomerRow = {
   ticketId?: number;
+  customerId?: number;
   name: string;
   phone: string;
   direction?: string;
@@ -237,23 +238,80 @@ const CustomerTable = ({
     firstRowSample: rows[0],
   });
 
-  const handleRowClick = (row: CustomerRow, index: number) => {
+  const handleRowClick = async (row: CustomerRow, index: number) => {
     console.log('🟣 [Reports Campaigns] Row clicked!', {
       title,
       index,
       row,
-      ticketId: row.ticketId,
-      hasTicketId: !!row.ticketId,
+      customerId: row.customerId,
+      name: row.name,
+      phone: row.phone,
     });
 
-    if (row.ticketId) {
-      const ticketUrl = `/tickets?id=${row.ticketId}`;
-      console.log('🟢 [Reports Campaigns] Navigating to:', ticketUrl);
-      router.push(ticketUrl);
-    } else {
-      console.warn('⚠️ [Reports Campaigns] No ticketId in row:', row);
-      alert('Ticket ID not found. The backend may not be returning ticketId in the report data.');
-    }
+    // Función helper para buscar cliente y redirigir a customer management
+    const navigateToCustomerManagement = async (row: CustomerRow) => {
+      console.log('🔍 [Reports Campaigns] navigateToCustomerManagement called:', {
+        customerId: row.customerId,
+        customerName: row.name,
+        customerPhone: row.phone,
+      });
+      
+      // Si tenemos customerId directamente, usarlo
+      if (row.customerId) {
+        const customerUrl = `/customers?customerId=${row.customerId}`;
+        console.log('🟢 [Reports Campaigns] ✅ Navigating to customer management using customerId:', {
+          customerId: row.customerId,
+          url: customerUrl,
+        });
+        // Usar window.location.replace para forzar la navegación y evitar interceptores
+        window.location.replace(customerUrl);
+        return;
+      }
+      
+      // Si no tenemos customerId, buscar por nombre/teléfono
+      try {
+        const customers = await fetchFromBackend("/customers?page=1&limit=500");
+        const customerList = Array.isArray(customers) ? customers : customers?.data || [];
+        
+        // Buscar el cliente que coincida con el nombre o teléfono
+        const customer = customerList.find((c: any) => 
+          (c.name && c.name.toLowerCase() === row.name.toLowerCase()) ||
+          (c.phone && c.phone === row.phone)
+        );
+        
+        if (customer && customer.id) {
+          // Redirigir a customer management con el customerId
+          const customerUrl = `/customers?customerId=${customer.id}`;
+          console.log('🟢 [Reports Campaigns] ✅ Navigating to customer management (found by search):', {
+            customerId: customer.id,
+            customerName: customer.name,
+            url: customerUrl,
+          });
+          // Usar window.location.replace para forzar la navegación y evitar interceptores
+          window.location.replace(customerUrl);
+        } else {
+          console.warn('⚠️ [Reports Campaigns] Customer not found:', {
+            rowName: row.name,
+            rowPhone: row.phone,
+          });
+          toast({
+            title: "Cliente no encontrado",
+            description: "No se pudo encontrar el cliente en la base de datos.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('🔴 [Reports Campaigns] Error buscando cliente:', error);
+        toast({
+          title: "Error",
+          description: "No se pudo buscar el cliente.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    // Redirigir a customer management en lugar de tickets
+    await navigateToCustomerManagement(row);
   };
 
   return (
@@ -264,7 +322,7 @@ const CustomerTable = ({
           {rows.length} {rows.length === 1 ? "record" : "records"} found
         </p>
         <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 flex items-center gap-1">
-          💡 Click on any row to view ticket details in All Tickets
+          💡 Click on any row to view customer details in Customer Management
         </p>
       </div>
 

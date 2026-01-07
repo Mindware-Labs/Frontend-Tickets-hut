@@ -22,6 +22,8 @@ import {
   Search,
   ArrowLeft,
   LayoutDashboard,
+  History,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -72,6 +74,7 @@ interface ReportRow {
   agentName: string;
   callCount?: number;
   callHistory?: CustomerCallHistory[];
+  customerId?: number;
 }
 
 interface ReportTable {
@@ -406,7 +409,7 @@ export default function CampaignReportPage() {
               </h3>
               <div className="rounded-xl border bg-card shadow-sm overflow-hidden overflow-x-auto">
                 <div className="px-6 py-2 bg-muted/30 border-b text-xs text-muted-foreground">
-                  💡 Click on any row to view ticket details in All Tickets
+                  💡 Click on any row to view customer details in Customer Management
                 </div>
                 <table className="w-full text-sm text-left">
                   <thead className="bg-muted/50 text-xs uppercase font-semibold text-muted-foreground border-b">
@@ -417,13 +420,14 @@ export default function CampaignReportPage() {
                       <th className="px-6 py-3 min-w-[200px]">Notes</th>
                       <th className="px-6 py-3 whitespace-nowrap">Date</th>
                       <th className="px-6 py-3 whitespace-nowrap">Agent</th>
+                      <th className="px-6 py-3 whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {table.rows.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={6}
+                          colSpan={7}
                           className="px-6 py-8 text-center italic text-muted-foreground"
                         >
                           No records found for this category.
@@ -439,69 +443,75 @@ export default function CampaignReportPage() {
                           fullRow: row,
                         });
                         
-                        const handleRowClick = (e: React.MouseEvent) => {
-                          console.log('=== ROW CLICKED ===');
-                          console.log('🟣 [Campaign Report] Row clicked!', {
-                            rowIndex: idx,
-                            event: e,
-                            target: e.target,
-                            currentTarget: e.currentTarget,
-                            rowData: row,
-                            ticketId: row.ticketId,
+                        // Función helper para buscar cliente y redirigir a customer management
+                        const navigateToCustomerManagement = async (row: ReportRow) => {
+                          console.log('🔍 [Campaign Report] navigateToCustomerManagement called:', {
+                            customerId: row.customerId,
+                            customerName: row.name,
+                            customerPhone: row.phone,
+                            ticketId: row.ticketId, // Log ticketId para debugging
                             hasTicketId: !!row.ticketId,
                           });
                           
-                          // Prevent event from bubbling up
-                          e.preventDefault();
-                          e.stopPropagation();
-                          
-                          // Check if click was on a badge or other interactive element
-                          const target = e.target as HTMLElement;
-                          console.log('🟣 [Campaign Report] Click target:', {
-                            tagName: target.tagName,
-                            className: target.className,
-                            isButton: !!target.closest('button'),
-                            isLink: !!target.closest('a'),
-                            isBadge: target.closest('[class*="Badge"]') !== null,
-                            isHistory: !!(target.closest('details') || target.closest('summary') || target.closest('[data-history-section]')),
-                          });
-                          
-                          // IMPORTANTE: Verificar si el click fue en el historial
-                          if (target.closest('details') || target.closest('summary') || target.closest('[data-history-section]')) {
-                            console.log('🛑 [Campaign Report] Click was on history section, ignoring handleRowClick');
-                            return;
-                          }
-                          
-                          if (target.closest('button') || target.closest('a')) {
-                            console.log('🟣 [Campaign Report] Click was on button/link, ignoring');
-                            return;
-                          }
-                          
+                          // IMPORTANTE: Asegurarse de que NO estamos usando ticketId para redirigir
                           if (row.ticketId) {
-                            // Incluir el nombre o teléfono del cliente en el parámetro search
-                            const searchTerm = row.name || row.phone || '';
-                            const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
-                            const ticketUrl = `/tickets?id=${row.ticketId}${searchParam}`;
-                            console.log('🟢 [Campaign Report] Navigating to ticket:', {
-                              ticketId: row.ticketId,
-                              url: ticketUrl,
-                              searchTerm: searchTerm,
-                              rowName: row.name,
-                              rowPhone: row.phone,
-                              searchParam: searchParam,
-                              router: router,
-                              rowData: row,
+                            console.warn('⚠️ [Campaign Report] Row has ticketId but we are NOT using it for navigation. Using customerId instead.');
+                          }
+                          
+                          // Si tenemos customerId directamente, usarlo
+                          if (row.customerId) {
+                            const customerUrl = `/customers?customerId=${row.customerId}`;
+                            console.log('🟢 [Campaign Report] ✅ Navigating to customer management using customerId:', {
+                              customerId: row.customerId,
+                              url: customerUrl,
+                              currentUrl: window.location.href,
                             });
-                            router.push(ticketUrl);
-                          } else {
-                            console.error('🔴 [Campaign Report] Ticket ID is missing!', {
-                              row: row,
-                              rowIndex: idx,
-                              tableTitle: table.title,
-                            });
+                            // IMPORTANTE: Usar window.location para forzar la navegación y evitar interceptores
+                            // Esto asegura que no haya ningún componente que intercepte y redirija a tickets
+                            // Usar replace en lugar de href para evitar que se agregue al historial
+                            window.location.replace(customerUrl);
+                            return;
+                          }
+                          
+                          // Si no tenemos customerId, buscar por nombre/teléfono
+                          try {
+                            const customers = await fetchFromBackend("/customers?page=1&limit=500");
+                            const customerList = Array.isArray(customers) ? customers : customers?.data || [];
+                            
+                            // Buscar el cliente que coincida con el nombre o teléfono
+                            const customer = customerList.find((c: any) => 
+                              (c.name && c.name.toLowerCase() === row.name.toLowerCase()) ||
+                              (c.phone && c.phone === row.phone)
+                            );
+                            
+                            if (customer && customer.id) {
+                              // Redirigir a customer management con el customerId
+                              const customerUrl = `/customers?customerId=${customer.id}`;
+                              console.log('🟢 [Campaign Report] ✅ Navigating to customer management (found by search):', {
+                                customerId: customer.id,
+                                customerName: customer.name,
+                                url: customerUrl,
+                                currentUrl: window.location.href,
+                              });
+                              // IMPORTANTE: Usar window.location.replace para forzar la navegación y evitar interceptores
+                              // Usar replace en lugar de href para evitar que se agregue al historial
+                              window.location.replace(customerUrl);
+                            } else {
+                              console.warn('⚠️ [Campaign Report] Customer not found:', {
+                                rowName: row.name,
+                                rowPhone: row.phone,
+                              });
+                              toast({
+                                title: "Cliente no encontrado",
+                                description: "No se pudo encontrar el cliente en la base de datos.",
+                                variant: "destructive",
+                              });
+                            }
+                          } catch (error) {
+                            console.error('🔴 [Campaign Report] Error buscando cliente:', error);
                             toast({
                               title: "Error",
-                              description: "Ticket ID not found. Please refresh the report.",
+                              description: "No se pudo buscar el cliente.",
                               variant: "destructive",
                             });
                           }
@@ -523,101 +533,84 @@ export default function CampaignReportPage() {
                         return (
                           <tr
                             key={idx}
-                            className="transition-colors [&:has([data-history-section]):hover]:bg-transparent hover:bg-muted/30"
+                            className="transition-colors [&:has([data-history-section]):hover]:bg-transparent hover:bg-muted/30 cursor-pointer"
+                            data-row-type="campaign-report"
+                            data-customer-id={row.customerId || ''}
+                            data-customer-name={row.name}
+                            data-customer-phone={row.phone}
+                            // IMPORTANTE: NO usar data-ticket-id para evitar redirecciones automáticas a tickets
+                            onClick={async (e) => {
+                              // IMPORTANTE: Prevenir cualquier redirección a tickets
+                              e.preventDefault();
+                              e.stopPropagation();
+                              // Prevenir cualquier comportamiento por defecto que pueda causar navegación
+                              e.nativeEvent.stopImmediatePropagation();
+                              
+                              // Verificar que el clic NO fue en elementos interactivos
+                              const target = e.target as HTMLElement;
+                              const isInteractive = target.closest('button') || 
+                                                   target.closest('details') || 
+                                                   target.closest('summary') || 
+                                                   target.closest('[data-history-section]') ||
+                                                   target.closest('a') ||
+                                                   target.closest('badge');
+                              
+                              if (isInteractive) {
+                                console.log('🛑 [Campaign Report] Click on interactive element, ignoring');
+                                return; // Dejar que los elementos interactivos manejen su propio clic
+                              }
+                              
+                              // Si el clic fue en la fila (no en elementos interactivos), redirigir a customer management
+                              console.log('🟢 [Campaign Report] Row clicked, navigating to customer management (NOT tickets)');
+                              await navigateToCustomerManagement(row);
+                            }}
+                            onMouseDown={(e) => {
+                              // Prevenir cualquier comportamiento por defecto en mousedown también
+                              const target = e.target as HTMLElement;
+                              const isInteractive = target.closest('button') || 
+                                                   target.closest('details') || 
+                                                   target.closest('summary') || 
+                                                   target.closest('[data-history-section]') ||
+                                                   target.closest('a') ||
+                                                   target.closest('badge');
+                              
+                              if (!isInteractive) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }
+                            }}
                           >
                             <td 
-                              className="px-6 py-3 font-medium text-foreground cursor-pointer"
+                              className="px-6 py-3 font-medium text-foreground"
                               onClick={(e) => {
-                                // Verificar que el clic NO fue en el historial
+                                // Permitir que el evento se propague al <tr> para que maneje la navegación
+                                // Solo detener si es un elemento interactivo
                                 const target = e.target as HTMLElement;
-                                const isHistoryClick = target.closest('details') || target.closest('summary') || target.closest('[data-history]') || target.closest('[data-history-section]');
-                                if (isHistoryClick) {
-                                  console.log('=== CLICK EN HISTORIAL DETECTADO EN NOMBRE, IGNORANDO ===', {
-                                    target: target.tagName,
-                                    closestDetails: !!target.closest('details'),
-                                    closestSummary: !!target.closest('summary'),
-                                    closestDataHistory: !!target.closest('[data-history-section]'),
-                                  });
+                                const isInteractive = target.closest('details') || 
+                                                     target.closest('summary') || 
+                                                     target.closest('[data-history-section]') ||
+                                                     target.closest('button');
+                                if (isInteractive) {
                                   e.stopPropagation();
-                                  e.preventDefault();
                                   return;
-                                }
-                                console.log('=== CLICK EN NOMBRE ===', idx);
-                                handleRowClick(e);
-                              }}
-                              onClickCapture={(e) => {
-                                // Capturar en fase de captura para detener antes de que llegue a otros handlers
-                                const target = e.target as HTMLElement;
-                                const isHistoryClick = target.closest('details') || target.closest('summary') || target.closest('[data-history]') || target.closest('[data-history-section]');
-                                if (isHistoryClick) {
-                                  console.log('=== CAPTURE: CLICK EN HISTORIAL EN NOMBRE, DETENIENDO ===');
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                }
-                              }}
-                              onMouseDown={(e) => {
-                                // Verificar que el mousedown NO fue en el historial
-                                const target = e.target as HTMLElement;
-                                if (target.closest('details') || target.closest('summary') || target.closest('[data-history]') || target.closest('[data-history-section]')) {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  return;
-                                }
-                              }}
-                              role="button"
-                              tabIndex={0}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  handleRowClick(e as any);
                                 }
                               }}
                             >
                               {row.name}
                             </td>
                             <td 
-                              className="px-6 py-3 text-muted-foreground font-mono text-xs cursor-pointer"
+                              className="px-6 py-3 text-muted-foreground font-mono text-xs"
                               onClick={(e) => {
-                                // Verificar que el clic NO fue en el historial
+                                // Permitir que el evento se propague al <tr> para que maneje la navegación
+                                // Solo detener si es un elemento interactivo
                                 const target = e.target as HTMLElement;
-                                const isHistoryClick = target.closest('details') || target.closest('summary') || target.closest('[data-history]') || target.closest('[data-history-section]');
-                                if (isHistoryClick) {
-                                  console.log('=== CLICK EN HISTORIAL DETECTADO EN TELÉFONO, IGNORANDO ===', {
-                                    target: target.tagName,
-                                    closestDetails: !!target.closest('details'),
-                                    closestSummary: !!target.closest('summary'),
-                                    closestDataHistory: !!target.closest('[data-history-section]'),
-                                  });
+                                const isInteractive = target.closest('details') || 
+                                                     target.closest('summary') || 
+                                                     target.closest('[data-history-section]') ||
+                                                     target.closest('button');
+                                if (isInteractive) {
                                   e.stopPropagation();
-                                  e.preventDefault();
                                   return;
-                                }
-                                console.log('=== CLICK EN TELÉFONO ===', idx);
-                                handleRowClick(e);
-                              }}
-                              onClickCapture={(e) => {
-                                // Capturar en fase de captura para detener antes de que llegue a otros handlers
-                                const target = e.target as HTMLElement;
-                                const isHistoryClick = target.closest('details') || target.closest('summary') || target.closest('[data-history]') || target.closest('[data-history-section]');
-                                if (isHistoryClick) {
-                                  console.log('=== CAPTURE: CLICK EN HISTORIAL EN TELÉFONO, DETENIENDO ===');
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                }
-                              }}
-                              onMouseDown={(e) => {
-                                // Verificar que el mousedown NO fue en el historial
-                                const target = e.target as HTMLElement;
-                                if (target.closest('details') || target.closest('summary') || target.closest('[data-history]') || target.closest('[data-history-section]')) {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  return;
-                                }
-                              }}
-                              role="button"
-                              tabIndex={0}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  handleRowClick(e as any);
                                 }
                               }}
                             >
@@ -713,7 +706,7 @@ export default function CampaignReportPage() {
                                         className="cursor-pointer text-blue-600 dark:text-blue-400 hover:underline text-[10px] select-none flex items-center gap-1 py-1"
                                         style={{ listStyle: 'none' }}
                                         data-history-section="true"
-                                        onClick={(e) => {
+                                        onClick={async (e) => {
                                           console.log('🔍 [Campaign Report] Ver historial clicked!', {
                                             rowName: row.name,
                                             rowPhone: row.phone,
@@ -727,35 +720,8 @@ export default function CampaignReportPage() {
                                           e.stopPropagation();
                                           e.preventDefault(); // Prevenir que se expanda el details Y que se propague
                                           
-                                          // Redirigir a la vista de tickets con el search del cliente
-                                          const searchTerm = row.name || row.phone || '';
-                                          console.log('🔍 [Campaign Report] Search term extracted:', {
-                                            searchTerm,
-                                            rowName: row.name,
-                                            rowPhone: row.phone,
-                                            hasName: !!row.name,
-                                            hasPhone: !!row.phone,
-                                          });
-                                          
-                                          if (searchTerm) {
-                                            const ticketsUrl = `/tickets?search=${encodeURIComponent(searchTerm.trim())}`;
-                                            console.log('🔍 [Campaign Report] Navigating to tickets with search:', {
-                                              searchTerm,
-                                              searchTermTrimmed: searchTerm.trim(),
-                                              url: ticketsUrl,
-                                              rowName: row.name,
-                                              rowPhone: row.phone,
-                                              encodedUrl: ticketsUrl,
-                                            });
-                                            // Usar router.push para navegar con el parámetro de búsqueda
-                                            router.push(ticketsUrl);
-                                          } else {
-                                            console.warn('⚠️ [Campaign Report] No search term available for customer');
-                                            // Si no hay nombre ni teléfono, redirigir sin search
-                                            setTimeout(() => {
-                                              router.push('/tickets');
-                                            }, 0);
-                                          }
+                                          // Redirigir a customer management y abrir el modal del cliente
+                                          await navigateToCustomerManagement(row);
                                           
                                           // IMPORTANTE: Retornar false también para prevenir cualquier comportamiento por defecto
                                           return false;
@@ -770,7 +736,7 @@ export default function CampaignReportPage() {
                                           // Prevenir que el hover de la fila se active cuando el mouse está sobre el historial
                                           e.stopPropagation();
                                         }}
-                                        onClickCapture={(e) => {
+                                        onClickCapture={async (e) => {
                                           // Capturar el evento en la fase de captura para asegurar que se ejecute primero
                                           const target = e.target as HTMLElement;
                                           const isInSummary = target.closest('summary') || target.closest('[data-history-section]') || e.currentTarget.contains(target);
@@ -784,12 +750,8 @@ export default function CampaignReportPage() {
                                             e.stopPropagation();
                                             e.preventDefault();
                                             
-                                            const searchTerm = row.name || row.phone || '';
-                                            if (searchTerm) {
-                                              const ticketsUrl = `/tickets?search=${encodeURIComponent(searchTerm.trim())}`;
-                                              console.log('🔍 [Campaign Report] Navigating from capture phase:', ticketsUrl);
-                                              router.push(ticketsUrl);
-                                            }
+                                            // Redirigir a customer management y abrir el modal del cliente
+                                            await navigateToCustomerManagement(row);
                                           }
                                         }}
                                       >
@@ -882,6 +844,27 @@ export default function CampaignReportPage() {
                               onMouseDown={(e) => e.stopPropagation()}
                             >
                               {row.agentName}
+                            </td>
+                            <td 
+                              className="px-6 py-3"
+                              onClick={(e) => e.stopPropagation()}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  
+                                  // Redirigir a customer management y abrir el modal del cliente
+                                  await navigateToCustomerManagement(row);
+                                }}
+                              >
+                                <History className="h-3 w-3 mr-1" />
+                                Ver Historial
+                              </Button>
                             </td>
                           </tr>
                         );

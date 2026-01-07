@@ -455,7 +455,6 @@ export function ViewTicketModal({
                                         </div>
                                       )}
                                     </div>
-                                    </div>
                                   )}
                                 </div>
                               </div>

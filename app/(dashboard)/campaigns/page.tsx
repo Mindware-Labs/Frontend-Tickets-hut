@@ -133,8 +133,12 @@ export default function CampaignsPage() {
       const data = await fetchFromBackend("/yards");
       const items = Array.isArray(data) ? data : data?.data || [];
       setYards(items);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching yards:", error);
+      // Only show toast if it's not a 401 (unauthorized) - those are handled globally
+      if (error?.status !== 401) {
+        console.warn("Failed to load yards. This might be expected if the yards feature is not enabled.");
+      }
     }
   };
 

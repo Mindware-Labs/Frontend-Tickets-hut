@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { fetchFromBackend } from "@/lib/api-client";
 import { useRole } from "@/components/providers/role-provider";
 import { toast } from "@/hooks/use-toast";
@@ -25,6 +25,7 @@ export default function CustomersPage() {
   const normalizedRole = role?.toString().toLowerCase();
   const isAgent = normalizedRole === "agent";
   const canManage = !isAgent;
+  const searchParams = useSearchParams();
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
@@ -88,6 +89,47 @@ export default function CustomersPage() {
     setShowDeleteModal(false);
     setShowDetailsModal(false);
   }, [pathname]);
+
+  // Abrir modal automáticamente si hay customerId en la URL
+  useEffect(() => {
+    const customerIdParam = searchParams.get("customerId");
+    if (customerIdParam && customers.length > 0 && !showDetailsModal) {
+      const customer = customers.find(
+        (c) => c.id.toString() === customerIdParam
+      );
+      if (customer) {
+        console.log('🔍 [Customers Page] Opening modal automatically for customer:', customerIdParam);
+        handleDetails(customer);
+        // Limpiar el parámetro de la URL después de abrir el modal
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("customerId");
+            window.history.replaceState({}, "", url.toString());
+          }
+        }, 100);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, customers]);
+
+  // Abrir modal automáticamente si hay customerId en la URL
+  useEffect(() => {
+    const customerIdParam = searchParams.get("customerId");
+    if (customerIdParam && customers.length > 0) {
+      const customer = customers.find(
+        (c) => c.id.toString() === customerIdParam
+      );
+      if (customer) {
+        handleDetails(customer);
+        // Limpiar el parámetro de la URL después de abrir el modal
+        const url = new URL(window.location.href);
+        url.searchParams.delete("customerId");
+        window.history.replaceState({}, "", url.toString());
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, customers]);
 
   const filteredCustomers = useMemo(() => {
     const term = search.toLowerCase();

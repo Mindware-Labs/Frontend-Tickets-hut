@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, JSX, useRef } from "react";
-import { useSearchParams, usePathname } from "next/navigation";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import useSWR from "swr";
 import {
   Table,
@@ -118,6 +118,7 @@ declare module "@/lib/mock-data" {
 
 export default function TicketsPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [isTabActive, setIsTabActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previousTicketCount, setPreviousTicketCount] = useState(0);
@@ -725,8 +726,12 @@ export default function TicketsPage() {
       setUrlCustomerId(customerIdParam);
       processedTicketIdRef.current = null; // Reset cuando no hay ticketId
     } else {
-      // Si no hay ticketId en la URL, resetear
+      // Si no hay ticketId ni customerId en la URL, resetear ambos
       processedTicketIdRef.current = null;
+      if (urlCustomerId) {
+        console.log('🔄 [Tickets Page] Clearing customer filter - no customerId in URL');
+        setUrlCustomerId(null);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketIdParam, customerIdParam, viewParam, ticketsLength]);
@@ -789,14 +794,21 @@ export default function TicketsPage() {
       searchLength: search.length,
     });
     
+    // Verificar si customerId está en la URL actual
+    const currentCustomerIdParam = searchParams.get("customerId");
+    
     const filtered = tickets.filter((ticket: Ticket) => {
       // ⚠️ ELIMINADO EL FILTRO ESTRICTO POR ID AQUÍ
       // if (urlTicketId) { ... } -> Borrado para que se vea la lista completa
 
-      if (urlCustomerId) {
-        return (
-          ticket.customerId && ticket.customerId.toString() === urlCustomerId
-        );
+      // Primero verificar si el ticket pertenece al cliente (si hay customerId en la URL)
+      // Pero NO hacer return temprano, continuar con los demás filtros
+      if (currentCustomerIdParam) {
+        const matchesCustomer = ticket.customerId && ticket.customerId.toString() === currentCustomerIdParam;
+        if (!matchesCustomer) {
+          return false; // Si no coincide con el cliente, excluir el ticket
+        }
+        // Si coincide, continuar con los demás filtros
       }
 
       const yardName =
@@ -933,7 +945,7 @@ export default function TicketsPage() {
     currentUserFullName,
     campaigns,
     urlTicketId,
-    urlCustomerId,
+    searchParams,
   ]);
 
   const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);
@@ -941,6 +953,17 @@ export default function TicketsPage() {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredTickets.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredTickets, currentPage, itemsPerPage]);
+
+  // Helper para obtener tickets filtrados por cliente (si hay customerId en la URL)
+  const getCustomerFilteredTickets = useMemo(() => {
+    const currentCustomerIdParam = searchParams.get("customerId");
+    if (!currentCustomerIdParam) {
+      return tickets; // Si no hay customerId, devolver todos los tickets
+    }
+    return tickets.filter((t: Ticket) => 
+      t.customerId && t.customerId.toString() === currentCustomerIdParam
+    );
+  }, [tickets, searchParams]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -953,6 +976,27 @@ export default function TicketsPage() {
     campaignFilter,
     yardFilter,
   ]);
+
+  // Función para manejar el cambio de vista y limpiar el filtro de cliente si no está en la URL
+  const handleViewChange = (view: string) => {
+    const currentCustomerIdParam = searchParams.get("customerId");
+    // Si el usuario cambia de vista manualmente y no hay customerId en la URL, limpiar el filtro
+    if (!currentCustomerIdParam) {
+      if (urlCustomerId) {
+        console.log('🔄 [Tickets Page] Clearing customer filter on view change');
+        setUrlCustomerId(null);
+      }
+      // También limpiar el parámetro de la URL si existe
+      if (typeof window !== 'undefined') {
+        const currentUrl = new URL(window.location.href);
+        if (currentUrl.searchParams.has("customerId")) {
+          currentUrl.searchParams.delete("customerId");
+          router.replace(currentUrl.pathname + currentUrl.search, { scroll: false });
+        }
+      }
+    }
+    setActiveView(view);
+  };
 
   const handleViewDetails = async (ticket: Ticket) => {
     // Obtener el ticket completo desde el backend para asegurar que tenga callHistory
@@ -2231,26 +2275,26 @@ export default function TicketsPage() {
           <Button
             variant={activeView === "all" ? "secondary" : "ghost"}
             className="w-full justify-start"
-            onClick={() => setActiveView("all")}
+            onClick={() => handleViewChange("all")}
           >
             <RefreshCw
               className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
             />
             All Tickets
             <span className="ml-auto text-xs">
-              {tickets.filter((t: Ticket) => !isMissedCall(t)).length}
+              {getCustomerFilteredTickets.filter((t: Ticket) => !isMissedCall(t)).length}
             </span>
           </Button>
           <Button
             variant={activeView === "active" ? "secondary" : "ghost"}
             className="w-full justify-start"
-            onClick={() => setActiveView("active")}
+            onClick={() => handleViewChange("active")}
           >
             <AlertCircle className="mr-2 h-4 w-4" />
             Open
             <span className="ml-auto text-xs">
               {
-                tickets.filter((t: Ticket) => {
+                getCustomerFilteredTickets.filter((t: Ticket) => {
                   if (isMissedCall(t)) return false;
                   const status = (t.status || "")
                     .toString()
@@ -2264,13 +2308,13 @@ export default function TicketsPage() {
           <Button
             variant={activeView === "assigned" ? "secondary" : "ghost"}
             className="w-full justify-start"
-            onClick={() => setActiveView("assigned")}
+            onClick={() => handleViewChange("assigned")}
           >
             <User className="mr-2 h-4 w-4" />
             Assigned
             <span className="ml-auto text-xs">
               {
-                tickets.filter(
+                getCustomerFilteredTickets.filter(
                   (t: Ticket) => !isMissedCall(t) && !!t.assignedTo
                 ).length
               }
@@ -2279,13 +2323,13 @@ export default function TicketsPage() {
           <Button
             variant={activeView === "assigned_me" ? "secondary" : "ghost"}
             className="w-full justify-start"
-            onClick={() => setActiveView("assigned_me")}
+            onClick={() => handleViewChange("assigned_me")}
           >
             <User className="mr-2 h-4 w-4" />
             My Tickets
             <span className="ml-auto text-xs">
               {
-                tickets.filter(
+                getCustomerFilteredTickets.filter(
                   (t: Ticket) =>
                     !isMissedCall(t) && isTicketAssignedToCurrentUser(t)
                 ).length
@@ -2295,13 +2339,13 @@ export default function TicketsPage() {
           <Button
             variant={activeView === "unassigned" ? "secondary" : "ghost"}
             className="w-full justify-start"
-            onClick={() => setActiveView("unassigned")}
+            onClick={() => handleViewChange("unassigned")}
           >
             <Hash className="mr-2 h-4 w-4" />
             Unassigned
             <span className="ml-auto text-xs">
               {
-                tickets.filter((t: Ticket) => !isMissedCall(t) && !t.assignedTo)
+                getCustomerFilteredTickets.filter((t: Ticket) => !isMissedCall(t) && !t.assignedTo)
                   .length
               }
             </span>
@@ -2309,18 +2353,18 @@ export default function TicketsPage() {
           <Button
             variant={activeView === "missed" ? "secondary" : "ghost"}
             className="w-full justify-start"
-            onClick={() => setActiveView("missed")}
+            onClick={() => handleViewChange("missed")}
           >
             <AlertTriangle className="mr-2 h-4 w-4" />
             Missed Calls
             <span className="ml-auto text-xs">
-              {tickets.filter((t: Ticket) => isMissedCall(t)).length}
+              {getCustomerFilteredTickets.filter((t: Ticket) => isMissedCall(t)).length}
             </span>
           </Button>
           <Button
             variant={activeView === "high_priority" ? "secondary" : "ghost"}
             className="w-full justify-start relative"
-            onClick={() => setActiveView("high_priority")}
+            onClick={() => handleViewChange("high_priority")}
           >
             <Star className="mr-2 h-4 w-4" />
             High Priority
