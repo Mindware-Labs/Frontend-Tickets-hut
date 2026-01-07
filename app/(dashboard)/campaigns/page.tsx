@@ -393,7 +393,15 @@ export default function CampaignsPage() {
           <SelectContent>
             <SelectItem value="all">All Yards</SelectItem>
             {yards.map((y) => (
-              <SelectItem key={y.id} value={y.id.toString()}>{y.name}</SelectItem>
+              <SelectItem 
+                key={y.id} 
+                value={y.id.toString()}
+                title={y.name}
+              >
+                <span className="truncate block max-w-[180px]">
+                  {y.name}
+                </span>
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -535,7 +543,9 @@ export default function CampaignsPage() {
                   <div className="flex gap-2">
                     <Badge variant="outline" className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/5 text-blue-700 border-blue-200/40 hover:bg-blue-500/10 dark:text-blue-400 dark:border-blue-900/40 transition-colors">
                       <Tag className="h-3 w-3"/> 
-                      {campaignTypeLabels[campaign.tipo]}
+                      <span className="truncate block max-w-[100px]" title={campaignTypeLabels[campaign.tipo]}>
+                        {campaignTypeLabels[campaign.tipo]}
+                      </span>
                     </Badge>
                     
                     {/* BADGE DEL YARD CON TRUNCAMIENTO */}

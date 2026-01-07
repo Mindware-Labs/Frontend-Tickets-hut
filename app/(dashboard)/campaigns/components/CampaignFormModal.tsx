@@ -34,7 +34,6 @@ import {
 } from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-// 1. IMPORTAR ENUM CORRECTO
 import { ManagementType } from "../../tickets/types";
 import { CampaignFormData, YardSummary } from "../types";
 
@@ -54,7 +53,6 @@ interface CampaignFormModalProps {
   yards: YardSummary[];
 }
 
-// 2. ACTUALIZAR ETIQUETAS USANDO EL ENUM
 const campaignTypeLabels: Record<ManagementType, string> = {
   [ManagementType.ONBOARDING]: "Onboarding",
   [ManagementType.AR]: "AR",
@@ -115,7 +113,6 @@ export function CampaignFormModal({
               <Label htmlFor={`${idPrefix}-tipo`}>Type *</Label>
               <Select
                 value={formData.tipo}
-                // 3. CASTING CORRECTO AL ENUM
                 onValueChange={(value: ManagementType) =>
                   onFormChange({ ...formData, tipo: value })
                 }
@@ -176,9 +173,12 @@ export function CampaignFormModal({
                       validationErrors.yardaId && "border-red-500"
                     )}
                   >
-                    {formData.yardaId
-                      ? yards.find((yard) => yard.id === formData.yardaId)?.name
-                      : "Select a yard..."}
+                    {/* EDITADO: Envolvemos el texto en un span truncate */}
+                    <span className="truncate">
+                      {formData.yardaId
+                        ? yards.find((yard) => yard.id === formData.yardaId)?.name
+                        : "Select a yard..."}
+                    </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -213,8 +213,8 @@ export function CampaignFormModal({
                               setOpenYardCombobox(false);
                               if (validationErrors.yardaId) {
                                 onValidationErrorChange({
-                                    ...validationErrors,
-                                    yardaId: "",
+                                  ...validationErrors,
+                                  yardaId: "",
                                 });
                               }
                             }}
