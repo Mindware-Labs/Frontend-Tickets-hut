@@ -184,8 +184,8 @@ export function EditTicketModal({
   const campaignOptionValues = isOnboardingCampaign
     ? Object.values(OnboardingOption)
     : isArCampaign
-    ? Object.values(ArOption)
-    : [];
+      ? Object.values(ArOption)
+      : [];
 
   if (!ticket) return null;
 
@@ -229,43 +229,48 @@ export function EditTicketModal({
                           : "",
                         campaignOption:
                           campaign?.tipo === ManagementType.ONBOARDING ||
-                          campaign?.tipo === ManagementType.AR
+                            campaign?.tipo === ManagementType.AR
                             ? editFormData.campaignOption
                             : "",
                       });
                     }}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select campaign" />
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select campaign">
+                        {editFormData.campaignId ? (
+                          <span
+                            className="truncate block max-w-[200px]"
+                            title={campaigns.find(c => c.id.toString() === editFormData.campaignId)?.nombre || editFormData.campaignId}
+                          >
+                            {(() => {
+                              const selectedCampaign = campaigns.find(c => c.id.toString() === editFormData.campaignId);
+                              const displayName = selectedCampaign?.nombre || editFormData.campaignId;
+                              return displayName.length > 25 ? `${displayName.substring(0, 25)}...` : displayName;
+                            })()}
+                          </span>
+                        ) : (
+                          "Select campaign"
+                        )}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <div className="p-2 sticky top-0 bg-background z-10 pb-2 border-b mb-1">
-                        <div className="relative">
-                          <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                          <Input
-                            placeholder="Search campaigns..."
-                            className="pl-8 h-8 text-sm"
-                            value={campaignSearchEdit}
-                            onChange={(e) =>
-                              setCampaignSearchEdit(e.target.value)
-                            }
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                      </div>
-                      <ScrollArea className="h-[200px]">
+                      <SelectItem value="none">None</SelectItem>
+                      {campaigns.map((campaign) => (
                         <SelectItem
-                          value="none"
-                          className="text-muted-foreground"
+                          key={campaign.id}
+                          value={campaign.id.toString()}
+                          title={campaign.nombre}
                         >
-                          No campaign
+                          <span className="truncate block max-w-[250px]">
+                            {campaign.nombre.length > 30
+                              ? `${campaign.nombre.substring(0, 30)}...`
+                              : campaign.nombre}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            #{campaign.id}
+                          </span>
                         </SelectItem>
-                        {filteredCampaignsEdit.map((c) => (
-                          <SelectItem key={c.id} value={c.id.toString()}>
-                            {c.nombre}
-                          </SelectItem>
-                        ))}
-                      </ScrollArea>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

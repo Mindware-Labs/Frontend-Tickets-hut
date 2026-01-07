@@ -189,63 +189,78 @@ export function CreateTicketModal({
                 <Megaphone className="w-4 h-4" /> Campaign & Location
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Campaign */}
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Campaign</Label>
-                  <Select
-                    value={createFormData.campaignId}
-                    onValueChange={(value) => {
-                      const campaign = campaigns.find(
-                        (c) => c.id.toString() === value
-                      );
-                      setCreateFormData({
-                        ...createFormData,
-                        campaignId: value === "none" ? "" : value,
-                        yardId: campaign?.yardaId
-                          ? campaign.yardaId.toString()
-                          : "",
-                        campaignOption:
-                          campaign?.tipo === ManagementType.ONBOARDING ||
-                          campaign?.tipo === ManagementType.AR
-                            ? createFormData.campaignOption
-                            : "",
-                      });
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select campaign" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <div className="p-2 sticky top-0 bg-background z-10 pb-2 border-b mb-1">
-                        <div className="relative">
-                          <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                          <Input
-                            placeholder="Search campaigns..."
-                            className="pl-8 h-8 text-sm"
-                            value={campaignSearchCreate}
-                            onChange={(e) =>
-                              setCampaignSearchCreate(e.target.value)
-                            }
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                      </div>
-                      <ScrollArea className="h-[200px]">
-                        <SelectItem
-                          value="none"
-                          className="text-muted-foreground"
-                        >
-                          No campaign
-                        </SelectItem>
-                        {filteredCampaignsCreate.map((c) => (
-                          <SelectItem key={c.id} value={c.id.toString()}>
-                            {c.nombre}
-                          </SelectItem>
-                        ))}
-                      </ScrollArea>
-                    </SelectContent>
-                  </Select>
-                </div>
+  {/* Campaign */}
+  <div className="space-y-2">
+    <Label className="text-xs font-semibold">Campaign</Label>
+    <Select
+      value={createFormData.campaignId}
+      onValueChange={(value) => {
+        const campaign = campaigns.find(
+          (c) => c.id.toString() === value
+        );
+        setCreateFormData({
+          ...createFormData,
+          campaignId: value === "none" ? "" : value,
+          yardId: campaign?.yardaId
+            ? campaign.yardaId.toString()
+            : "",
+          campaignOption:
+            campaign?.tipo === ManagementType.ONBOARDING ||
+            campaign?.tipo === ManagementType.AR
+              ? createFormData.campaignOption
+              : "",
+        });
+      }}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Select campaign">
+          {createFormData.campaignId && createFormData.campaignId !== "none" && (
+            <span 
+              className="truncate block max-w-[180px]" 
+              title={campaigns.find(c => c.id.toString() === createFormData.campaignId)?.nombre || createFormData.campaignId}
+            >
+              {campaigns.find(c => c.id.toString() === createFormData.campaignId)?.nombre || createFormData.campaignId}
+            </span>
+          )}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <div className="p-2 sticky top-0 bg-background z-10 pb-2 border-b mb-1">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search campaigns..."
+              className="pl-8 h-8 text-sm"
+              value={campaignSearchCreate}
+              onChange={(e) =>
+                setCampaignSearchCreate(e.target.value)
+              }
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+        <ScrollArea className="h-[200px]">
+          <SelectItem
+            value="none"
+            className="text-muted-foreground"
+          >
+            No campaign
+          </SelectItem>
+          {filteredCampaignsCreate.map((c) => (
+            <SelectItem 
+              key={c.id} 
+              value={c.id.toString()}
+              title={c.nombre}
+            >
+              <span className="truncate block max-w-[250px]">
+                {c.nombre}
+              </span>
+            </SelectItem>
+          ))}
+        </ScrollArea>
+      </SelectContent>
+    </Select>
+  </div>
 
                 {/* Yard Select */}
                 <div className="space-y-2">

@@ -221,7 +221,7 @@ export function ViewTicketModal({
                         value={
                           <div className="flex items-center gap-1.5 mt-1">
                             {getDirectionIcon(ticket.direction || "inbound")}
-                            <span>
+                            <span className="truncate block max-w-[100px]">
                               {getDirectionText(
                                 ticket.direction || "inbound",
                                 (ticket as any).originalDirection
@@ -237,23 +237,40 @@ export function ViewTicketModal({
                     <DetailRow
                       icon={Tag}
                       label="Campaign"
-                      value={getCampaign(ticket) || "No campaign"}
+                      value={
+                        <span
+                          className="truncate block max-w-[150px]"
+                          title={getCampaign(ticket) || "No campaign"}
+                        >
+                          {getCampaign(ticket) || "No campaign"}
+                        </span>
+                      }
                     />
 
                     {(ticket.campaignOption ||
                       (ticket as any).onboardingOption) && (
-                      <>
-                        <Separator className="opacity-50" />
-                        <DetailRow
-                          icon={Tag}
-                          label="Campaign Option"
-                          value={formatEnumLabel(
-                            (ticket.campaignOption ||
-                              (ticket as any).onboardingOption) as any
-                          )}
-                        />
-                      </>
-                    )}
+                        <>
+                          <Separator className="opacity-50" />
+                          <DetailRow
+                            icon={Tag}
+                            label="Campaign Option"
+                            value={
+                              <span
+                                className="truncate block max-w-[150px]"
+                                title={formatEnumLabel(
+                                  (ticket.campaignOption ||
+                                    (ticket as any).onboardingOption) as any
+                                )}
+                              >
+                                {formatEnumLabel(
+                                  (ticket.campaignOption ||
+                                    (ticket as any).onboardingOption) as any
+                                )}
+                              </span>
+                            }
+                          />
+                        </>
+                      )}
 
                     <Separator className="opacity-50" />
 
@@ -261,9 +278,14 @@ export function ViewTicketModal({
                       icon={MessageSquare}
                       label="Disposition"
                       value={
-                        ticket.disposition
-                          ? formatEnumLabel(ticket.disposition as any)
-                          : "-"
+                        ticket.disposition ? (
+                          <span
+                            className="truncate block max-w-[150px]"
+                            title={formatEnumLabel(ticket.disposition as any)}
+                          >
+                            {formatEnumLabel(ticket.disposition as any)}
+                          </span>
+                        ) : "-"
                       }
                     />
                   </div>

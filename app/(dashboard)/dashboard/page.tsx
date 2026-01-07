@@ -76,7 +76,6 @@ type DashboardData = {
   };
   charts: {
     callsByDay: { day: string; calls: number }[];
-    // Usamos 'any' aquí temporalmente en la lógica para ser flexibles con lo que llega del backend
     ticketsByCampaign: any[];
     ticketsByDisposition: { name: string; count: number }[];
   };
@@ -153,11 +152,9 @@ export default function DashboardPage() {
     loadDashboard();
   }, [loadDashboard]);
 
-  // Cleanup on route change to prevent overlay issues
+  // Cleanup on route change
   const pathname = usePathname();
-  useEffect(() => {
-    // Add cleanup logic here if modals are added in the future
-  }, [pathname]);
+  useEffect(() => {}, [pathname]);
 
   // --- PREPARACIÓN DE DATOS ---
 
@@ -185,24 +182,16 @@ export default function DashboardPage() {
     [dashboardData]
   );
 
-  // --- AQUÍ ESTÁ LA MEJORA PRINCIPAL ---
   const campaignChartData = useMemo(() => {
     const rawData = dashboardData?.charts?.ticketsByCampaign || [];
-
-    // Debug: Verifica en la consola qué está llegando realmente
-    console.log("Dashboard - Raw Campaign Data:", rawData);
-
     return rawData
       .map((item: any) => ({
-        // Intenta obtener el nombre de varias formas
         name: item.name || item.nombre || "Unknown",
-        // Intenta obtener la cantidad de varias formas y forza a número
         tickets: Number(item.count ?? item.ticketCount ?? item.tickets ?? 0),
-        // Color para el gráfico
         fill: "var(--color-tickets)",
       }))
-      .sort((a, b) => b.tickets - a.tickets) // Ordenar mayor a menor
-      .slice(0, 10); // Top 10
+      .sort((a, b) => b.tickets - a.tickets)
+      .slice(0, 10);
   }, [dashboardData]);
 
   const lineChartConfig = useMemo<ChartConfig>(
@@ -501,6 +490,7 @@ export default function DashboardPage() {
             </div>
           </TabsContent>
 
+          {/* --- FIX PARA NOMBRES LARGOS --- */}
           <TabsContent
             value="campaigns"
             className="focus-visible:outline-none focus-visible:ring-0"
@@ -509,65 +499,82 @@ export default function DashboardPage() {
               <Card className="w-full">
                 <CardHeader>
                   <CardTitle>Campaign Performance</CardTitle>
-                  <CardDescription>Campaign ticket volume</CardDescription>
+                  <CardDescription>
+                    Top active campaigns by ticket volume
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="pt-2 pb-4">
+                <CardContent className="px-2 sm:p-6">
                   <ChartContainer
                     config={campaignChartConfig}
-                    className="h-[220px] w-full aspect-auto"
+                    className="aspect-auto h-[350px] w-full"
                   >
                     <BarChart
                       accessibilityLayer
                       data={campaignChartData}
                       layout="vertical"
-                      barCategoryGap={18}
                       margin={{
-                        right: 16,
+                        left: 20, // 1. Margen de seguridad extra a la izquierda
+                        right: 50,
+                        top: 0,
+                        bottom: 0,
                       }}
+                      barGap={2}
                     >
                       <CartesianGrid horizontal={false} />
+
                       <YAxis
                         dataKey="name"
                         type="category"
                         tickLine={false}
                         tickMargin={10}
                         axisLine={false}
-                        tickFormatter={(value) => value.slice(0, 10)}
-                        hide
+                        width={230} // 2. Mucho más espacio reservado para el texto
+                        tickFormatter={(value) => {
+                          // 3. Permite textos más largos antes de poner '...'
+                          return value.length > 36
+                            ? `${value.slice(0, 36)}...`
+                            : value;
+                        }}
+                        className="text-xs font-medium text-muted-foreground"
                       />
+
                       <XAxis dataKey="tickets" type="number" hide />
+
                       <ChartTooltip
-                        cursor={false}
+                        cursor={{ fill: "var(--muted)", opacity: 0.2 }}
                         content={<ChartTooltipContent indicator="line" />}
                       />
+
                       <Bar
                         dataKey="tickets"
                         layout="vertical"
                         fill="var(--color-tickets)"
-                        radius={4}
-                        maxBarSize={22}
+                        radius={[0, 4, 4, 0]}
+                        barSize={24}
                       >
-                        <LabelList
-                          dataKey="name"
-                          position="insideLeft"
-                          offset={8}
-                          className="fill-black"
-                          fontSize={12}
-                        />
                         <LabelList
                           dataKey="tickets"
                           position="right"
-                          offset={8}
-                          className="fill-foreground"
+                          offset={10}
+                          className="fill-foreground font-bold"
                           fontSize={12}
                         />
                       </Bar>
                     </BarChart>
                   </ChartContainer>
                 </CardContent>
-                <CardFooter className="flex-col items-start gap-2 text-sm">
-                  <div className="text-muted-foreground leading-none">
-                    Showing top active campaigns
+                <CardFooter className="flex-col items-start gap-2 text-sm border-t pt-4 bg-muted/20">
+                  <div className="flex w-full items-start gap-2 text-sm">
+                    <div className="grid gap-2">
+                      <div className="flex items-center gap-2 font-medium leading-none">
+                        Most active campaign trending up{" "}
+                        <TrendingUp className="h-4 w-4" />
+                      </div>
+                      <div className="flex items-center gap-2 leading-none text-muted-foreground">
+                        Showing top {campaignChartData.length} campaigns by
+                        volume
+                      </div>
+                    </div>
                   </div>
                 </CardFooter>
               </Card>
@@ -584,7 +591,9 @@ export default function DashboardPage() {
                   Agents Overview
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {agentsError ? agentsError : `Total agents: ${agents.length}`}
+                  {agentsError
+                    ? agentsError
+                    : `Total agents: ${agents.length}`}
                 </p>
               </div>
               <Button
