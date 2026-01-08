@@ -5,6 +5,7 @@ export enum TicketDisposition {
   SUPPORT = "SUPPORT",
   BILLING = "BILLING",
   TECHNICAL_ISSUE = "TECHNICAL_ISSUE",
+  NEW_LEAD = "NEW_LEAD",
   OTHER = "OTHER",
 }
 
@@ -45,7 +46,6 @@ export enum ArOption {
 }
 
 export enum CallDirection {
-  
   INBOUND = "INBOUND",
   OUTBOUND = "OUTBOUND",
   MISSED = "MISSED",
