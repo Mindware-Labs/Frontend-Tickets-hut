@@ -300,21 +300,17 @@ export default function TicketsPage() {
     }
   };
 
- const getDirectionText = (direction: string, originalDirection?: string) => {
+  const getDirectionText = (direction: string, originalDirection?: string) => {
     const d = direction?.toString().toLowerCase();
-    
     if (d === "missed") {
-      // Verificamos simplemente si existe originalDirection
-      if (originalDirection) {
-        // Formateamos la primera letra en mayúscula para que se vea bien
-        const formatted = originalDirection.charAt(0).toUpperCase() + originalDirection.slice(1).toLowerCase();
-        return `Missed (${formatted})`;
-      }
+      const orig = originalDirection?.toString().toLowerCase();
+      if (orig === "outbound") return "Missed (Outbound)";
+      if (orig === "inbound") return "Missed (Inbound)";
       return "Missed";
     }
-    
     return d === "outbound" ? "Outbound" : "Inbound";
   };
+
   const isMissedCall = (ticket: Ticket) =>
     ticket.direction?.toString().toLowerCase() === "missed";
 
