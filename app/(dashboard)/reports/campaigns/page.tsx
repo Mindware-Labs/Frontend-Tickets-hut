@@ -398,7 +398,7 @@ const CustomerTable = ({
                       {hasHistory && (
                         <details className="mt-1">
                           <summary className="cursor-pointer text-blue-600 dark:text-blue-400 hover:underline text-[10px]">
-                            Ver historial ({row.callHistory!.length} llamadas)
+                            View history ({row.callHistory!.length} Calls)
                           </summary>
                           <div className="mt-2 space-y-2 pl-2 border-l-2 border-muted">
                             {row.callHistory!.slice().reverse().map((call, idx) => (

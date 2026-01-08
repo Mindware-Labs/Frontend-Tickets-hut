@@ -707,7 +707,7 @@ export default function CampaignReportPage() {
                                         style={{ listStyle: 'none' }}
                                         data-history-section="true"
                                         onClick={async (e) => {
-                                          console.log('🔍 [Campaign Report] Ver historial clicked!', {
+                                          console.log('🔍 [Campaign Report] View history clicked!', {
                                             rowName: row.name,
                                             rowPhone: row.phone,
                                             event: e,
@@ -727,7 +727,7 @@ export default function CampaignReportPage() {
                                           return false;
                                         }}
                                         onMouseDown={(e) => {
-                                          console.log('🖱️ [Campaign Report] Ver historial mousedown');
+                                          console.log('🖱️ [Campaign Report] View history mousedown');
                                           e.stopPropagation();
                                           e.preventDefault();
                                           return false;
@@ -740,7 +740,7 @@ export default function CampaignReportPage() {
                                           // Capturar el evento en la fase de captura para asegurar que se ejecute primero
                                           const target = e.target as HTMLElement;
                                           const isInSummary = target.closest('summary') || target.closest('[data-history-section]') || e.currentTarget.contains(target);
-                                          console.log('🔍 [Campaign Report] Ver historial clicked (capture phase)!', {
+                                          console.log('🔍 [Campaign Report] View history clicked (capture phase)!', {
                                             target: target.tagName,
                                             isInSummary,
                                             currentTarget: e.currentTarget,
@@ -763,7 +763,7 @@ export default function CampaignReportPage() {
                                         >
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                         </svg>
-                                        <span className="pointer-events-none">Ver historial ({row.callHistory!.length} {(row.callHistory!.length === 1 ? 'llamada' : 'llamadas')})</span>
+                                        <span className="pointer-events-none">View history ({row.callHistory!.length} {(row.callHistory!.length === 1 ? 'call' : 'calls')})</span>
                                       </summary>
                                       <div 
                                         className="mt-2 space-y-2 pl-2 border-l-2 border-muted max-h-40 overflow-y-auto"
@@ -863,7 +863,7 @@ export default function CampaignReportPage() {
                                 }}
                               >
                                 <History className="h-3 w-3 mr-1" />
-                                Ver Historial
+                                View history
                               </Button>
                             </td>
                           </tr>
