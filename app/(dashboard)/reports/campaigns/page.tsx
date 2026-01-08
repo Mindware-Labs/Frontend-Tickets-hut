@@ -466,11 +466,22 @@ export default function CampaignReportsPage() {
         const data = await fetchFromBackend("/campaign?page=1&limit=500");
         const items = Array.isArray(data) ? data : data?.data || [];
         setCampaigns(items);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching campaigns:", error);
+        
+        // Determinar el tipo de error y mostrar un mensaje apropiado
+        let errorMessage = "Failed to load campaigns";
+        if (error?.message?.includes("fetch failed") || error?.message?.includes("Failed to fetch")) {
+          errorMessage = "Cannot connect to backend server. Please check if the backend is running.";
+        } else if (error?.status === 401) {
+          errorMessage = "Session expired. Please login again.";
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+        
         toast({
           title: "Error",
-          description: "Failed to load campaigns",
+          description: errorMessage,
           variant: "destructive",
         });
       }
