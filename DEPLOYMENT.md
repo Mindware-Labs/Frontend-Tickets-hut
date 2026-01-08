@@ -94,3 +94,4 @@ Después de configurar las variables:
 
 Si algo falla, revisa la consola del navegador para ver errores específicos.
 
+

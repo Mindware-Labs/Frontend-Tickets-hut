@@ -92,13 +92,32 @@ export async function fetchFromBackend(
     }
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-    // Note: We don't use credentials: 'include' because we're sending the token
-    // manually in the Authorization header. This avoids CORS issues when the
-    // backend uses origin: '*' in CORS configuration.
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+      // Note: We don't use credentials: 'include' because we're sending the token
+      // manually in the Authorization header. This avoids CORS issues when the
+      // backend uses origin: '*' in CORS configuration.
+    });
+  } catch (fetchError: any) {
+    // Handle network errors (backend not running, CORS, etc.)
+    if (process.env.NODE_ENV === "development") {
+      console.error("[api-client] Network error fetching:", endpoint);
+      console.error("[api-client] URL:", url);
+      console.error("[api-client] Error:", fetchError);
+    }
+    
+    const error = new Error(
+      fetchError?.message?.includes("fetch failed") || fetchError?.message?.includes("Failed to fetch")
+        ? `Cannot connect to backend server at ${BACKEND_API_URL}. Please check if the backend is running.`
+        : fetchError?.message || "Network error: Failed to fetch"
+    ) as Error & { status?: number; isNetworkError?: boolean };
+    error.status = 0;
+    error.isNetworkError = true;
+    throw error;
+  }
 
   // Handle 401 Unauthorized - token expired or invalid
   if (response.status === 401) {

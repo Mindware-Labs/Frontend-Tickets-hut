@@ -49,7 +49,7 @@ interface ViewTicketModalProps {
   getPriorityColor: HelperFn<(priority?: string) => string>;
   getDirectionIcon: HelperFn<(direction: string) => JSX.Element>;
   getDirectionText: HelperFn<
-    (direction: string, originalDirection?: string) => string
+    (direction: string, originalDirection?: string, agentId?: number | string) => string
   >;
   getCampaign: HelperFn<(ticket: Ticket) => string | null>;
   getAttachmentUrl: HelperFn<(value: string) => string>;
@@ -269,7 +269,8 @@ export function ViewTicketModal({
                             <span className="truncate block max-w-[100px]">
                               {getDirectionText(
                                 ticket.direction || "inbound",
-                                (ticket as any).originalDirection
+                                (ticket as any).originalDirection,
+                                ticket.agentId
                               )}
                             </span>
                           </div>

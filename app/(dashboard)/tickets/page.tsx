@@ -300,13 +300,33 @@ export default function TicketsPage() {
     }
   };
 
+<<<<<<< HEAD
   const getDirectionText = (direction: string, originalDirection?: string) => {
+=======
+ const getDirectionText = (direction: string, originalDirection?: string, agentId?: number | string) => {
+>>>>>>> 706fc22134142be7f7f03e215ec20bee7cd707d6
     const d = direction?.toString().toLowerCase();
     if (d === "missed") {
+<<<<<<< HEAD
       const orig = originalDirection?.toString().toLowerCase();
       if (orig === "outbound") return "Missed (Outbound)";
       if (orig === "inbound") return "Missed (Inbound)";
       return "Missed";
+=======
+      // Si hay originalDirection, usarlo directamente
+      if (originalDirection) {
+        // Formateamos la primera letra en mayúscula para que se vea bien
+        const formatted = originalDirection.charAt(0).toUpperCase() + originalDirection.slice(1).toLowerCase();
+        return `Missed (${formatted})`;
+      }
+      // Si no hay originalDirection pero hay un agente asignado,
+      // es muy probable que sea una llamada outbound (el agente llamó al cliente)
+      if (agentId) {
+        return "Missed (Outbound)";
+      }
+      // Por defecto, asumir Inbound solo si no hay indicadores de Outbound
+      return "Missed (Inbound)";
+>>>>>>> 706fc22134142be7f7f03e215ec20bee7cd707d6
     }
     return d === "outbound" ? "Outbound" : "Inbound";
   };
@@ -1774,7 +1794,8 @@ export default function TicketsPage() {
             <span className="text-sm">
               {getDirectionText(
                 selectedTicket?.direction || "inbound",
-                (selectedTicket as any)?.originalDirection
+                (selectedTicket as any)?.originalDirection,
+                selectedTicket?.agentId
               )}
             </span>
           </div>
@@ -2700,7 +2721,8 @@ export default function TicketsPage() {
                             <span className="text-xs">
                               {getDirectionText(
                                 ticket.direction || "inbound",
-                                (ticket as any).originalDirection
+                                (ticket as any).originalDirection,
+                                ticket.agentId
                               )}
                             </span>
                           </div>
