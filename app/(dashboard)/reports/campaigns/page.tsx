@@ -280,11 +280,16 @@ const CustomerTable = ({
 
       // Si tenemos customerId directamente, usarlo
       if (row.customerId && campaignId) {
+        // Verificar si es llamada perdida
+        const isMissed =
+          row.direction && row.direction.toLowerCase().includes("missed");
+        const viewParam = isMissed ? "&view=missed" : "";
+
         const ticketsUrl = `/tickets?customerId=${
           row.customerId
         }&campaignId=${campaignId}&fromReport=campaign&reportStartDate=${encodeURIComponent(
           startDate
-        )}&reportEndDate=${encodeURIComponent(endDate)}`;
+        )}&reportEndDate=${encodeURIComponent(endDate)}${viewParam}`;
         console.log(
           "🟢 [Reports Campaigns] ✅ Navigating to tickets with customerId and campaignId:",
           {
@@ -292,6 +297,7 @@ const CustomerTable = ({
             campaignId: campaignId,
             startDate,
             endDate,
+            isMissed,
             url: ticketsUrl,
           }
         );
@@ -322,12 +328,17 @@ const CustomerTable = ({
         );
 
         if (customer && customer.id && campaignId) {
+          // Verificar si es llamada perdida
+          const isMissed =
+            row.direction && row.direction.toLowerCase().includes("missed");
+          const viewParam = isMissed ? "&view=missed" : "";
+
           // Redirigir a tickets con el customerId y campaignId
           const ticketsUrl = `/tickets?customerId=${
             customer.id
           }&campaignId=${campaignId}&fromReport=campaign&reportStartDate=${encodeURIComponent(
             startDate
-          )}&reportEndDate=${encodeURIComponent(endDate)}`;
+          )}&reportEndDate=${encodeURIComponent(endDate)}${viewParam}`;
           console.log(
             "🟢 [Reports Campaigns] ✅ Navigating to tickets (found by search):",
             {
@@ -336,6 +347,7 @@ const CustomerTable = ({
               campaignId: campaignId,
               startDate,
               endDate,
+              isMissed,
               url: ticketsUrl,
             }
           );
