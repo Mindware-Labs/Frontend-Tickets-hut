@@ -774,14 +774,14 @@ export default function TicketsPage() {
       if (ticket) {
         console.log("✅ [Tickets Page] Ticket found, opening modal:", {
           ticketId: ticket.id,
-          hasCampaign: !!(ticket.campaignId || ticket.campaign),
+          hasYard: !!ticket.yardId,
         });
         processedTicketIdRef.current = ticketIdParam; // Marcar como procesado
         setUrlTicketId(ticketIdParam);
         setSelectedTicket(ticket);
         setShowDetails(true);
-        // Open the appropriate modal based on whether ticket has a campaign
-        if (ticket.campaignId || ticket.campaign) {
+        // Open the appropriate modal based on whether ticket has a yard
+        if (ticket.yardId) {
           setShowViewModal(true);
         } else {
           setShowEditModal(true);
@@ -1171,8 +1171,8 @@ export default function TicketsPage() {
       attachments: ticket.attachments || [],
     });
 
-    // Si el ticket tiene campaña, abre ViewTicketModal; si no, abre EditTicketModal
-    if (ticket.campaignId || ticket.campaign) {
+    // Si el ticket tiene yarda, abre ViewTicketModal; si no, abre EditTicketModal
+    if (ticket.yardId) {
       setShowViewModal(true);
     } else {
       setShowEditModal(true);
