@@ -449,14 +449,124 @@ const CustomerTable = ({
                       </span>
                     </div>
                     <div className="col-span-2 px-6 py-3">
-                      <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary/10 text-primary">
-                        {row.direction || "Unknown"}
-                      </span>
+                      {(() => {
+                        const direction = (row.direction || "Unknown").toString().toLowerCase();
+                        const isInbound = direction.includes("inbound");
+                        const isOutbound = direction.includes("outbound");
+                        const isMissed = direction.includes("missed");
+                        const isTextMessage = direction.includes("text") || direction.includes("message");
+                        
+                        let bgColor = "bg-slate-100 dark:bg-slate-800";
+                        let textColor = "text-slate-700 dark:text-slate-300";
+                        let borderColor = "border-slate-200 dark:border-slate-700";
+                        let icon = null;
+                        
+                        if (isInbound) {
+                          bgColor = "bg-blue-50 dark:bg-blue-950/30";
+                          textColor = "text-blue-700 dark:text-blue-400";
+                          borderColor = "border-blue-200 dark:border-blue-800";
+                          icon = <PhoneMissed className="h-3 w-3 rotate-180" />;
+                        } else if (isOutbound) {
+                          bgColor = "bg-emerald-50 dark:bg-emerald-950/30";
+                          textColor = "text-emerald-700 dark:text-emerald-400";
+                          borderColor = "border-emerald-200 dark:border-emerald-800";
+                          icon = <PhoneMissed className="h-3 w-3" />;
+                        } else if (isMissed) {
+                          bgColor = "bg-rose-50 dark:bg-rose-950/30";
+                          textColor = "text-rose-700 dark:text-rose-400";
+                          borderColor = "border-rose-200 dark:border-rose-800";
+                          icon = <PhoneOff className="h-3 w-3" />;
+                        } else if (isTextMessage) {
+                          bgColor = "bg-purple-50 dark:bg-purple-950/30";
+                          textColor = "text-purple-700 dark:text-purple-400";
+                          borderColor = "border-purple-200 dark:border-purple-800";
+                          icon = <ReceiptText className="h-3 w-3" />;
+                        }
+                        
+                        return (
+                          <div className={cn(
+                            "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all hover:shadow-sm",
+                            bgColor,
+                            textColor,
+                            borderColor
+                          )}>
+                            {icon && <span className="flex-shrink-0">{icon}</span>}
+                            <span className="capitalize">{row.direction || "Unknown"}</span>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="col-span-2 px-6 py-3">
-                      <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
-                        {row.status}
-                      </span>
+                      {(() => {
+                        const status = (row.status || "").toString().toUpperCase();
+                        const isPaid = status.includes("PAID") && !status.includes("NOT");
+                        const isNotPaid = status.includes("NOT_PAID") || (status.includes("NOT") && status.includes("PAID"));
+                        const isOfflinePayment = status.includes("OFFLINE_PAYMENT");
+                        const isNotPaidCheck = status.includes("NOT_PAID_CHECK") || status.includes("PAID_CHECK");
+                        const isMovedOut = status.includes("MOVED_OUT");
+                        const isCanceled = status.includes("CANCELED") || status.includes("CANCELLED");
+                        const isBalance0 = status.includes("BALANCE_0") || status.includes("BALANCE 0");
+                        const isDoNotCall = status.includes("DO_NOT_CALL") || status.includes("DON'T_CALL");
+                        
+                        let bgColor = "bg-slate-100 dark:bg-slate-800";
+                        let textColor = "text-slate-700 dark:text-slate-300";
+                        let borderColor = "border-slate-200 dark:border-slate-700";
+                        let icon = null;
+                        
+                        if (isPaid) {
+                          bgColor = "bg-green-50 dark:bg-green-950/30";
+                          textColor = "text-green-700 dark:text-green-400";
+                          borderColor = "border-green-200 dark:border-green-800";
+                          icon = <CheckCircle2 className="h-3 w-3" />;
+                        } else if (isNotPaid) {
+                          bgColor = "bg-red-50 dark:bg-red-950/30";
+                          textColor = "text-red-700 dark:text-red-400";
+                          borderColor = "border-red-200 dark:border-red-800";
+                          icon = <XCircle className="h-3 w-3" />;
+                        } else if (isOfflinePayment) {
+                          bgColor = "bg-amber-50 dark:bg-amber-950/30";
+                          textColor = "text-amber-700 dark:text-amber-400";
+                          borderColor = "border-amber-200 dark:border-amber-800";
+                          icon = <ReceiptText className="h-3 w-3" />;
+                        } else if (isNotPaidCheck) {
+                          bgColor = "bg-amber-50 dark:bg-amber-950/30";
+                          textColor = "text-amber-700 dark:text-amber-400";
+                          borderColor = "border-amber-200 dark:border-amber-800";
+                          icon = <FileText className="h-3 w-3" />;
+                        } else if (isMovedOut) {
+                          bgColor = "bg-orange-50 dark:bg-orange-950/30";
+                          textColor = "text-orange-700 dark:text-orange-400";
+                          borderColor = "border-orange-200 dark:border-orange-800";
+                          icon = <MoveRight className="h-3 w-3" />;
+                        } else if (isCanceled) {
+                          bgColor = "bg-rose-50 dark:bg-rose-950/30";
+                          textColor = "text-rose-700 dark:text-rose-400";
+                          borderColor = "border-rose-200 dark:border-rose-800";
+                          icon = <Ban className="h-3 w-3" />;
+                        } else if (isBalance0) {
+                          bgColor = "bg-teal-50 dark:bg-teal-950/30";
+                          textColor = "text-teal-700 dark:text-teal-400";
+                          borderColor = "border-teal-200 dark:border-teal-800";
+                          icon = <BadgeDollarSign className="h-3 w-3" />;
+                        } else if (isDoNotCall) {
+                          bgColor = "bg-red-50 dark:bg-red-950/30";
+                          textColor = "text-red-700 dark:text-red-400";
+                          borderColor = "border-red-200 dark:border-red-800";
+                          icon = <PhoneOff className="h-3 w-3" />;
+                        }
+                        
+                        return (
+                          <div className={cn(
+                            "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all hover:shadow-sm",
+                            bgColor,
+                            textColor,
+                            borderColor
+                          )}>
+                            {icon && <span className="flex-shrink-0">{icon}</span>}
+                            <span className="capitalize">{row.status || "Unknown"}</span>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="col-span-2 px-6 py-3 text-muted-foreground wrap-break-word text-xs">
                       <div className="space-y-1">
