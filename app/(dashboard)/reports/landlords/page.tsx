@@ -11,6 +11,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { fetchBlobFromBackend, fetchFromBackend } from "@/lib/api-client";
@@ -73,6 +87,7 @@ export default function LandlordReportsPage() {
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [yards, setYards] = useState<YardOption[]>([]);
   const [selectedLandlordId, setSelectedLandlordId] = useState<string>("");
+  const [landlordOpen, setLandlordOpen] = useState(false);
   const [reportStartDate, setReportStartDate] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() - 7);
@@ -437,29 +452,56 @@ export default function LandlordReportsPage() {
               <label className="text-xs font-medium leading-none">
                 Landlord
               </label>
-              <Select
-                value={selectedLandlordId}
-                onValueChange={(value) => {
-                  setSelectedLandlordId(value);
-                  setReportYardId("all");
-                  setReportData(null);
-                  setReportError(null);
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select landlord" />
-                </SelectTrigger>
-                <SelectContent>
-                  {landlords.map((landlord) => (
-                    <SelectItem
-                      key={landlord.id}
-                      value={landlord.id.toString()}
-                    >
-                      {landlord.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={landlordOpen} onOpenChange={setLandlordOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={landlordOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedLandlordId
+                      ? landlords.find(
+                          (l) => l.id.toString() === selectedLandlordId
+                        )?.name
+                      : "Select landlord"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search landlord..." />
+                    <CommandList>
+                      <CommandEmpty>No landlord found.</CommandEmpty>
+                      <CommandGroup>
+                        {landlords.map((landlord) => (
+                          <CommandItem
+                            key={landlord.id}
+                            value={landlord.name}
+                            onSelect={() => {
+                              setSelectedLandlordId(landlord.id.toString());
+                              setReportYardId("all");
+                              setReportData(null);
+                              setReportError(null);
+                              setLandlordOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedLandlordId === landlord.id.toString()
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            {landlord.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2 md:col-span-1">

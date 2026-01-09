@@ -1,6 +1,6 @@
 "use client";
 
-console.log('🚀🚀🚀 REPORTS CAMPAIGNS PAGE FILE LOADED 🚀🚀🚀');
+console.log("🚀🚀🚀 REPORTS CAMPAIGNS PAGE FILE LOADED 🚀🚀🚀");
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -13,6 +13,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { fetchFromBackend, fetchBlobFromBackend } from "@/lib/api-client";
 import { CallDirection } from "@/app/(dashboard)/tickets/types";
@@ -226,73 +240,123 @@ const MetricCard = ({ metric }: { metric: ReportMetric }) => (
 const CustomerTable = ({
   title,
   rows,
+  campaignId,
+  startDate,
+  endDate,
 }: {
   title: string;
   rows: CustomerRow[];
+  campaignId: number | null;
+  startDate: string;
+  endDate: string;
 }) => {
   const router = useRouter();
-  
-  console.log('🟡 [Reports Campaigns] Rendering CustomerTable:', {
+
+  console.log("🟡 [Reports Campaigns] Rendering CustomerTable:", {
     title,
     rowsCount: rows.length,
     firstRowSample: rows[0],
   });
 
   const handleRowClick = async (row: CustomerRow, index: number) => {
-    console.log('🟣 [Reports Campaigns] Row clicked!', {
+    console.log("🟣 [Reports Campaigns] Row clicked!", {
       title,
       index,
       row,
       customerId: row.customerId,
       name: row.name,
       phone: row.phone,
+      campaignId: campaignId,
     });
 
-    // Función helper para buscar cliente y redirigir a customer management
-    const navigateToCustomerManagement = async (row: CustomerRow) => {
-      console.log('🔍 [Reports Campaigns] navigateToCustomerManagement called:', {
+    // Función helper para redirigir a tickets con filtros de campaña y cliente
+    const navigateToTickets = async (row: CustomerRow) => {
+      console.log("🔍 [Reports Campaigns] navigateToTickets called:", {
         customerId: row.customerId,
         customerName: row.name,
         customerPhone: row.phone,
+        campaignId: campaignId,
       });
-      
+
       // Si tenemos customerId directamente, usarlo
-      if (row.customerId) {
-        const customerUrl = `/customers?customerId=${row.customerId}`;
-        console.log('🟢 [Reports Campaigns] ✅ Navigating to customer management using customerId:', {
-          customerId: row.customerId,
-          url: customerUrl,
-        });
-        // Usar window.location.replace para forzar la navegación y evitar interceptores
-        window.location.replace(customerUrl);
+      if (row.customerId && campaignId) {
+        // Verificar si es llamada perdida
+        const isMissed =
+          row.direction && row.direction.toLowerCase().includes("missed");
+        const viewParam = isMissed ? "&view=missed" : "";
+
+        const ticketsUrl = `/tickets?customerId=${
+          row.customerId
+        }&campaignId=${campaignId}&fromReport=campaign&reportStartDate=${encodeURIComponent(
+          startDate
+        )}&reportEndDate=${encodeURIComponent(endDate)}${viewParam}`;
+        console.log(
+          "🟢 [Reports Campaigns] ✅ Navigating to tickets with customerId and campaignId:",
+          {
+            customerId: row.customerId,
+            campaignId: campaignId,
+            startDate,
+            endDate,
+            isMissed,
+            url: ticketsUrl,
+          }
+        );
+        router.push(ticketsUrl);
         return;
       }
-      
+
       // Si no tenemos customerId, buscar por nombre/teléfono
       try {
-        const customers = await fetchFromBackend("/customers?page=1&limit=500");
-        const customerList = Array.isArray(customers) ? customers : customers?.data || [];
-        
-        // Buscar el cliente que coincida con el nombre o teléfono
-        const customer = customerList.find((c: any) => 
-          (c.name && c.name.toLowerCase() === row.name.toLowerCase()) ||
-          (c.phone && c.phone === row.phone)
+        console.log(
+          "🔍 [Reports Campaigns] Fetching customers to find match..."
         );
-        
-        if (customer && customer.id) {
-          // Redirigir a customer management con el customerId
-          const customerUrl = `/customers?customerId=${customer.id}`;
-          console.log('🟢 [Reports Campaigns] ✅ Navigating to customer management (found by search):', {
-            customerId: customer.id,
-            customerName: customer.name,
-            url: customerUrl,
-          });
-          // Usar window.location.replace para forzar la navegación y evitar interceptores
-          window.location.replace(customerUrl);
+        const customers = await fetchFromBackend("/customers?page=1&limit=500");
+        const customerList = Array.isArray(customers)
+          ? customers
+          : customers?.data || [];
+
+        console.log("🔍 [Reports Campaigns] Customer list fetched:", {
+          totalCustomers: customerList.length,
+          searchingFor: { name: row.name, phone: row.phone },
+        });
+
+        // Buscar el cliente que coincida con el nombre o teléfono
+        const customer = customerList.find(
+          (c: any) =>
+            (c.name && c.name.toLowerCase() === row.name.toLowerCase()) ||
+            (c.phone && c.phone === row.phone)
+        );
+
+        if (customer && customer.id && campaignId) {
+          // Verificar si es llamada perdida
+          const isMissed =
+            row.direction && row.direction.toLowerCase().includes("missed");
+          const viewParam = isMissed ? "&view=missed" : "";
+
+          // Redirigir a tickets con el customerId y campaignId
+          const ticketsUrl = `/tickets?customerId=${
+            customer.id
+          }&campaignId=${campaignId}&fromReport=campaign&reportStartDate=${encodeURIComponent(
+            startDate
+          )}&reportEndDate=${encodeURIComponent(endDate)}${viewParam}`;
+          console.log(
+            "🟢 [Reports Campaigns] ✅ Navigating to tickets (found by search):",
+            {
+              customerId: customer.id,
+              customerName: customer.name,
+              campaignId: campaignId,
+              startDate,
+              endDate,
+              isMissed,
+              url: ticketsUrl,
+            }
+          );
+          router.push(ticketsUrl);
         } else {
-          console.warn('⚠️ [Reports Campaigns] Customer not found:', {
+          console.warn("⚠️ [Reports Campaigns] Customer not found:", {
             rowName: row.name,
             rowPhone: row.phone,
+            searchResult: customer,
           });
           toast({
             title: "Cliente no encontrado",
@@ -301,7 +365,7 @@ const CustomerTable = ({
           });
         }
       } catch (error) {
-        console.error('🔴 [Reports Campaigns] Error buscando cliente:', error);
+        console.error("🔴 [Reports Campaigns] Error buscando cliente:", error);
         toast({
           title: "Error",
           description: "No se pudo buscar el cliente.",
@@ -310,8 +374,8 @@ const CustomerTable = ({
       }
     };
 
-    // Redirigir a customer management en lugar de tickets
-    await navigateToCustomerManagement(row);
+    // Redirigir a tickets con filtros de campaña
+    await navigateToTickets(row);
   };
 
   return (
@@ -329,13 +393,14 @@ const CustomerTable = ({
       {/* Container with horizontal scroll for mobile responsiveness */}
       <div className="w-full overflow-x-auto">
         <div className="min-w-200 align-middle">
-          <div className="grid grid-cols-12 bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-y">
+          <div className="grid grid-cols-13 bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-y">
             <div className="col-span-2 px-6 py-3">Customer</div>
             <div className="col-span-2 px-6 py-3">Phone</div>
             <div className="col-span-1 px-6 py-3">Calls</div>
             <div className="col-span-2 px-6 py-3">Direction</div>
             <div className="col-span-2 px-6 py-3">Status</div>
-            <div className="col-span-3 px-6 py-3">Latest Notes / History</div>
+            <div className="col-span-2 px-6 py-3">Notes</div>
+            <div className="col-span-2 px-6 py-3">Contact Date</div>
           </div>
           <div className="divide-y">
             {rows.length === 0 ? (
@@ -352,77 +417,79 @@ const CustomerTable = ({
                 });
 
                 const callCount = row.callCount || 1;
-                const hasHistory = row.callHistory && row.callHistory.length > 1;
-                
+                const hasHistory =
+                  row.callHistory && row.callHistory.length > 1;
+
                 return (
-                <div
-                  key={`${title}-${index}`}
-                  className="grid grid-cols-12 text-sm hover:bg-muted/30 transition-colors cursor-pointer"
-                  onClick={(e) => {
-                    console.log('=== ROW CLICK EVENT ===', index);
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleRowClick(row, index);
-                  }}
-                  onMouseDown={() => console.log('=== MOUSE DOWN ===', index)}
-                  onMouseUp={() => console.log('=== MOUSE UP ===', index)}
-                  style={{ cursor: 'pointer' }}
-                >
                   <div
-                    className="col-span-2 px-6 py-3 font-medium truncate"
-                    title={row.name}
+                    key={`${title}-${index}`}
+                    className="grid grid-cols-13 text-sm hover:bg-muted/30 transition-colors cursor-pointer"
+                    onClick={(e) => {
+                      console.log("=== ROW CLICK EVENT ===", index);
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleRowClick(row, index);
+                    }}
+                    onMouseDown={() => console.log("=== MOUSE DOWN ===", index)}
+                    onMouseUp={() => console.log("=== MOUSE UP ===", index)}
+                    style={{ cursor: "pointer" }}
                   >
-                    {row.name}
-                  </div>
-                  <div className="col-span-2 px-6 py-3 text-muted-foreground truncate">
-                    {row.phone || "—"}
-                  </div>
-                  <div className="col-span-1 px-6 py-3">
-                    <span className="inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 text-xs font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-blue-500/10 text-blue-700 dark:text-blue-400">
-                      {callCount}x
-                    </span>
-                  </div>
-                  <div className="col-span-2 px-6 py-3">
-                    <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary/10 text-primary">
-                      {row.direction || "Unknown"}
-                    </span>
-                  </div>
-                  <div className="col-span-2 px-6 py-3">
-                    <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
-                      {row.status}
-                    </span>
-                  </div>
-                  <div className="col-span-3 px-6 py-3 text-muted-foreground wrap-break-word text-xs">
-                    <div className="space-y-1">
-                      <div className="font-medium">{row.note || "—"}</div>
-                      {hasHistory && (
-                        <details className="mt-1">
-                          <summary className="cursor-pointer text-blue-600 dark:text-blue-400 hover:underline text-[10px]">
-                            View history ({row.callHistory!.length} Calls)
-                          </summary>
-                          <div className="mt-2 space-y-2 pl-2 border-l-2 border-muted">
-                            {row.callHistory!.slice().reverse().map((call, idx) => (
-                              <div key={idx} className="text-[10px] space-y-0.5">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold">
-                                    {new Date(call.createdAt).toLocaleDateString()}
-                                  </span>
-                                  <span className="text-muted-foreground">
-                                    {call.agentName}
-                                  </span>
-                                </div>
-                                <div className="text-muted-foreground">
-                                  {call.note || "—"}
-                                </div>
+                    <div
+                      className="col-span-2 px-6 py-3 font-medium truncate"
+                      title={row.name}
+                    >
+                      {row.name}
+                    </div>
+                    <div className="col-span-2 px-6 py-3 text-muted-foreground truncate">
+                      {row.phone || "—"}
+                    </div>
+                    <div className="col-span-1 px-6 py-3">
+                      <span className="inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 text-xs font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-blue-500/10 text-blue-700 dark:text-blue-400">
+                        {callCount}x
+                      </span>
+                    </div>
+                    <div className="col-span-2 px-6 py-3">
+                      <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary/10 text-primary">
+                        {row.direction || "Unknown"}
+                      </span>
+                    </div>
+                    <div className="col-span-2 px-6 py-3">
+                      <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
+                        {row.status}
+                      </span>
+                    </div>
+                    <div className="col-span-2 px-6 py-3 text-muted-foreground wrap-break-word text-xs">
+                      <div className="space-y-1">
+                        <div className="font-medium">{row.note || "—"}</div>
+                      </div>
+                    </div>
+                    <div className="col-span-2 px-6 py-3 text-muted-foreground text-xs">
+                      {row.callHistory && row.callHistory.length > 0 ? (
+                        <div className="space-y-0.5">
+                          {row.callHistory.map((call, idx) => {
+                            const date = new Date(call.createdAt);
+                            const formattedDate = date.toLocaleString("en-US", {
+                              month: "2-digit",
+                              day: "2-digit",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: false,
+                            });
+                            return (
+                              <div key={idx} className="text-xs">
+                                {idx + 1}. {formattedDate}
                               </div>
-                            ))}
-                          </div>
-                        </details>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        "—"
                       )}
                     </div>
                   </div>
-                </div>
                 );
+                n;
               })
             )}
           </div>
@@ -433,20 +500,21 @@ const CustomerTable = ({
 };
 
 export default function CampaignReportsPage() {
-  console.log('═══════════════════════════════════════════════════');
-  console.log('🎯 CAMPAIGN REPORTS PAGE COMPONENT RENDERING');
-  console.log('═══════════════════════════════════════════════════');
-  
+  console.log("═══════════════════════════════════════════════════");
+  console.log("🎯 CAMPAIGN REPORTS PAGE COMPONENT RENDERING");
+  console.log("═══════════════════════════════════════════════════");
+
   const searchParams = useSearchParams();
   const campaignIdParam = searchParams.get("campaignId");
-  
-  console.log('📋 Component initialized:', {
+
+  console.log("📋 Component initialized:", {
     campaignIdParam,
     timestamp: new Date().toISOString(),
   });
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
+  const [campaignOpen, setCampaignOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(false);
@@ -468,17 +536,21 @@ export default function CampaignReportsPage() {
         setCampaigns(items);
       } catch (error: any) {
         console.error("Error fetching campaigns:", error);
-        
+
         // Determinar el tipo de error y mostrar un mensaje apropiado
         let errorMessage = "Failed to load campaigns";
-        if (error?.message?.includes("fetch failed") || error?.message?.includes("Failed to fetch")) {
-          errorMessage = "Cannot connect to backend server. Please check if the backend is running.";
+        if (
+          error?.message?.includes("fetch failed") ||
+          error?.message?.includes("Failed to fetch")
+        ) {
+          errorMessage =
+            "Cannot connect to backend server. Please check if the backend is running.";
         } else if (error?.status === 401) {
           errorMessage = "Session expired. Please login again.";
         } else if (error?.message) {
           errorMessage = error.message;
         }
-        
+
         toast({
           title: "Error",
           description: errorMessage,
@@ -492,6 +564,19 @@ export default function CampaignReportsPage() {
   useEffect(() => {
     if (campaignIdParam) setSelectedCampaignId(campaignIdParam);
   }, [campaignIdParam]);
+
+  // Load startDate and endDate from URL params
+  useEffect(() => {
+    const startDateParam = searchParams.get("startDate");
+    const endDateParam = searchParams.get("endDate");
+
+    if (startDateParam) {
+      setStartDate(decodeURIComponent(startDateParam));
+    }
+    if (endDateParam) {
+      setEndDate(decodeURIComponent(endDateParam));
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -522,6 +607,30 @@ export default function CampaignReportsPage() {
     loadLogo();
   }, []);
 
+  // Auto-generate report when all parameters are loaded from URL
+  useEffect(() => {
+    const autoGenerateReport = async () => {
+      // Check if we have all required params and no report yet
+      if (
+        selectedCampaignId &&
+        startDate &&
+        endDate &&
+        !report &&
+        !loading &&
+        campaigns.length > 0
+      ) {
+        console.log("🔄 Auto-generating report from URL params:", {
+          selectedCampaignId,
+          startDate,
+          endDate,
+        });
+        await buildReport();
+      }
+    };
+    autoGenerateReport();
+  }, [selectedCampaignId, startDate, endDate, campaigns]);
+  // Note: buildReport and report are intentionally not in dependencies to avoid infinite loop
+
   const selectedCampaign = useMemo(() => {
     return (
       campaigns.find((c) => c.id.toString() === selectedCampaignId) || null
@@ -543,24 +652,39 @@ export default function CampaignReportsPage() {
         startDate,
         endDate,
       });
-      console.log('🔵 [Reports Campaigns] Fetching report data...');
-      console.log('🔵 [Reports Campaigns] URL:', `/campaign/${selectedCampaignId}/report?${params.toString()}`);
-      
+      console.log("🔵 [Reports Campaigns] Fetching report data...");
+      console.log(
+        "🔵 [Reports Campaigns] URL:",
+        `/campaign/${selectedCampaignId}/report?${params.toString()}`
+      );
+
       const response = await fetchFromBackend(
         `/campaign/${selectedCampaignId}/report?${params.toString()}`
       );
-      
-      console.log('🟢 [Reports Campaigns] Report data received:', response);
-      console.log('🟢 [Reports Campaigns] Tables count:', response?.tables?.length);
-      
+
+      console.log("🟢 [Reports Campaigns] Report data received:", response);
+      console.log(
+        "🟢 [Reports Campaigns] Tables count:",
+        response?.tables?.length
+      );
+
       if (response?.tables && response.tables.length > 0) {
-        console.log('🟢 [Reports Campaigns] First table sample:', response.tables[0]);
+        console.log(
+          "🟢 [Reports Campaigns] First table sample:",
+          response.tables[0]
+        );
         if (response.tables[0]?.rows && response.tables[0].rows.length > 0) {
-          console.log('🟢 [Reports Campaigns] First row sample:', response.tables[0].rows[0]);
-          console.log('🟢 [Reports Campaigns] First row has ticketId?', !!response.tables[0].rows[0].ticketId);
+          console.log(
+            "🟢 [Reports Campaigns] First row sample:",
+            response.tables[0].rows[0]
+          );
+          console.log(
+            "🟢 [Reports Campaigns] First row has ticketId?",
+            !!response.tables[0].rows[0].ticketId
+          );
         }
       }
-      
+
       if (!response) throw new Error("No data from backend");
       // El backend ya entrega los datos agregados y tablas
       setReport({
@@ -728,21 +852,53 @@ export default function CampaignReportsPage() {
               <label className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 Campaign
               </label>
-              <Select
-                value={selectedCampaignId}
-                onValueChange={setSelectedCampaignId}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a campaign..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {campaigns.map((c) => (
-                    <SelectItem key={c.id} value={c.id.toString()}>
-                      {c.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={campaignOpen} onOpenChange={setCampaignOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={campaignOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedCampaignId
+                      ? campaigns.find(
+                          (c) => c.id.toString() === selectedCampaignId
+                        )?.nombre
+                      : "Select a campaign..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search campaign..." />
+                    <CommandList>
+                      <CommandEmpty>No campaign found.</CommandEmpty>
+                      <CommandGroup>
+                        {campaigns.map((c) => (
+                          <CommandItem
+                            key={c.id}
+                            value={c.nombre}
+                            onSelect={() => {
+                              setSelectedCampaignId(c.id.toString());
+                              setCampaignOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedCampaignId === c.id.toString()
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            {c.nombre}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <label className="text-xs font-medium leading-none">
@@ -817,6 +973,11 @@ export default function CampaignReportsPage() {
                   key={table.title}
                   title={table.title}
                   rows={table.rows}
+                  campaignId={
+                    selectedCampaignId ? parseInt(selectedCampaignId) : null
+                  }
+                  startDate={startDate}
+                  endDate={endDate}
                 />
               ))}
             </div>
