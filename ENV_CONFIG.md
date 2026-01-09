@@ -82,3 +82,6 @@ BACKEND_API_URL=https://tu-backend-url.com
 4. Reinicia el deployment
 
 
+
+
+
