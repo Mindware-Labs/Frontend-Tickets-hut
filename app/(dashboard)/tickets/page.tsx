@@ -300,13 +300,19 @@ export default function TicketsPage() {
     }
   };
 
- const getDirectionText = (direction: string, originalDirection?: string, agentId?: number | string) => {
+  const getDirectionText = (
+    direction: string,
+    originalDirection?: string,
+    agentId?: number | string
+  ) => {
     const d = direction?.toString().toLowerCase();
     if (d === "missed") {
       // Si hay originalDirection, usarlo directamente
       if (originalDirection) {
         // Formateamos la primera letra en mayúscula para que se vea bien
-        const formatted = originalDirection.charAt(0).toUpperCase() + originalDirection.slice(1).toLowerCase();
+        const formatted =
+          originalDirection.charAt(0).toUpperCase() +
+          originalDirection.slice(1).toLowerCase();
         return `Missed (${formatted})`;
       }
       // Si no hay originalDirection pero hay un agente asignado,
@@ -625,52 +631,98 @@ export default function TicketsPage() {
     setShowViewModal(false);
   }, [pathname]);
 
+  // Handle "fromReport" parameter to show persistent toast with back button
+  useEffect(() => {
+    const fromReport = searchParams.get("fromReport");
+
+    if (fromReport === "campaign") {
+      const campaignId = searchParams.get("campaignId");
+      const reportStartDate = searchParams.get("reportStartDate");
+      const reportEndDate = searchParams.get("reportEndDate");
+
+      // Apply campaign filter when coming from report
+      if (campaignId) {
+        setCampaignFilter(campaignId);
+      }
+
+      // Build the URL to return to the report with the same filters
+      let reportUrl = "/reports/campaigns";
+      if (campaignId && reportStartDate && reportEndDate) {
+        reportUrl += `?campaignId=${campaignId}&startDate=${encodeURIComponent(
+          reportStartDate
+        )}&endDate=${encodeURIComponent(reportEndDate)}`;
+      }
+
+      const { dismiss } = toast({
+        title: "Viewing filtered tickets",
+        description: (
+          <div className="flex flex-col gap-2">
+            <p>You are viewing tickets filtered from the campaign report.</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                dismiss();
+                router.push(reportUrl);
+              }}
+              className="w-fit"
+            >
+              Back to Report
+            </Button>
+          </div>
+        ),
+        duration: Infinity, // Toast without time limit
+      });
+    }
+  }, [searchParams, router]);
+
   // Handle search parameter from URL - separate effect to ensure it runs immediately
   useEffect(() => {
     // Obtener el parámetro de búsqueda de la URL de dos formas para mayor robustez
     const searchParam = searchParams.get("search");
     let searchParamValue = searchParam ? decodeURIComponent(searchParam) : null;
-    
+
     // También verificar directamente desde window.location como respaldo
-    if (typeof window !== 'undefined' && !searchParamValue) {
+    if (typeof window !== "undefined" && !searchParamValue) {
       const urlParams = new URLSearchParams(window.location.search);
       const urlSearchParam = urlParams.get("search");
       if (urlSearchParam) {
         searchParamValue = decodeURIComponent(urlSearchParam);
       }
     }
-    
+
     // Get all search params for debugging
     const allParams: Record<string, string> = {};
     searchParams.forEach((value, key) => {
       allParams[key] = value;
     });
-    
-    console.log('🔍 [Tickets Page] Search effect triggered:', {
+
+    console.log("🔍 [Tickets Page] Search effect triggered:", {
       searchParam,
       searchParamValue,
       allParams,
       searchParamsString: searchParams.toString(),
       currentSearch: search,
-      windowLocation: typeof window !== 'undefined' ? window.location.href : 'N/A',
+      windowLocation:
+        typeof window !== "undefined" ? window.location.href : "N/A",
     });
-    
+
     // Sincronizar el estado del search con el parámetro de la URL
     // Solo actualizar si el valor es diferente para evitar renders innecesarios
     if (searchParamValue !== null && searchParamValue.trim() !== "") {
       if (searchParamValue !== search) {
-        console.log('🔍 [Tickets Page] Setting search from URL:', {
+        console.log("🔍 [Tickets Page] Setting search from URL:", {
           searchParam,
           searchParamValue,
           currentSearch: search,
           willUpdate: true,
         });
         setSearch(searchParamValue);
-        console.log('✅ [Tickets Page] Search updated to:', searchParamValue);
+        console.log("✅ [Tickets Page] Search updated to:", searchParamValue);
       }
     } else if (!searchParamValue && search) {
       // Si no hay parámetro de búsqueda en la URL y el search tiene valor, limpiarlo
-      console.log('ℹ️ [Tickets Page] No search param in URL, clearing search');
+      console.log("ℹ️ [Tickets Page] No search param in URL, clearing search");
       setSearch("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -684,7 +736,7 @@ export default function TicketsPage() {
 
   // Handle URL parameters for filtering
   useEffect(() => {
-    console.log('🔵 [Tickets Page] URL params effect triggered:', {
+    console.log("🔵 [Tickets Page] URL params effect triggered:", {
       ticketIdParam,
       customerIdParam,
       viewParam,
@@ -698,22 +750,24 @@ export default function TicketsPage() {
     }
 
     if (!ticketsLength) {
-      console.log('⏳ [Tickets Page] Waiting for tickets to load...');
+      console.log("⏳ [Tickets Page] Waiting for tickets to load...");
       return;
     }
 
     if (ticketIdParam) {
       // Solo procesar si es un ticketId diferente al que ya procesamos
       if (processedTicketIdRef.current === ticketIdParam) {
-        console.log('⏭️ [Tickets Page] Ticket already processed, skipping');
+        console.log("⏭️ [Tickets Page] Ticket already processed, skipping");
         return; // Ya procesamos este ticketId, no hacer nada
       }
 
-      console.log('🔍 [Tickets Page] Looking for ticket:', ticketIdParam);
+      console.log("🔍 [Tickets Page] Looking for ticket:", ticketIdParam);
       // Filter and open specific ticket
-      const ticket = tickets.find((t: Ticket) => t.id.toString() === ticketIdParam);
+      const ticket = tickets.find(
+        (t: Ticket) => t.id.toString() === ticketIdParam
+      );
       if (ticket) {
-        console.log('✅ [Tickets Page] Ticket found, opening modal:', {
+        console.log("✅ [Tickets Page] Ticket found, opening modal:", {
           ticketId: ticket.id,
           hasCampaign: !!(ticket.campaignId || ticket.campaign),
         });
@@ -728,7 +782,7 @@ export default function TicketsPage() {
           setShowEditModal(true);
         }
       } else {
-        console.log('❌ [Tickets Page] Ticket not found:', ticketIdParam);
+        console.log("❌ [Tickets Page] Ticket not found:", ticketIdParam);
       }
     } else if (customerIdParam) {
       // Filter by customer ID
@@ -738,7 +792,9 @@ export default function TicketsPage() {
       // Si no hay ticketId ni customerId en la URL, resetear ambos
       processedTicketIdRef.current = null;
       if (urlCustomerId) {
-        console.log('🔄 [Tickets Page] Clearing customer filter - no customerId in URL');
+        console.log(
+          "🔄 [Tickets Page] Clearing customer filter - no customerId in URL"
+        );
         setUrlCustomerId(null);
       }
     }
@@ -797,15 +853,15 @@ export default function TicketsPage() {
   }, [yards, yardFilterSearch]);
 
   const filteredTickets = useMemo(() => {
-    console.log('🔎 [Tickets Page] Filtering tickets with search:', {
+    console.log("🔎 [Tickets Page] Filtering tickets with search:", {
       search,
       ticketsCount: tickets.length,
       searchLength: search.length,
     });
-    
+
     // Verificar si customerId está en la URL actual
     const currentCustomerIdParam = searchParams.get("customerId");
-    
+
     const filtered = tickets.filter((ticket: Ticket) => {
       // ⚠️ ELIMINADO EL FILTRO ESTRICTO POR ID AQUÍ
       // if (urlTicketId) { ... } -> Borrado para que se vea la lista completa
@@ -813,7 +869,9 @@ export default function TicketsPage() {
       // Primero verificar si el ticket pertenece al cliente (si hay customerId en la URL)
       // Pero NO hacer return temprano, continuar con los demás filtros
       if (currentCustomerIdParam) {
-        const matchesCustomer = ticket.customerId && ticket.customerId.toString() === currentCustomerIdParam;
+        const matchesCustomer =
+          ticket.customerId &&
+          ticket.customerId.toString() === currentCustomerIdParam;
         if (!matchesCustomer) {
           return false; // Si no coincide con el cliente, excluir el ticket
         }
@@ -840,13 +898,15 @@ export default function TicketsPage() {
       const searchTrimmed = search ? search.trim() : "";
       const phoneDigitsOnly = phone.replace(/[^0-9]/g, "");
       const searchDigitsOnly = searchTrimmed.replace(/[^0-9]/g, "");
-      
+
       const matchesSearch = searchLower
-        ? (clientName.toLowerCase().includes(searchLower) ||
-           yardName.toLowerCase().includes(searchLower) ||
-           ticket.id.toString().includes(searchTrimmed) ||
-           phone.toLowerCase().includes(searchLower) ||
-           (phoneDigitsOnly && searchDigitsOnly && phoneDigitsOnly.includes(searchDigitsOnly)))
+        ? clientName.toLowerCase().includes(searchLower) ||
+          yardName.toLowerCase().includes(searchLower) ||
+          ticket.id.toString().includes(searchTrimmed) ||
+          phone.toLowerCase().includes(searchLower) ||
+          (phoneDigitsOnly &&
+            searchDigitsOnly &&
+            phoneDigitsOnly.includes(searchDigitsOnly))
         : true; // Si no hay search, mostrar todos
 
       const matchesStatus =
@@ -922,14 +982,14 @@ export default function TicketsPage() {
         matchesView
       );
     });
-    
-    console.log('✅ [Tickets Page] Filtered tickets result:', {
+
+    console.log("✅ [Tickets Page] Filtered tickets result:", {
       originalCount: tickets.length,
       filteredCount: filtered.length,
       search,
       hasSearch: !!search,
     });
-    
+
     if (activeView === "high_priority") {
       return filtered.sort((a: Ticket, b: Ticket) => {
         const statusA = normalizeEnumValue(a.status);
@@ -969,8 +1029,9 @@ export default function TicketsPage() {
     if (!currentCustomerIdParam) {
       return tickets; // Si no hay customerId, devolver todos los tickets
     }
-    return tickets.filter((t: Ticket) => 
-      t.customerId && t.customerId.toString() === currentCustomerIdParam
+    return tickets.filter(
+      (t: Ticket) =>
+        t.customerId && t.customerId.toString() === currentCustomerIdParam
     );
   }, [tickets, searchParams]);
 
@@ -992,15 +1053,19 @@ export default function TicketsPage() {
     // Si el usuario cambia de vista manualmente y no hay customerId en la URL, limpiar el filtro
     if (!currentCustomerIdParam) {
       if (urlCustomerId) {
-        console.log('🔄 [Tickets Page] Clearing customer filter on view change');
+        console.log(
+          "🔄 [Tickets Page] Clearing customer filter on view change"
+        );
         setUrlCustomerId(null);
       }
       // También limpiar el parámetro de la URL si existe
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         const currentUrl = new URL(window.location.href);
         if (currentUrl.searchParams.has("customerId")) {
           currentUrl.searchParams.delete("customerId");
-          router.replace(currentUrl.pathname + currentUrl.search, { scroll: false });
+          router.replace(currentUrl.pathname + currentUrl.search, {
+            scroll: false,
+          });
         }
       }
     }
@@ -1018,7 +1083,7 @@ export default function TicketsPage() {
         }
       }
     } catch (error) {
-      console.error('Error fetching full ticket data:', error);
+      console.error("Error fetching full ticket data:", error);
       // Continuar con el ticket de la lista si falla la petición
     }
 
@@ -2292,7 +2357,11 @@ export default function TicketsPage() {
             />
             All Tickets
             <span className="ml-auto text-xs">
-              {getCustomerFilteredTickets.filter((t: Ticket) => !isMissedCall(t)).length}
+              {
+                getCustomerFilteredTickets.filter(
+                  (t: Ticket) => !isMissedCall(t)
+                ).length
+              }
             </span>
           </Button>
           <Button
@@ -2355,8 +2424,9 @@ export default function TicketsPage() {
             Unassigned
             <span className="ml-auto text-xs">
               {
-                getCustomerFilteredTickets.filter((t: Ticket) => !isMissedCall(t) && !t.assignedTo)
-                  .length
+                getCustomerFilteredTickets.filter(
+                  (t: Ticket) => !isMissedCall(t) && !t.assignedTo
+                ).length
               }
             </span>
           </Button>
@@ -2368,7 +2438,11 @@ export default function TicketsPage() {
             <AlertTriangle className="mr-2 h-4 w-4" />
             Missed Calls
             <span className="ml-auto text-xs">
-              {getCustomerFilteredTickets.filter((t: Ticket) => isMissedCall(t)).length}
+              {
+                getCustomerFilteredTickets.filter((t: Ticket) =>
+                  isMissedCall(t)
+                ).length
+              }
             </span>
           </Button>
           <Button

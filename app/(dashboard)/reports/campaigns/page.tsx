@@ -240,9 +240,15 @@ const MetricCard = ({ metric }: { metric: ReportMetric }) => (
 const CustomerTable = ({
   title,
   rows,
+  campaignId,
+  startDate,
+  endDate,
 }: {
   title: string;
   rows: CustomerRow[];
+  campaignId: number | null;
+  startDate: string;
+  endDate: string;
 }) => {
   const router = useRouter();
 
@@ -260,31 +266,36 @@ const CustomerTable = ({
       customerId: row.customerId,
       name: row.name,
       phone: row.phone,
+      campaignId: campaignId,
     });
 
-    // Función helper para buscar cliente y redirigir a customer management
-    const navigateToCustomerManagement = async (row: CustomerRow) => {
-      console.log(
-        "🔍 [Reports Campaigns] navigateToCustomerManagement called:",
-        {
-          customerId: row.customerId,
-          customerName: row.name,
-          customerPhone: row.phone,
-        }
-      );
+    // Función helper para redirigir a tickets con filtros de campaña y cliente
+    const navigateToTickets = async (row: CustomerRow) => {
+      console.log("🔍 [Reports Campaigns] navigateToTickets called:", {
+        customerId: row.customerId,
+        customerName: row.name,
+        customerPhone: row.phone,
+        campaignId: campaignId,
+      });
 
       // Si tenemos customerId directamente, usarlo
-      if (row.customerId) {
-        const customerUrl = `/customers?customerId=${row.customerId}`;
+      if (row.customerId && campaignId) {
+        const ticketsUrl = `/tickets?customerId=${
+          row.customerId
+        }&campaignId=${campaignId}&fromReport=campaign&reportStartDate=${encodeURIComponent(
+          startDate
+        )}&reportEndDate=${encodeURIComponent(endDate)}`;
         console.log(
-          "🟢 [Reports Campaigns] ✅ Navigating to customer management using customerId:",
+          "🟢 [Reports Campaigns] ✅ Navigating to tickets with fromReport flag:",
           {
             customerId: row.customerId,
-            url: customerUrl,
+            campaignId: campaignId,
+            startDate,
+            endDate,
+            url: ticketsUrl,
           }
         );
-        // Usar window.location.replace para forzar la navegación y evitar interceptores
-        window.location.replace(customerUrl);
+        router.push(ticketsUrl);
         return;
       }
 
@@ -302,19 +313,25 @@ const CustomerTable = ({
             (c.phone && c.phone === row.phone)
         );
 
-        if (customer && customer.id) {
-          // Redirigir a customer management con el customerId
-          const customerUrl = `/customers?customerId=${customer.id}`;
+        if (customer && customer.id && campaignId) {
+          // Redirigir a tickets con el customerId y campaignId
+          const ticketsUrl = `/tickets?customerId=${
+            customer.id
+          }&campaignId=${campaignId}&fromReport=campaign&reportStartDate=${encodeURIComponent(
+            startDate
+          )}&reportEndDate=${encodeURIComponent(endDate)}`;
           console.log(
-            "🟢 [Reports Campaigns] ✅ Navigating to customer management (found by search):",
+            "🟢 [Reports Campaigns] ✅ Navigating to tickets (found by search) with fromReport flag:",
             {
               customerId: customer.id,
               customerName: customer.name,
-              url: customerUrl,
+              campaignId: campaignId,
+              startDate,
+              endDate,
+              url: ticketsUrl,
             }
           );
-          // Usar window.location.replace para forzar la navegación y evitar interceptores
-          window.location.replace(customerUrl);
+          router.push(ticketsUrl);
         } else {
           console.warn("⚠️ [Reports Campaigns] Customer not found:", {
             rowName: row.name,
@@ -336,8 +353,8 @@ const CustomerTable = ({
       }
     };
 
-    // Redirigir a customer management en lugar de tickets
-    await navigateToCustomerManagement(row);
+    // Redirigir a tickets con filtros de campaña
+    await navigateToTickets(row);
   };
 
   return (
@@ -355,13 +372,14 @@ const CustomerTable = ({
       {/* Container with horizontal scroll for mobile responsiveness */}
       <div className="w-full overflow-x-auto">
         <div className="min-w-200 align-middle">
-          <div className="grid grid-cols-12 bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-y">
+          <div className="grid grid-cols-13 bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-y">
             <div className="col-span-2 px-6 py-3">Customer</div>
             <div className="col-span-2 px-6 py-3">Phone</div>
             <div className="col-span-1 px-6 py-3">Calls</div>
             <div className="col-span-2 px-6 py-3">Direction</div>
             <div className="col-span-2 px-6 py-3">Status</div>
-            <div className="col-span-3 px-6 py-3">Latest Notes / History</div>
+            <div className="col-span-2 px-6 py-3">Notes</div>
+            <div className="col-span-2 px-6 py-3">Contact Date</div>
           </div>
           <div className="divide-y">
             {rows.length === 0 ? (
@@ -384,7 +402,7 @@ const CustomerTable = ({
                 return (
                   <div
                     key={`${title}-${index}`}
-                    className="grid grid-cols-12 text-sm hover:bg-muted/30 transition-colors cursor-pointer"
+                    className="grid grid-cols-13 text-sm hover:bg-muted/30 transition-colors cursor-pointer"
                     onClick={(e) => {
                       console.log("=== ROW CLICK EVENT ===", index);
                       e.preventDefault();
@@ -419,45 +437,38 @@ const CustomerTable = ({
                         {row.status}
                       </span>
                     </div>
-                    <div className="col-span-3 px-6 py-3 text-muted-foreground wrap-break-word text-xs">
+                    <div className="col-span-2 px-6 py-3 text-muted-foreground wrap-break-word text-xs">
                       <div className="space-y-1">
                         <div className="font-medium">{row.note || "—"}</div>
-                        {hasHistory && (
-                          <details className="mt-1">
-                            <summary className="cursor-pointer text-blue-600 dark:text-blue-400 hover:underline text-[10px]">
-                              View history ({row.callHistory!.length} Calls)
-                            </summary>
-                            <div className="mt-2 space-y-2 pl-2 border-l-2 border-muted">
-                              {row
-                                .callHistory!.slice()
-                                .reverse()
-                                .map((call, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="text-[10px] space-y-0.5"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-semibold">
-                                        {new Date(
-                                          call.createdAt
-                                        ).toLocaleDateString()}
-                                      </span>
-                                      <span className="text-muted-foreground">
-                                        {call.agentName}
-                                      </span>
-                                    </div>
-                                    <div className="text-muted-foreground">
-                                      {call.note || "—"}
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
-                          </details>
-                        )}
                       </div>
+                    </div>
+                    <div className="col-span-2 px-6 py-3 text-muted-foreground text-xs">
+                      {row.callHistory && row.callHistory.length > 0 ? (
+                        <div className="space-y-0.5">
+                          {row.callHistory.map((call, idx) => {
+                            const date = new Date(call.createdAt);
+                            const formattedDate = date.toLocaleString("en-US", {
+                              month: "2-digit",
+                              day: "2-digit",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: false,
+                            });
+                            return (
+                              <div key={idx} className="text-xs">
+                                {idx + 1}. {formattedDate}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        "—"
+                      )}
                     </div>
                   </div>
                 );
+                n;
               })
             )}
           </div>
@@ -533,6 +544,19 @@ export default function CampaignReportsPage() {
     if (campaignIdParam) setSelectedCampaignId(campaignIdParam);
   }, [campaignIdParam]);
 
+  // Load startDate and endDate from URL params
+  useEffect(() => {
+    const startDateParam = searchParams.get("startDate");
+    const endDateParam = searchParams.get("endDate");
+
+    if (startDateParam) {
+      setStartDate(decodeURIComponent(startDateParam));
+    }
+    if (endDateParam) {
+      setEndDate(decodeURIComponent(endDateParam));
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     const loadLogo = async () => {
       try {
@@ -561,6 +585,30 @@ export default function CampaignReportsPage() {
     };
     loadLogo();
   }, []);
+
+  // Auto-generate report when all parameters are loaded from URL
+  useEffect(() => {
+    const autoGenerateReport = async () => {
+      // Check if we have all required params and no report yet
+      if (
+        selectedCampaignId &&
+        startDate &&
+        endDate &&
+        !report &&
+        !loading &&
+        campaigns.length > 0
+      ) {
+        console.log("🔄 Auto-generating report from URL params:", {
+          selectedCampaignId,
+          startDate,
+          endDate,
+        });
+        await buildReport();
+      }
+    };
+    autoGenerateReport();
+  }, [selectedCampaignId, startDate, endDate, campaigns]);
+  // Note: buildReport and report are intentionally not in dependencies to avoid infinite loop
 
   const selectedCampaign = useMemo(() => {
     return (
@@ -904,6 +952,11 @@ export default function CampaignReportsPage() {
                   key={table.title}
                   title={table.title}
                   rows={table.rows}
+                  campaignId={
+                    selectedCampaignId ? parseInt(selectedCampaignId) : null
+                  }
+                  startDate={startDate}
+                  endDate={endDate}
                 />
               ))}
             </div>
