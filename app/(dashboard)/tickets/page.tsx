@@ -295,6 +295,8 @@ export default function TicketsPage() {
     }
     if (d === "outbound") {
       return <PhoneOutgoing className="h-3 w-3 text-blue-500" />;
+    } else if (d === "text_message") {
+      return <MessageCircle className="h-3 w-3 text-purple-500" />;
     } else {
       return <PhoneIncoming className="h-3 w-3 text-emerald-500" />;
     }
@@ -322,6 +324,9 @@ export default function TicketsPage() {
       }
       // Por defecto, asumir Inbound solo si no hay indicadores de Outbound
       return "Missed (Inbound)";
+    }
+    if (d === "text_message") {
+      return "Text Message";
     }
     return d === "outbound" ? "Outbound" : "Inbound";
   };
@@ -2539,6 +2544,7 @@ export default function TicketsPage() {
                 <SelectItem value="inbound">Inbound</SelectItem>
                 <SelectItem value="outbound">Outbound</SelectItem>
                 <SelectItem value="missed">Missed</SelectItem>
+                <SelectItem value="text_message">Text Message</SelectItem>
               </SelectContent>
             </Select>
           </div>
