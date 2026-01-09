@@ -269,7 +269,7 @@ const CustomerTable = ({
       campaignId: campaignId,
     });
 
-    // Función helper para redirigir a tickets con filtros de campaña solamente
+    // Función helper para redirigir a tickets con filtros de campaña y cliente
     const navigateToTickets = async (row: CustomerRow) => {
       console.log("🔍 [Reports Campaigns] navigateToTickets called:", {
         customerId: row.customerId,
@@ -278,14 +278,17 @@ const CustomerTable = ({
         campaignId: campaignId,
       });
 
-      // Redirigir solo con campaignId, sin customerId para mostrar todos los tickets de la campaña
-      if (campaignId) {
-        const ticketsUrl = `/tickets?campaignId=${campaignId}&fromReport=campaign&reportStartDate=${encodeURIComponent(
+      // Si tenemos customerId directamente, usarlo
+      if (row.customerId && campaignId) {
+        const ticketsUrl = `/tickets?customerId=${
+          row.customerId
+        }&campaignId=${campaignId}&fromReport=campaign&reportStartDate=${encodeURIComponent(
           startDate
         )}&reportEndDate=${encodeURIComponent(endDate)}`;
         console.log(
-          "🟢 [Reports Campaigns] ✅ Navigating to tickets with fromReport flag:",
+          "🟢 [Reports Campaigns] ✅ Navigating to tickets with customerId and campaignId:",
           {
+            customerId: row.customerId,
             campaignId: campaignId,
             startDate,
             endDate,
@@ -293,11 +296,67 @@ const CustomerTable = ({
           }
         );
         router.push(ticketsUrl);
-      } else {
-        console.warn("⚠️ [Reports Campaigns] No campaignId available");
+        return;
+      }
+
+      // Si no tenemos customerId, buscar por nombre/teléfono
+      try {
+        console.log(
+          "🔍 [Reports Campaigns] Fetching customers to find match..."
+        );
+        const customers = await fetchFromBackend("/customers?page=1&limit=500");
+        const customerList = Array.isArray(customers)
+          ? customers
+          : customers?.data || [];
+
+        console.log("🔍 [Reports Campaigns] Customer list fetched:", {
+          totalCustomers: customerList.length,
+          searchingFor: { name: row.name, phone: row.phone },
+        });
+
+        // Buscar el cliente que coincida con el nombre o teléfono
+        const customer = customerList.find(
+          (c: any) =>
+            (c.name && c.name.toLowerCase() === row.name.toLowerCase()) ||
+            (c.phone && c.phone === row.phone)
+        );
+
+        if (customer && customer.id && campaignId) {
+          // Redirigir a tickets con el customerId y campaignId
+          const ticketsUrl = `/tickets?customerId=${
+            customer.id
+          }&campaignId=${campaignId}&fromReport=campaign&reportStartDate=${encodeURIComponent(
+            startDate
+          )}&reportEndDate=${encodeURIComponent(endDate)}`;
+          console.log(
+            "🟢 [Reports Campaigns] ✅ Navigating to tickets (found by search):",
+            {
+              customerId: customer.id,
+              customerName: customer.name,
+              campaignId: campaignId,
+              startDate,
+              endDate,
+              url: ticketsUrl,
+            }
+          );
+          router.push(ticketsUrl);
+        } else {
+          console.warn("⚠️ [Reports Campaigns] Customer not found:", {
+            rowName: row.name,
+            rowPhone: row.phone,
+            searchResult: customer,
+          });
+          toast({
+            title: "Cliente no encontrado",
+            description: "No se pudo encontrar el cliente en la base de datos.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("🔴 [Reports Campaigns] Error buscando cliente:", error);
         toast({
           title: "Error",
-          description: "No se pudo determinar la campaña.",
+          description: "No se pudo buscar el cliente.",
           variant: "destructive",
         });
       }
