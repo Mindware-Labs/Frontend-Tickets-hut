@@ -269,7 +269,7 @@ const CustomerTable = ({
       campaignId: campaignId,
     });
 
-    // Función helper para redirigir a tickets con filtros de campaña y cliente
+    // Función helper para redirigir a tickets con filtros de campaña solamente
     const navigateToTickets = async (row: CustomerRow) => {
       console.log("🔍 [Reports Campaigns] navigateToTickets called:", {
         customerId: row.customerId,
@@ -278,17 +278,14 @@ const CustomerTable = ({
         campaignId: campaignId,
       });
 
-      // Si tenemos customerId directamente, usarlo
-      if (row.customerId && campaignId) {
-        const ticketsUrl = `/tickets?customerId=${
-          row.customerId
-        }&campaignId=${campaignId}&fromReport=campaign&reportStartDate=${encodeURIComponent(
+      // Redirigir solo con campaignId, sin customerId para mostrar todos los tickets de la campaña
+      if (campaignId) {
+        const ticketsUrl = `/tickets?campaignId=${campaignId}&fromReport=campaign&reportStartDate=${encodeURIComponent(
           startDate
         )}&reportEndDate=${encodeURIComponent(endDate)}`;
         console.log(
           "🟢 [Reports Campaigns] ✅ Navigating to tickets with fromReport flag:",
           {
-            customerId: row.customerId,
             campaignId: campaignId,
             startDate,
             endDate,
@@ -296,58 +293,11 @@ const CustomerTable = ({
           }
         );
         router.push(ticketsUrl);
-        return;
-      }
-
-      // Si no tenemos customerId, buscar por nombre/teléfono
-      try {
-        const customers = await fetchFromBackend("/customers?page=1&limit=500");
-        const customerList = Array.isArray(customers)
-          ? customers
-          : customers?.data || [];
-
-        // Buscar el cliente que coincida con el nombre o teléfono
-        const customer = customerList.find(
-          (c: any) =>
-            (c.name && c.name.toLowerCase() === row.name.toLowerCase()) ||
-            (c.phone && c.phone === row.phone)
-        );
-
-        if (customer && customer.id && campaignId) {
-          // Redirigir a tickets con el customerId y campaignId
-          const ticketsUrl = `/tickets?customerId=${
-            customer.id
-          }&campaignId=${campaignId}&fromReport=campaign&reportStartDate=${encodeURIComponent(
-            startDate
-          )}&reportEndDate=${encodeURIComponent(endDate)}`;
-          console.log(
-            "🟢 [Reports Campaigns] ✅ Navigating to tickets (found by search) with fromReport flag:",
-            {
-              customerId: customer.id,
-              customerName: customer.name,
-              campaignId: campaignId,
-              startDate,
-              endDate,
-              url: ticketsUrl,
-            }
-          );
-          router.push(ticketsUrl);
-        } else {
-          console.warn("⚠️ [Reports Campaigns] Customer not found:", {
-            rowName: row.name,
-            rowPhone: row.phone,
-          });
-          toast({
-            title: "Cliente no encontrado",
-            description: "No se pudo encontrar el cliente en la base de datos.",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error("🔴 [Reports Campaigns] Error buscando cliente:", error);
+      } else {
+        console.warn("⚠️ [Reports Campaigns] No campaignId available");
         toast({
           title: "Error",
-          description: "No se pudo buscar el cliente.",
+          description: "No se pudo determinar la campaña.",
           variant: "destructive",
         });
       }
