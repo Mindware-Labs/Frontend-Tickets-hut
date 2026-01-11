@@ -99,26 +99,29 @@ export default function YardsPage() {
 
   // Filter yards
   const filteredYards = useMemo(() => {
-    return yards.filter((yard) => {
-      const matchesSearch =
-        yard.name.toLowerCase().includes(search.toLowerCase()) ||
-        yard.commonName.toLowerCase().includes(search.toLowerCase()) ||
-        yard.propertyAddress.toLowerCase().includes(search.toLowerCase()) ||
-        yard.contactInfo.toLowerCase().includes(search.toLowerCase()) ||
-        (yard.landlord?.name || "")
-          .toLowerCase()
-          .includes(search.toLowerCase());
+    return yards
+      .filter((yard) => {
+        const matchesSearch =
+          yard.name.toLowerCase().includes(search.toLowerCase()) ||
+          yard.commonName.toLowerCase().includes(search.toLowerCase()) ||
+          yard.propertyAddress.toLowerCase().includes(search.toLowerCase()) ||
+          yard.contactInfo.toLowerCase().includes(search.toLowerCase()) ||
+          (yard.landlord?.name || "")
+            .toLowerCase()
+            .includes(search.toLowerCase());
 
-      const matchesType = typeFilter === "all" || yard.yardType === typeFilter;
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && yard.isActive) ||
-        (statusFilter === "inactive" && !yard.isActive);
+        const matchesType =
+          typeFilter === "all" || yard.yardType === typeFilter;
+        const matchesStatus =
+          statusFilter === "all" ||
+          (statusFilter === "active" && yard.isActive) ||
+          (statusFilter === "inactive" && !yard.isActive);
 
-      const matchesQuery = yardIdFilter ? yard.id === yardIdFilter : true;
+        const matchesQuery = yardIdFilter ? yard.id === yardIdFilter : true;
 
-      return matchesSearch && matchesType && matchesStatus && matchesQuery;
-    });
+        return matchesSearch && matchesType && matchesStatus && matchesQuery;
+      })
+      .sort((a, b) => a.id - b.id); // Ordenar por ID de menor a mayor (1 a x)
   }, [yards, search, typeFilter, statusFilter, yardIdFilter]);
 
   // Pagination
