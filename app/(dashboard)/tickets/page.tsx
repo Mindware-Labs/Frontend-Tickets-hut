@@ -133,6 +133,8 @@ export default function TicketsPage() {
   const [yardFilter, setYardFilter] = useState("all");
   const [campaignFilterSearch, setCampaignFilterSearch] = useState("");
   const [yardFilterSearch, setYardFilterSearch] = useState("");
+  const [agentFilter, setAgentFilter] = useState("all");
+  const [agentFilterSearch, setAgentFilterSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showDetails, setShowDetails] = useState(false);
@@ -857,6 +859,15 @@ export default function TicketsPage() {
     return yards.filter((y) => y.name.toLowerCase().includes(term));
   }, [yards, yardFilterSearch]);
 
+  const filteredAgentFilterOptions = useMemo(() => {
+    const term = agentFilterSearch.toLowerCase();
+    return agents.filter(
+      (a) =>
+        a.name.toLowerCase().includes(term) ||
+        (a.email || "").toLowerCase().includes(term)
+    );
+  }, [agents, agentFilterSearch]);
+
   const filteredTickets = useMemo(() => {
     console.log("🔎 [Tickets Page] Filtering tickets with search:", {
       search,
@@ -945,6 +956,20 @@ export default function TicketsPage() {
       const matchesYard =
         yardFilter === "all" ||
         (ticketYardId && ticketYardId.toString() === yardFilter);
+
+      // --- AGREGAR ESTO ---
+      // Verificamos ticket.agentId o ticket.assignedTo.id
+      const ticketAgentId =
+        ticket.agentId ??
+        (ticket.assignedTo && typeof ticket.assignedTo === "object"
+          ? (ticket.assignedTo as any).id
+          : null);
+          
+      const matchesAgent =
+        agentFilter === "all" ||
+        (ticketAgentId && ticketAgentId.toString() === agentFilter);
+      // --------------------
+
       const isMissed = isMissedCall(ticket);
 
       let matchesView = true;
@@ -984,6 +1009,7 @@ export default function TicketsPage() {
         matchesDirection &&
         matchesCampaign &&
         matchesYard &&
+        matchesAgent &&
         matchesView
       );
     });
@@ -1014,6 +1040,7 @@ export default function TicketsPage() {
     activeView,
     campaignFilter,
     yardFilter,
+    agentFilter,
     currentAgent,
     currentUser,
     currentUserFullName,
@@ -1050,6 +1077,7 @@ export default function TicketsPage() {
     activeView,
     campaignFilter,
     yardFilter,
+    agentFilter,
   ]);
 
   // Función para manejar el cambio de vista y limpiar el filtro de cliente si no está en la URL
@@ -2533,6 +2561,25 @@ export default function TicketsPage() {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-2">
+            <Label>Agent</Label>
+            <Select value={agentFilter} onValueChange={setAgentFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Agents" />
+              </SelectTrigger>
+              <SelectContent>
+
+                <SelectItem value="all">All Agents</SelectItem>
+                {filteredAgentFilterOptions.map((agent) => (
+                  <SelectItem key={agent.id} value={agent.id.toString()}>
+                    {agent.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-2">
             <Label>Direction</Label>
             <Select value={directionFilter} onValueChange={setDirectionFilter}>
@@ -2907,6 +2954,7 @@ export default function TicketsPage() {
         setAttachmentFiles={setCreateAttachmentFiles}
         isCreating={isCreating}
         onSubmit={handleCreateTicket}
+      
       />
 
       <ViewTicketModal
