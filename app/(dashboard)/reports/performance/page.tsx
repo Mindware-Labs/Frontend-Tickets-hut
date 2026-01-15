@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { PhoneMissed } from "lucide-react";
 import { usePathname } from "next/navigation";
 import {
   BarChart,
@@ -43,6 +44,7 @@ type ReportData = {
     resolutionRate: number;
     avgDurationSeconds: number;
     activeAgents: number;
+    missedInboundCalls: number;
   };
   callsByDay: { date: string; day: string; total: number; closed: number }[];
   dispositionBreakdown: { name: string; value: number }[];
@@ -304,6 +306,26 @@ export default function PerformancePage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-xs text-muted-foreground">
+                      Missed Inbound
+                    </p>
+                    {/* Agregué text-red-600 para resaltar */}
+                    <h3 className="text-3xl font-bold mt-1">
+                      {report.kpis.missedInboundCalls || 0}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Unanswered calls
+                    </p>
+                  </div>
+                  <div className="p-2 rounded-full bg-red-100 text-red-700 dark:bg-red-500/10">
+                    <PhoneMissed className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative overflow-hidden rounded-xl border bg-card p-5 shadow-sm">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-xs text-muted-foreground">
                       Resolution Rate
                     </p>
                     <h3 className="text-3xl font-bold mt-1">
@@ -474,7 +496,7 @@ export default function PerformancePage() {
                           style={{
                             backgroundColor:
                               DISPOSITION_COLORS[
-                                index % DISPOSITION_COLORS.length
+                              index % DISPOSITION_COLORS.length
                               ],
                           }}
                         />
@@ -502,7 +524,7 @@ export default function PerformancePage() {
                       key={item.name}
                       className="flex items-center justify-between text-sm"
                     >
-                      <span className="text-muted-foreground">{item.name}</span>
+                      <span className="text-muted-foreground uppercase">{item.name}</span>
                       <span className="font-medium text-foreground">
                         {item.value}
                       </span>
